@@ -31,8 +31,11 @@ Features:
 - Excellent Random Token Generator
 
 To Do:
+
 - OAuth 1 & 2 Consumer
 - OAuth 2 Provider
+- SQL based migration
 
 Install with Composer:
+
 "polycademy/polyauth": "*"
