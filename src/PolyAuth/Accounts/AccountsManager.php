@@ -55,7 +55,7 @@ class AccountsManager{
 		$this->password_manager = new PasswordComplexity($options, $language);
 		$this->random = new Random;
 		$this->role_manager  = new RoleManager($db, $logger);
-		$this->emailer = new Emailer($db, $options, $language, $logger);
+		$this->emailer = new Emailer($options, $language, $logger);
 		
 		//if you use bcrypt fallback, you must always use bcrypt fallback, you cannot switch servers!
 		if($this->options['hash_fallback']){
@@ -1111,10 +1111,13 @@ class AccountsManager{
 	
 	}
 	
-	//we need some functions that allow incremental updates of the role
-	//basically export the $role object (which allows incremental updates.. etc)
-	//then expose the roleSave in the rbac which would update the role or insert the role (but since they wouldn't have access to create the role, it would most likely update)
-	//it's basically a process of using get_roles() -> modify role object -> role_save();
+	/**
+	 * Save an array of role objects. This function is not used internally, but it's to provide a pass through API to the RBAC package.
+	 * It can allow incremental updates to a single or multitude of $role objects. It can update or insert role objects.
+	 *
+	 * @param $roles array of objects
+	 * @return boolean
+	 */
 	public function save_roles(array $roles){
 	
 		foreach($roles as $role){
@@ -1130,12 +1133,24 @@ class AccountsManager{
 		
 	}
 	
-	//takes a user id and role object, and adds it to the user and saves it, the role object should have a list of permissions
+	/**
+	 * Takes a UserAccount object and array of role names and registers those roles against the user.
+	 * The roles must already exist.
+	 *
+	 * @param $user object
+	 * @param $role_names array
+	 * @return $user
+	 */
 	public function register_roles(UserAccount $user, array $role_names){
 		
 		foreach($role_names as $role_name){
 		
 			$role = $this->role_manager->roleFetchByName($role_name);
+			
+			if(!$role){
+				$errors[] = $this->lang['role_not_exists'];
+				return false;
+			}
 			
 			if(!$this->role_manager->roleAddSubject($role, $user)){
 				$this->errors[] = $this->lang['role_assignment_unsuccessful'];
