@@ -3,9 +3,7 @@
 namespace spec\PolyAuth;
 
 use PhpSpec\ObjectBehavior;
-use Prophecy\Argument;
 
-use RBAC\Subject\Subject;
 use RBAC\Role\Role;
 use RBAC\Role\RoleSet;
 use RBAC\Permission;
@@ -14,9 +12,18 @@ class UserAccountSpec extends ObjectBehavior{
 
 	function let($subject_id, RoleSet $role_set, Role $role, Permission $permission){
 	
+		//fixtures
 		$subject_id = 1;
-		//stubbing the getRoles() function
+		$permission->permission_id = 1;
+		$permission->name = 'admin_view';
+		$permission->description = 'Admin View Permission';
+		
+		//collaborator stubbing/mocking
+		$permission->__toString()->willReturn($permission->name);
 		$role_set->getRoles()->willReturn(array($role));
+		$role_set->getPermissions()->willReturn(array($permission));
+		$role_set->has_permission($permission)->willReturn(true);
+		
 		$this->beConstructedWith($subject_id, $role_set);
 		
 	}
@@ -38,17 +45,44 @@ class UserAccountSpec extends ObjectBehavior{
 	
 		$this->get_role_set()->shouldReturnAnInstanceOf('RBAC\Role\RoleSet');
 		$this->get_roles()->shouldBeArray();
-		foreach($this->get_roles() as $role_object){
-			$role_object->shouldBeAnInstanceOf('RBAC\Role\Role');
-			$this->has_role($role_object)->shouldReturn(true);
-		}
+		$role_object = $this->get_roles()[0];
+		$role_object->shouldBeAnInstanceOf('RBAC\Role\Role');
+		$this->has_role($role_object)->shouldReturn(true);
 		
 	}
 	
 	function it_should_manipulate_permissions(){
 	
+		$this->get_permissions()->shouldBeArray();
+		$permission_object = $this->get_permissions()[0];
+		$permission_object->shouldBeAnInstanceOf('RBAC\Permission');
+		$this->has_permission($permission_object)->shouldReturn(true);
+	
 	}
 	
+	function it_should_manipulate_userdata(){
 	
+		$this->set_user_data(array(
+			'id'		=> 1,
+			'username'	=> 'CMCDragonkai',
+		));
+		
+		//merging data
+		$this->set_user_data(array(
+			'height'	=> '8m',
+		));
+		
+		$user_object = new \stdClass;
+		$user_object->weight = '100 kg';
+		$this->set_user_data($user_object);
+		
+		$this->get_user_data()->shouldReturn(array('id' => 1, 'username' => 'CMCDragonkai', 'height' => '8m', 'weight' => '100 kg'));
+		$this->get('username')->shouldReturn('CMCDragonkai');
+		
+		//magic getters
+		$this->username->shouldReturn('CMCDragonkai');
+		$this->id->shouldReturn(1);
+	
+	}
 	
 }

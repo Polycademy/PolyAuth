@@ -9,7 +9,7 @@ class Options implements \ArrayAccess{
 
 	public $options = array();
 	
-	public function __construct(array $options = false){
+	public function __construct(array $options = null){
 		
 		$this->options = array(
 			//table options, see that the migration to be reflected. (RBAC options are not negotiable)

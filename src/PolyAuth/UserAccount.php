@@ -39,15 +39,11 @@ class UserAccount extends Subject{
 		return $this->hasPermission($permission);
 	}
 	
-	public function require_permission($permission){
-		return $this->requirePermission($permission);
-	}
-	
 	public function set_user_data($data){
 	
 		$type = gettype($data);
 		
-		if($type != 'object' OR $type != 'array'){
+		if($type != 'object' AND $type != 'array'){
 			return false;
 		}
 		
