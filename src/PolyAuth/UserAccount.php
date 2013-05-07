@@ -25,9 +25,10 @@ class UserAccount extends Subject{
 		return $this->getRoleset()->getRoles();
 	}
 	
+	//accepts a $role object, and checks if it exists among the $role set
 	public function has_role($role){
 		$roles = $this->getRoleset()->getRoles();
-		return isset($roles[$role]);
+		return in_array($role, $roles);
 	}
 	
 	public function get_permissions(){
