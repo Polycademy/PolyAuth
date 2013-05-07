@@ -7,7 +7,6 @@
 		"psr/log": "1.0.0"
 	},
 	"require-dev":{
-		"firephp/firephp-core": "*",
 		"phpspec/phpspec": "2.0.*@dev"
 	},
     "config": {
