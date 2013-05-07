@@ -46,7 +46,7 @@ class UserAccount extends Subject{
 	
 		$type = gettype($data);
 		
-		if($type != 'object' OR != 'array'){
+		if($type != 'object' OR $type != 'array'){
 			return false;
 		}
 		
