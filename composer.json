@@ -8,8 +8,7 @@
 	},
 	"require-dev":{
 		"firephp/firephp-core": "*",
-		"phpspec/phpspec": "2.0.*@dev",
-		"mockery/mockery": "*"
+		"phpspec/phpspec": "2.0.*@dev"
 	},
     "config": {
         "bin-dir": "bin/"
