@@ -1,0 +1,22 @@
+{
+    "require":{
+		"aura/session": "1.0.0-beta1",
+		"leighmacdonald/php_rbac": "dev-master",
+		"ircmaxell/password-compat": "*",
+		"phpmailer/phpmailer": "5.2.*",
+		"psr/log": "1.0.0"
+	},
+	"require-dev":{
+		"firephp/firephp-core": "*",
+		"phpspec/phpspec": "1.*",
+		"mockery/mockery": "0.8.*"
+	},
+    "config": {
+        "bin-dir": "bin/"
+    },
+	"autoload": {
+		"psr-0": {
+			"PolyAuth": "src"
+		}
+	}
+}
