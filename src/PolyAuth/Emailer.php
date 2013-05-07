@@ -2,10 +2,6 @@
 
 namespace PolyAuth;
 
-//for database
-use PDO;
-use PDOException;
-
 //for logger
 use Psr\Log\LoggerInterface;
 
@@ -20,7 +16,6 @@ use PolyAuth\UserAccount;
 //this class handles the sending of emails
 class Emailer{
 
-	protected $db;
 	protected $options;
 	protected $lang;
 	protected $logger;
@@ -28,13 +23,12 @@ class Emailer{
 	
 	protected $errors = array();
 
-	public function __construct(PDO $db, Options $options, Language $language, LoggerInterface $logger = null){
+	public function __construct(Options $options, Language $language, LoggerInterface $logger = null, \PHPMailer $mailer = null){
 	
 		$this->options = $options;
 		$this->lang = $language;
-		$this->db = $db;
 		$this->logger = $logger;
-		$this->mailer = new PHPMailer;
+		$this->mailer = ($mailer) ? $mailer : new \PHPMailer;
 	
 	}
 	
@@ -46,9 +40,10 @@ class Emailer{
 		$body = (empty($body)) ? $this->options['email_activation_template'] : $body;
 			
 		//use sprintf to insert activation code and user id
-		$body = str_replace('{{user_id}}','%1$s', $body);
-		$body = str_replace('{{activation_code}}','%2$s', $body);
-		$body = sprintf($body, $user->id, $user->activationCode);
+		$body = $this->interpolate_email_body($body, array(
+			'{{user_id}}'			=> $user->id,
+			'{{activation_code}}'	=> $user->activationCode,
+		));
 		
 		//send email via PHPMailer
 		if(!$this->send_mail($user->email, $subject, $body, $alt_body)){
@@ -68,9 +63,10 @@ class Emailer{
 		$subject = (empty($subject)) ? $this->lang('email_forgotten_identity_subject') : $subject;
 		$body = (empty($body)) ? $this->options['email_forgotten_identity_template'] : $body;
 		
-		$body = str_replace('{{user_id}}','%1$s', $body);
-		$body = str_replace('{{identity}}','%2$s', $body);
-		$body = sprintf($body, $user->id, $user->{$this->options['identity']});
+		$body = $this->interpolate_email_body($body, array(
+			'{{user_id}}'			=> $user->id,
+			'{{identity}}'			=> $user->{$this->options['identity']},
+		));
 		
 		if(!$this->send_mail($user->email, $subject, $body, $alt_body)){
 			if($this->logger){
@@ -84,15 +80,16 @@ class Emailer{
 		
 	}
 	
-	public function send_forgotten_password(){
+	public function send_forgotten_password(UserAccount $user, $subject = false, $body = false, $alt_body = false){
 	
 		$subject = (empty($subject)) ? $this->lang('email_forgotten_password_subject') : $subject;
 		$body = (empty($body)) ? $this->options['email_forgotten_password_template'] : $body;
-	
-		$body = str_replace('{{user_id}}','%1$s', $body);
-		$body = str_replace('{{identity}}','%2$s', $body);
-		$body = str_replace('{{forgotten_code}}','%3$s', $body);
-		$body = sprintf($body, $user->id, $user->{$this->options['identity']}, $user->forgottenCode);
+		
+		$body = $this->interpolate_email_body($body, array(
+			'{{user_id}}'			=> $user->id,
+			'{{identity}}'			=> $user->{$this->options['identity']},
+			'{{forgotten_code}}'	=> $user->forgottenCode,
+		));
 		
 		if(!$this->send_mail($user->email, $subject, $body, $alt_body)){
 			if($this->logger){
@@ -103,6 +100,16 @@ class Emailer{
 		}
 		
 		return true;
+	
+	}
+	
+	public function interpolate_email_body($body, array $replacements){
+	
+		foreach($replacements as $key => $interpolated_value){
+			$body = preg_replace("/$key/", $interpolated_value, $body);
+		}
+		
+		return $body;
 	
 	}
 	
@@ -131,7 +138,7 @@ class Emailer{
 		$this->mailer->Body = $body;
 		if($alt_body) $this->mailer->AltBody = $alt_body;
 		
-		if(!$mail->Send()){
+		if(!$this->mailer->Send()){
 			return false;
 		}
 		

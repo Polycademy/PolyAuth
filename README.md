@@ -29,6 +29,7 @@ Features:
 - Highly Configurable User Data/Profile
 - Password Complexity Checks
 - Excellent Random Token Generator
+- SpecBDD tested with Continuous Integration at Travis so you can trust that it works!
 
 To Do:
 
