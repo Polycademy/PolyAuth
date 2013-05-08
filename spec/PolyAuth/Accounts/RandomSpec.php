@@ -29,7 +29,7 @@ class RandomSpec extends ObjectBehavior{
 		
 	}
 	
-	public function getMatchers(){
+	function getMatchers(){
 	
 		return [
 			'haveLength' => function($subject, $condition) {
