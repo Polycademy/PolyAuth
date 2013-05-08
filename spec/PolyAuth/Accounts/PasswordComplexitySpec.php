@@ -12,21 +12,7 @@ class PasswordComplexitySpec extends ObjectBehavior{
 
 	function let(Options $options, Language $language){
 	
-		//mocking the options object with array access
-		
-		$option_array = array(
-			'login_password_complexity'	=> array(
-				'min'			=> 8,
-				'max'			=> 32,
-				'lowercase'		=> false,
-				'uppercase'		=> false,
-				'number'		=> false,
-				'specialchar'	=> false,
-				'diffpass'		=> false,
-				'diffidentity'	=> false,
-				'unique'		=> false,
-			),
-		);
+		$option_array = $options->options;
 		
 		$options->offsetGet(Argument::any())->will(function($args) use ($option_array){
 			$key = $args[0];
@@ -44,6 +30,20 @@ class PasswordComplexitySpec extends ObjectBehavior{
 	}
 	
 	function it_should_determine_min_and_max_of_passwords(){
+	
+		$options = array(
+			'min'			=> 8,
+			'max'			=> 32,
+			'lowercase'		=> false,
+			'uppercase'		=> false,
+			'number'		=> false,
+			'specialchar'	=> false,
+			'diffpass'		=> false,
+			'diffidentity'	=> false,
+			'unique'		=> false,
+		);
+		
+		$this->set_complexity($options);
 	
 		//minimum
 		$this->complex_enough('apass')->shouldReturn(false);
