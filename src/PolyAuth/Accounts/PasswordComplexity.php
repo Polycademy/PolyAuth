@@ -1,5 +1,10 @@
 <?php
 
+namespace PolyAuth\Accounts;
+
+use PolyAuth\Options;
+use PolyAuth\Language;
+
 class PasswordComplexity{
 
 	const REQUIRE_MIN = 1;
@@ -29,15 +34,15 @@ class PasswordComplexity{
 		$this->options = $options;
 		$this->lang = $language;
 		$this->r = new \ReflectionClass($this);
-		$this->set_complexity($this->options['login_password_complexity']);
+		$this->set_complexity($options['login_password_complexity']);
 	
 	}
 	
 	public function set_complexity(array $complexity_options){
 	
-		$this->min = (!empty($complexity_options['min']) ? $complexity_options['min'] : $this->min;
-		$this->max = (!empty($complexity_options['max']) ? $complexity_options['max'] : $this->max;
-		$this->diffpass = (!empty($complexity_options['diffpass']) ? $complexity_options['diffpass'] : $this->diffpass;
+		$this->min = (!empty($complexity_options['min'])) ? $complexity_options['min'] : $this->min;
+		$this->max = (!empty($complexity_options['max'])) ? $complexity_options['max'] : $this->max;
+		$this->diffpass = (!empty($complexity_options['diffpass'])) ? $complexity_options['diffpass'] : $this->diffpass;
 		$this->unique = (!empty($complexity_options['unique'])) ? $complexity_options['unique'] : $this->unique;
 		
 		//if it is false, then no complexity settings
@@ -49,8 +54,9 @@ class PasswordComplexity{
 			
 				//REQUIRE_MIN => min
 				$name = explode('_', strtolower($name), 2);
+				
 				//check if the option is set and it is not strictly equal to false
-				if(isset($complexity_options[$name] AND $complexity_options[$name] !== false){
+				if(isset($complexity_options[$name[1]]) AND $complexity_options[$name[1]] !== false){
 					//add to the complexity level
 					$complexity_level += $constant;
 				}
