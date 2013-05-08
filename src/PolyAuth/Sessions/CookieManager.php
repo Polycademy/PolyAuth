@@ -2,7 +2,7 @@
 
 //replicates CI's cookie styles
 
-namespace PolyAuth;
+namespace PolyAuth\Sessions;
 
 class CookieManager{
 
