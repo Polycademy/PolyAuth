@@ -16,8 +16,8 @@ class RandomSpec extends ObjectBehavior{
 	
 		$this->generate(32)->shouldHaveLength(32);
 		//at least one capital alpha, lowercase alpha and number in any order while negating any special characters
-		//epic lookahead regex!
 		$this->generate(32)->shouldMatch('/^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])[A-Za-z0-9]+$/');
+		$this->generate(2)->shouldReturn(false);
 	
 	}
 	
@@ -25,6 +25,7 @@ class RandomSpec extends ObjectBehavior{
 		
 		//and also one or more characters that is neither alpha nor numeric
 		$this->generate(32, true)->shouldMatch('/^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).+$/');
+		$this->generate(3, true)->shouldReturn(false);
 		
 	}
 	

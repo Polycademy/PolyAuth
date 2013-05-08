@@ -5,12 +5,8 @@ namespace spec\PolyAuth;
 use PhpSpec\ObjectBehavior;
 use Prophecy\Argument;
 
-//for options
 use PolyAuth\Options;
-
-//for languages
 use PolyAuth\Language;
-
 use PolyAuth\UserAccount;
 
 class EmailerSpec extends ObjectBehavior{

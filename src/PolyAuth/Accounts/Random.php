@@ -4,21 +4,61 @@ namespace PolyAuth\Accounts;
 
 class Random{
 
-	//generates a random token include A-Z,a-z,0-9 with special it will also include all the weird characters!
+	//generates a random token include at least one of each A-Z, a-z, 0-9 with special it will also include all the weird characters!
 	public function generate($length, $special = false){
 	
-		$token = "";
-		$code_alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-		$code_alphabet.= "abcdefghijklmnopqrstuvwxyz";
-		$code_alphabet.= "0123456789";
+		$length = abs($length);
+	
+		//if it is 3, then it's not good if special is true (which requires 4 characters)
+		//if it is 2 or less, then it's not good at all!
+		if($length < 4 AND $special = true){
+			return false;
+		}elseif($length < 3){
+			return false;
+		}
+		
+		$token = '';
+		$codes[0] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+		$codes[1] = "abcdefghijklmnopqrstuvwxyz";
+		$codes[2] = "0123456789";
+		
 		
 		if($special){
-			$code_alphabet .= '<,>./?;:\'"{[}]|\\-_+=)(*&^%$#@!`~ ';
+			$codes[3] = '<,>./?;:\'"{[}]|\\-_+=)(*&^%$#@!`~ ';
+			$parts = 4;
+		}else{
+			$parts = 3;
 		}
 		
-		for($i=0;$i<$length;$i++){
-			$token .= $code_alphabet[$this->crypto_rand_secure(0, strlen($code_alphabet))];
+		//$iterations is an array integers which is dependent on the rounded up integer of $length divided by $parts
+		for($i=0; $i<$parts; $i++){
+			//we only have to worry about equal or greater by using ceil
+			$iterations[$i] = ceil($length / $parts);
 		}
+		
+		//if the the total number is greater than the original length, we need to reduce one or more of the integers
+		if(array_sum($iterations) > $length){
+		
+			//total difference could be 1 or more
+			$difference = array_sum($iterations) - $length;
+			//we need to equally distribute the difference by 1 and minus them off the iteration integers
+			for($i=0; $i<$difference; $i++){
+				$iterations[$i] = $iterations[$i] - 1;
+			}
+		
+		}
+		
+		foreach($codes as $key => $code){
+		
+			//the $iterations will cycle through each integer each time the foreach runs
+			for($i = 0; $i < $iterations[$key]; $i++){
+				//add to the token by a single character
+				$token .= $code[$this->crypto_rand_secure(0, strlen($code))];
+			}
+		
+		}
+		
+		$token = str_shuffle($token);
 		
 		return $token;
 		
