@@ -20,7 +20,7 @@ class EmailerSpec extends ObjectBehavior{
 		$mailer->Send()->willReturn(true);
 		$mailer->__destruct()->willReturn(true);
 		
-		$this->beConstructedWith($options, $language, null, $mailer);
+		$this->beConstructedWith($options, $language, $mailer);
 		
 		$user->id = 1;
 		$user->email = 'example@example.com';
