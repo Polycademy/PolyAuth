@@ -136,7 +136,7 @@ class AccountsManager{
 		$registered_user = $this->get_user($last_insert_id);
 		
 		//now we've got to add the default roles and permissions
-		if(!$registered_user = $this->register_roles($registered_user, array($this->options['role_default']))){
+		if(!$registered_user = $this->register_user_roles($registered_user, array($this->options['role_default']))){
 			return false;
 		}
 		
@@ -394,7 +394,7 @@ class AccountsManager{
 		
 		$query = "UPDATE {$this->options['table_users']} SET passwordChange = 1, forgottenCode = :forgotten_code, forgottenDate = :forgotten_date WHERE id = :user_id";
 		$sth = $this->db->prepare($query);
-		$sth->bindParam('forgotten_code', $user->forgottenCode PDO::PARAM_STR);
+		$sth->bindParam('forgotten_code', $user->forgottenCode, PDO::PARAM_STR);
 		$sth->bindParam('forgotten_date', $user->forgottenDate, PDO::PARAM_STR);
 		$sth->bindParam('user_id', $user->id, PDO::PARAM_INT);
 		
@@ -556,7 +556,7 @@ class AccountsManager{
 		}
 		
 		//password complexity check on the new_password
-		if(!$this->password_manager->complex_enough($new_password, $old_password, $user->{$this->options['identity']}){
+		if(!$this->password_manager->complex_enough($new_password, $old_password, $user->{$this->options['identity']})){
 			$this->errors += $this->password_manager->get_errors();
 			return false;
 		}
@@ -737,7 +737,7 @@ class AccountsManager{
 		
 		}
 		
-		return $output_users	
+		return $output_users;	
 	
 	}
 	
@@ -749,7 +749,7 @@ class AccountsManager{
 	 */
 	public function get_users_by_role(array $roles){
 	
-		$role_names = implode(',' $roles);
+		$role_names = implode(',', $roles);
 		
 		//double join
 		$query = "
@@ -913,7 +913,7 @@ class AccountsManager{
 			
 			//at this point role object has already been created or updated
 			//if the perms have not been set, there's no need to update it
-			if(isset($role_data['perms'] AND is_array($role_data['perms'])){
+			if(isset($role_data['perms']) AND is_array($role_data['perms'])){
 			
 				//first delete all the old permissions (if they exist!)
 				$old_permissions = $role_object->getPermissions();
@@ -923,7 +923,7 @@ class AccountsManager{
 				
 				//if the perms is not empty, we add/update the new roles
 				//if it were empty, we would leave it with no permissions
-				if(!empty($role_data['perms']){
+				if(!empty($role_data['perms'])){
 				
 					//all permissions will be recreated
 					foreach($role_data['perms'] as $permission_name => $permission_desc){
@@ -968,7 +968,7 @@ class AccountsManager{
 	public function register_role($role_name, $role_desc = false){
 	
 		//check if the role already exists
-		if($role_object = $this->role_manager->roleFetchByName($role_name){
+		if($role_object = $this->role_manager->roleFetchByName($role_name)){
 			//update the existing role (if the role_desc actually exists)
 			$role_object->description = ($role_desc) ? $role_desc : $role_object->description;
 		}else{
@@ -1084,7 +1084,7 @@ class AccountsManager{
 	 */
 	public function delete_permission($permission_name){
 	
-		if($permission_object = $this->role_manager->permissionFetchByName($permission){
+		if($permission_object = $this->role_manager->permissionFetchByName($permission)){
 			if(!$this->role_manager->permissionDelete($permission_object)){
 				$this->errors[] = $this->lang('permission_delete_unsuccessful');
 				return false;
@@ -1141,7 +1141,7 @@ class AccountsManager{
 	 * @param $role_names array
 	 * @return $user
 	 */
-	public function register_roles(UserAccount $user, array $role_names){
+	public function register_user_roles(UserAccount $user, array $role_names){
 		
 		foreach($role_names as $role_name){
 		
