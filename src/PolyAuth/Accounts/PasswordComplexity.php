@@ -40,10 +40,11 @@ class PasswordComplexity{
 	
 	public function set_complexity(array $complexity_options){
 	
-		$this->min = (!empty($complexity_options['min'])) ? $complexity_options['min'] : $this->min;
-		$this->max = (!empty($complexity_options['max'])) ? $complexity_options['max'] : $this->max;
-		$this->diffpass = (!empty($complexity_options['diffpass'])) ? $complexity_options['diffpass'] : $this->diffpass;
-		$this->unique = (!empty($complexity_options['unique'])) ? $complexity_options['unique'] : $this->unique;
+		//these could be numbers (0) which is valid
+		$this->min = ($complexity_options['min'] !== false) ? $complexity_options['min'] : $this->min;
+		$this->max = ($complexity_options['max'] !== false) ? $complexity_options['max'] : $this->max;
+		$this->diffpass = ($complexity_options['diffpass'] !== false) ? $complexity_options['diffpass'] : $this->diffpass;
+		$this->unique = ($complexity_options['unique'] !== false) ? $complexity_options['unique'] : $this->unique;
 		
 		//if it is false, then no complexity settings
 		if(!empty($complexity_options)){
