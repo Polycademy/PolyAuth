@@ -23,7 +23,7 @@ class Emailer{
 	
 	protected $errors = array();
 
-	public function __construct(Options $options, Language $language, LoggerInterface $logger = null, \PHPMailer $mailer = null){
+	public function __construct(Options $options, Language $language, \PHPMailer $mailer = null, LoggerInterface $logger = null){
 	
 		$this->options = $options;
 		$this->lang = $language;
