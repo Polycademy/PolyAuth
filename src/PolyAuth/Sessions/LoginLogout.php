@@ -21,12 +21,8 @@ use Aura\Session\Manager as SessionManager;
 use Aura\Session\SegmentFactory;
 use Aura\Session\CsrfTokenFactory;
 
-//for RBAC (to authenticate against access)
+//for handling accounts
 use PolyAuth\Accounts\AccountsManager;
-use PolyAuth\UserAccount;
-use RBAC\Permission;
-use RBAC\Role\Role;
-use RBAC\Manager\RoleManager;
 
 //this class handles all the login and logout functionality
 class LoginLogout{
@@ -37,29 +33,35 @@ class LoginLogout{
 	protected $logger;
 	protected $session_manager;
 	protected $accounts_manager;
-	protected $role_manager;
 	
 	protected $user; //this is used to represent the user account for the RBAC, it is only initialised when a person logs in, it is not be used for any other purposes, always must represent the currently logged in user
 	
 	protected $errors = array();
 
-	public function __construct(PDO $db, Options $options, Language $language, SessionInterface $session_handler = null, LoggerInterface $logger = null){
+	public function __construct(
+		PDO $db, 
+		Options $options, 
+		Language $language, 
+		LoggerInterface $logger = null,
+		AccountsManager $accounts_manager = null,
+		CookieManager $cookie_manager = null,
+		SessionManager $session_manager = null
+	){
 	
 		$this->options = $options;
 		$this->lang = $language;
 		
 		$this->db = $db;
 		$this->logger = $logger;
-		$this->cookie_manager = new CookieManager(
+		$this->cookie_manager = ($cookie_manager) ? $cookie_manager : new CookieManager(
 			$this->options['cookie_domain'],
 			$this->options['cookie_path'],
 			$this->options['cookie_prefix'],
 			$this->options['cookie_secure'],
 			$this->options['cookie_httponly']
 		);
-		$this->session_manager = new SessionManager(new SegmentFactory, new CsrfTokenFactory);
-		$this->accounts_manager = new AccountsManager($db, $options, $language, $logger); //to mainly use the password hash verify
-		$this->role_manager  = new RoleManager($db, $logger);
+		$this->session_manager = ($session_manager) ? $session_manager : new SessionManager(new SegmentFactory, new CsrfTokenFactory);
+		$this->accounts_manager = ($accounts_manager) ? $accounts_manager : new AccountsManager($db, $options, $language, $logger);
 		
 		$this->startyourengines();
 	
