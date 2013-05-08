@@ -1,11 +1,11 @@
 <?php
 
-namespace PolyAuth;
+namespace PolyAuth\Accounts;
 
 class BcryptFallback{
 
 	private $rounds;
-	private $randomState;
+	private $random_state;
 	
 	public function __construct($rounds = 8){
 	
@@ -18,30 +18,31 @@ class BcryptFallback{
 
 	public function hash($input){
 	
-		$hash = crypt($input, $this->getSalt());
-		if(strlen($hash) > 13)
-		return $hash;
+		$hash = crypt($input, $this->get_salt());
+		if(strlen($hash) > 13){
+			return $hash;
+		}
 		return false;
 		
 	}
 
-	public function verify($input, $existingHash) {
+	public function verify($input, $existing_hash) {
 	
-		$hash = crypt($input, $existingHash);
-		return $hash === $existingHash;
+		$hash = crypt($input, $existing_hash);
+		return ($hash === $existing_hash);
 		
 	}
 
-	private function getSalt() {
+	private function get_salt() {
 	
 		$salt = sprintf('$2a$%02d$', $this->rounds);
-		$bytes = $this->getRandomBytes(16);
-		$salt .= $this->encodeBytes($bytes);
+		$bytes = $this->get_random_bytes(16);
+		$salt .= $this->encode_bytes($bytes);
 		return $salt;
 		
 	}
 
-	private function getRandomBytes($count) {
+	private function get_random_bytes($count) {
 	
 		$bytes = '';
 		if(function_exists('openssl_random_pseudo_bytes') && (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN')){
@@ -58,19 +59,19 @@ class BcryptFallback{
 		
 			$bytes = '';
 			
-			if($this->randomState === null) {
-				$this->randomState = microtime();
+			if($this->random_state === null) {
+				$this->random_state = microtime();
 				if(function_exists('getmypid')) {
-					$this->randomState .= getmypid();
+					$this->random_state .= getmypid();
 				}
 			}
 			
 			for($i = 0; $i < $count; $i += 16) {
-				$this->randomState = md5(microtime() . $this->randomState);
+				$this->random_state = md5(microtime() . $this->random_state);
 				if (PHP_VERSION >= '5') {
-					$bytes .= md5($this->randomState, true);
+					$bytes .= md5($this->random_state, true);
 				} else {
-					$bytes .= pack('H*', md5($this->randomState));
+					$bytes .= pack('H*', md5($this->random_state));
 				}
 			}
 			
@@ -82,7 +83,7 @@ class BcryptFallback{
 		
 	}
 
-	private function encodeBytes($input){
+	private function encode_bytes($input){
 	
 		// The following is code from the PHP Password Hashing Framework
 		$itoa64 = './ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
