@@ -4,7 +4,7 @@ namespace PolyAuth\Accounts;
 
 class Random{
 
-	//generates a random token include A-Z,a-z,0-9 with spiecal it will also include all the weird characters!
+	//generates a random token include A-Z,a-z,0-9 with special it will also include all the weird characters!
 	public function generate($length, $special = false){
 	
 		$token = "";
@@ -13,11 +13,11 @@ class Random{
 		$code_alphabet.= "0123456789";
 		
 		if($special){
-			$code_alphabet .= '<,>./?;:\'"{[}]|\\-_+=)(*&^%$#@!`~';
+			$code_alphabet .= '<,>./?;:\'"{[}]|\\-_+=)(*&^%$#@!`~ ';
 		}
 		
 		for($i=0;$i<$length;$i++){
-			$token .= $code_alphabet[crypto_rand_secure(0, strlen($code_alphabet))];
+			$token .= $code_alphabet[$this->crypto_rand_secure(0, strlen($code_alphabet))];
 		}
 		
 		return $token;
