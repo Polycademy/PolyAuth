@@ -35,31 +35,40 @@ class AccountsManager{
 	protected $options;
 	protected $lang;
 	protected $logger;
+	protected $role_manager;
 	protected $password_manager;
 	protected $random;
-	protected $role_manager;
 	protected $emailer;
 	protected $bcrypt_fallback = false;
 	
 	protected $errors = array();
 	
 	//expects PDO connection (potentially using $this->db->conn_id)
-	//SessionInterface is a copy of the PHP5.4.0 SessionHandlerInterface, this allows backwards compatibility
-	public function __construct(PDO $db, Options $options, Language $language, LoggerInterface $logger = null){
+	public function __construct(
+		PDO $db, 
+		Options $options, 
+		Language $language, 
+		LoggerInterface $logger = null,
+		RoleManager $role_manager = null, 
+		PasswordComplexity $password_manager = null,
+		Random $random = null,
+		Emailer $emailer = null,
+		BcryptFallback $bcrypt_fallback = null
+	){
 	
 		$this->options = $options;
 		$this->lang = $language;
 		
 		$this->db = $db;
 		$this->logger = $logger;
-		$this->password_manager = new PasswordComplexity($options, $language);
-		$this->random = new Random;
-		$this->role_manager  = new RoleManager($db, $logger);
-		$this->emailer = new Emailer($options, $language, $logger);
+		$this->role_manager  = ($role_manager) ? $role_manager : new RoleManager($db, $logger);
+		$this->password_manager = ($password_manager) ? $password_manager : new PasswordComplexity($options, $language);
+		$this->random = ($random) ? $random : new Random;
+		$this->emailer = ($emailer) ? $emailer : new Emailer($options, $language, $logger);
 		
 		//if you use bcrypt fallback, you must always use bcrypt fallback, you cannot switch servers!
 		if($this->options['hash_fallback']){
-			$this->bcrypt_fallback = new BcryptFallback($this->options['hash_rounds']);
+			$this->bcrypt_fallback = ($bcrypt_fallback) ? $bcrypt_fallback : new BcryptFallback($this->options['hash_rounds']);
 		}
 		
 	}
@@ -69,7 +78,7 @@ class AccountsManager{
 	 * Validation of the $data array is the end user's responsibility. We don't know what custom data fields the end user may want.
 	 *
 	 * @param $data array - $data parameter corresponds to user columns or properties. Make sure the identity and password and any other insertable properties are part of it.
-	 * @return $registered_user object - This is a fully loaded user object containing its roles and user data.
+	 * @return $registered_user object | false - This is a fully loaded user object containing its roles and user data.
 	 */
 	public function register(array $data){
 		
@@ -97,7 +106,8 @@ class AccountsManager{
 			return false;
 		}
 		
-		$data['ipAddress'] = $this->prepare_ip($_SERVER['REMOTE_ADDR']);
+		$ip = (!empty($_SERVER['REMOTE_ADDR'])) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1';
+		$data['ipAddress'] = $this->prepare_ip($ip);
 		$data['password'] = $this->hash_password($data['password'], $this->options['hash_method'], $this->options['hash_rounds']);
 		
 		$data += array(
@@ -120,7 +130,7 @@ class AccountsManager{
 		try {
 		
 			$sth->execute(array_values($data));
-			$last_insert_id = $sth->lastInsertId();
+			$last_insert_id = $this->db->lastInsertId();
 			
 		}catch(PDOException $db_err){
 
