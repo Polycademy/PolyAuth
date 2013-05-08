@@ -30,7 +30,7 @@ class CookieManager{
 			$expire = ($expire > 0) ? time() + $expire : 0;
 		}
 
-		setcookie($this->options['prefix'] . $name, $value, $expire, $this->options['path'], $this->options['domain'], $this->options['secure'], $this->options['httponly']);
+		return setcookie($this->options['prefix'] . $name, $value, $expire, $this->options['path'], $this->options['domain'], $this->options['secure'], $this->options['httponly']);
 		
 	}
 	
@@ -44,7 +44,7 @@ class CookieManager{
 	
 	public function delete_cookie($name = ''){
 	
-		$this->set_cookie($name, '', '');
+		return $this->set_cookie($name, '', '');
 		
 	}
 	
