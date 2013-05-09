@@ -34,7 +34,8 @@ class AccountsManagerSpec extends ObjectBehavior{
 		RoleManager $role_manager,
 		Role $role,
 		RoleSet $role_set,
-		Permission $permission
+		Permission $permission,
+		UserAccount $user
 	){
 	
 		//MANUAL MOCKING
@@ -52,10 +53,13 @@ class AccountsManagerSpec extends ObjectBehavior{
 		//OPTIONS MOCKS
 		
 		$option_array = $options->options;
-		$options->offsetGet(Argument::any())->will(function($args) use ($option_array){
+		$option_array['login_forgot_expiration'] = 1000;
+		
+		$options->offsetGet(Argument::any())->will(function($args) use (&$option_array){
 			$key = $args[0];
 			return $option_array[$key];
 		});
+		
 		$this->options = $options;
 	
 		//PDO MOCKS
@@ -68,6 +72,21 @@ class AccountsManagerSpec extends ObjectBehavior{
 		$db->prepare(Argument::any())->willReturn($sth);
 		$db->lastInsertId()->willReturn(1);
 		$db->getAttribute(PDO::ATTR_DRIVER_NAME)->willReturn('mysql');
+		
+		//USER MOCKS
+		$user_data = array(
+			'id'				=> 1,
+			'activationCode'	=> 'abcd1234',
+			'active'			=> 0,
+		);
+		
+		$user->get(Argument::cetera())->will(function($args) use (&$user_data){
+			return (isset($user_data[$args[0]])) ? $user_data[$args[0]] : null;
+		});
+		
+		$user->set(Argument::cetera())->will(function($args) use (&$user_data){
+			$user_data[$args[0]] = $args[1];
+		});
 		
 		//ROLE MANAGER MOCKS
 		
@@ -185,7 +204,59 @@ class AccountsManagerSpec extends ObjectBehavior{
 	
 	}
 	
-	function it_should_activate_users(){
+	function it_should_activate_users(UserAccount $user){
+		
+		$this->activate($user)->shouldReturn(true);
+		
+	}
+	
+	function it_should_not_activate_users_on_incorrect_activation_code(UserAccount $user){
+	
+		$this->activate($user, 'nottheactivationcode')->shouldReturn(false);
+		
+	}
+	
+	function it_should_activate_users_on_correct_activation_code(UserAccount $user){
+	
+		$this->activate($user, 'abcd1234')->shouldReturn(true);
+		
+	}
+	
+	function it_should_deactivate_users_and_return_activation_code(UserAccount $user){
+	
+		$user->active = 1;
+		$user->activationCode = '';
+		$this->deactivate($user)->shouldBeString();
+	
+	}
+	
+	function it_should_be_able_to_complete_the_forgotten_cycle(UserAccount $user, Options $options, PDOStatement $sth){
+	
+		$sth->rowCount()->willReturn(1);
+	
+		//let's assume that the forgotten emails were sent out
+		$user->forgottenCode = 'abcd1234';
+		
+		//assume login_forgot_expiration was for 1000 seconds
+		//assume that the user placed the request 900 seconds ago
+		$test_forgotten_time = date('Y-m-d H:i:s', strtotime('- 900 seconds', strtotime(date('Y-m-d H:i:s'))));
+		$user->forgottenTime = $test_forgotten_time;
+		
+		$this->forgotten_check($user, 'abcd1234')->shouldReturn(true);
+		
+		$this->forgotten_check($user, 'notthecorrectforgottencode')->shouldReturn(false);
+		
+		//exceeding the time should return false
+		$user->forgottenTime = date('Y-m-d H:i:s', strtotime('- 3000 seconds', strtotime(date('Y-m-d H:i:s'))));
+		$this->forgotten_check($user, 'abcd1234')->shouldReturn(false);
+	
+	}
+	
+	function it_should_manipulate_passwords(){
+	
+	}
+	
+	function it_should_be_able_to_get_users(){
 	
 		//I always use PDO::FETCH_OBJ, so no need to worry.
 		//but sometimes there's none
@@ -208,14 +279,6 @@ class AccountsManagerSpec extends ObjectBehavior{
 		// $sth->lastInsertId()->will(function($args) use (){
 		
 		// });
-	
-	}
-	
-	function it_should_be_able_to_complete_the_forgotten_cycle(){
-	
-	}
-	
-	function it_should_be_able_to_get_users(){
 	
 	}
 	

@@ -169,13 +169,13 @@ class AccountsManager{
 	
 		$query = "DELETE FROM {$this->options['table_users']} WHERE id = :user_id";
 		$sth = $this->db->prepare($query);
-		$sth->bindParam(':user_id', $user->id, PDO::PARAM_INT);
+		$sth->bindValue(':user_id', $user->id, PDO::PARAM_INT);
 		
 		try{
 		
 			$sth->execute();
 			
-			if($sth->rowCount >= 1){
+			if($sth->rowCount() >= 1){
 				return true;
 			}
 			
@@ -204,7 +204,7 @@ class AccountsManager{
 		
 		$query = "SELECT id FROM {$this->options['table_users']} WHERE {$this->options['login_identity']} = :identity";
 		$sth = $this->db->prepare($query);
-		$sth->bindParam(':identity', $identity, PDO::PARAM_STR);
+		$sth->bindValue(':identity', $identity, PDO::PARAM_STR);
 		
 		try {
 		
@@ -321,7 +321,7 @@ class AccountsManager{
 	
 		$query = "UPDATE {$this->options['table_users']} SET active = 1, activationCode = NULL WHERE id = :id";
 		$sth = $this->db->prepare($query);
-		$sth->bindParam(':id', $user->id, PDO::PARAM_INT);
+		$sth->bindValue(':id', $user->id, PDO::PARAM_INT);
 		
 		try{
 		
@@ -354,8 +354,8 @@ class AccountsManager{
 		$activation_code = $this->random->generate(40);
 		$query = "UPDATE {$this->options['table_users']} SET active = 0, activationCode = :activation_code WHERE id = :id";
 		$sth = $this->db->prepare($query);
-		$sth->bindParam(':activation_code', $activation_code, PDO::PARAM_STR);
-		$sth->bindParam(':id', $user->id, PDO::PARAM_INT);
+		$sth->bindValue(':activation_code', $activation_code, PDO::PARAM_STR);
+		$sth->bindValue(':id', $user->id, PDO::PARAM_INT);
 		
 		try{
 		
@@ -404,14 +404,14 @@ class AccountsManager{
 		
 		$query = "UPDATE {$this->options['table_users']} SET passwordChange = 1, forgottenCode = :forgotten_code, forgottenDate = :forgotten_date WHERE id = :user_id";
 		$sth = $this->db->prepare($query);
-		$sth->bindParam('forgotten_code', $user->forgottenCode, PDO::PARAM_STR);
-		$sth->bindParam('forgotten_date', $user->forgottenDate, PDO::PARAM_STR);
-		$sth->bindParam('user_id', $user->id, PDO::PARAM_INT);
+		$sth->bindValue('forgotten_code', $user->forgottenCode, PDO::PARAM_STR);
+		$sth->bindValue('forgotten_date', $user->forgottenDate, PDO::PARAM_STR);
+		$sth->bindValue('user_id', $user->id, PDO::PARAM_INT);
 		
 		try{
 		
 			$sth->execute();
-			if($sth->rowCount < 1){
+			if($sth->rowCount() < 1){
 				//no one was updated
 				$this->errors[] = $this->lang['forgot_unsuccessful'];
 				return false;
@@ -504,12 +504,13 @@ class AccountsManager{
 	
 		$query = "UPDATE {$this->options['table_users']} SET passwordChange = 0, forgottenCode = NULL, forgottenTime = NULL WHERE id = :user_id";
 		$sth = $this->db->prepare($query);
-		$sth->bindParam('user_id', $user->id, PDO::PARAM_INT);
+		$sth->bindValue('user_id', $user->id, PDO::PARAM_INT);
 		
 		try{
 		
 			$sth->execute();
-			if($sth->rowCount < 1){
+			
+			if($sth->rowCount() < 1){
 				//no one was updated
 				$this->errors[] = $this->lang['forgot_unsuccessful'];
 				return false;
@@ -548,7 +549,7 @@ class AccountsManager{
 		if($old_password){
 			$query = "SELECT password FROM {$this->options['table_users']} WHERE id = :user_id";
 			$sth = $this->db->prepare($query);
-			$sth->bindParam('user_id', $user->id, PDO::PARAM_INT);
+			$sth->bindValue('user_id', $user->id, PDO::PARAM_INT);
 			try{
 				$sth->execute();
 				$row = $sth->fetch(PDO::FETCH_OBJ);
@@ -577,13 +578,13 @@ class AccountsManager{
 		//update with new password
 		$query = "UPDATE {$this->options['table_users']} SET password = :new_password, passwordChange = 0 WHERE id = :user_id";
 		$sth = $this->db->prepare($query);
-		$sth->bindParam('new_password', $new_password, PDO::PARAM_STR);
-		$sth->bindParam('user_id', $user->id, PDO::PARAM_INT);
+		$sth->bindValue('new_password', $new_password, PDO::PARAM_STR);
+		$sth->bindValue('user_id', $user->id, PDO::PARAM_INT);
 		
 		try{
 		
 			$sth->execute();
-			if($sth->rowCount < 1){
+			if($sth->rowCount() < 1){
 				$this->errors[] = $this->lang['password_change_unsuccessful'];
 				return false;
 			}
@@ -671,7 +672,7 @@ class AccountsManager{
 	
 		$query = "SELECT * FROM {$this->options['table_users']} WHERE id = :user_id";
 		$sth = $this->db->prepare($query);
-		$sth->bindParam('user_id', $user_id, PDO::PARAM_INT);
+		$sth->bindValue('user_id', $user_id, PDO::PARAM_INT);
 		
 		try{
 		
