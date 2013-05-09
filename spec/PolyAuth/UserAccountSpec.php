@@ -34,6 +34,20 @@ class UserAccountSpec extends ObjectBehavior{
 		
 	}
 	
+	function it_should_be_able_to_setup_a_user_account_without_going_through_the_constructor(){
+	
+		$this->set_user_data(array(
+			'id'		=> 1,
+			'username'	=> 'CMCDragonkai',
+		));
+	
+		$this->id->shouldReturn(1);
+		$this->set_user(2); //calls the parent::__construct()
+		$this->id->shouldReturn(2);
+		$this->id()->shouldReturn(2);
+	
+	}
+	
 	function it_is_a_subject(){
 	
 		$this->shouldBeAnInstanceOf('RBAC\Subject\Subject');

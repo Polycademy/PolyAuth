@@ -11,9 +11,19 @@ class UserAccount extends Subject{
 
 	protected $user_data = array();
 
-	public function __construct($subject_id, RoleSet $role_set = null){
+	public function __construct($subject_id = false, RoleSet $role_set = null){
+		
+		if($subject_id){
+			$this->set_user($subject_id, $role_set);
+		}
+	
+	}
+	
+	public function set_user($subject_id, RoleSet $role_set = null){
+	
 		parent::__construct($subject_id, $role_set);
 		$this->user_data['id'] = $subject_id;
+	
 	}
 	
 	//this is an object!
@@ -60,21 +70,28 @@ class UserAccount extends Subject{
 	}
 	
 	public function get($key){
-		return (isset($this->user_data[$key])) ? $this->user_data[$key] : false;
+		return (isset($this->user_data[$key])) ? $this->user_data[$key] : null;
+	}
+	
+	public function set($key, $value){
+		$this->user_data[$key] = $value;
 	}
 	
 	//magic getters and setters
 	//only called on inaccessible properties
+	//these are very difficult to mock, so mocking the get and set functions are easier!
+	//that's why their implementations are a bit weird
     public function __get($key) {
-		return (isset($this->user_data[$key])) ? $this->user_data[$key] : false;
+		return $this->get($key);
     }
 
     public function __set($key, $value){
-		$this->user_data[$key] = $value;
+		$this->set($key, $value);
     }
 	
 	public function __isset($key){
-		return (isset($this->user_data[$key]));
+		$value = $this->get($key);
+		return (isset($value));
 	}
 	
 	public function __unset($key){
