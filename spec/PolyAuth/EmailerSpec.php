@@ -22,10 +22,21 @@ class EmailerSpec extends ObjectBehavior{
 		
 		$this->beConstructedWith($options, $language, $mailer);
 		
-		$user->id = 1;
-		$user->email = 'example@example.com';
-		$user->activationCode = 'ABCDEFG';
-		$user->forgottenCode = '1234567';
+		$user_data = array(
+			'id'				=> 1,
+			'username'			=> 'CMCDragonkai',
+			'email'				=> 'example@example.com',
+			'activationCode'	=> 'ABCDEFG',
+			'forgottenCode'		=> '1234567',
+		);
+		
+		$user->set(Argument::cetera())->will(function($args) use (&$user_data){
+			$user_data[$args[0]] = $args[1];
+		});
+		
+		$user->get(Argument::cetera())->will(function($args) use (&$user_data){
+			return (isset($user_data[$args[0]])) ? $user_data[$args[0]] : false;
+		});
 		
 		$this->user = $user;
 	
