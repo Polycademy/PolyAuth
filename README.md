@@ -21,7 +21,7 @@ Features:
 - Utilisation of loggers that support the PSR log interface
 - Automatic Session Handling based on PHP sessions but extendable by Session Handler Interface
 - PSR 1 Compatible and Framework Independent
-- PDO based Database Queries
+- PDO based Database Queries (only MySQL atm)
 - Logging in & Logging out
 - Autologin with Cookies
 - SQL setup as Codeigniter Migrations (easy to turn into your own)
@@ -36,6 +36,13 @@ To Do:
 - OAuth 1 & 2 Consumer
 - OAuth 2 Provider
 - SQL based migration
+- Storage Interface for Database Independent Functionality, will need to abstract PHPrbac
+- OTP API Integration (multifactor) - Interface or mobile app
+- HTTP Basic/Digest
+- OpenID
+- Captcha Service
+- User Access Logs
+- Cache Interface for DB calls
 
 Install with Composer:
 
