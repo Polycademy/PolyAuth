@@ -73,7 +73,6 @@ class AccountsManagerSpec extends ObjectBehavior{
 			}
 		});
 		$options_object = $options_object->reveal();
-		$options_object['login_forgot_expiration'] = 1000;
 	
 		//PDO MOCKS
 		$sth->bindParam(Argument::cetera())->willReturn(true);
@@ -105,6 +104,9 @@ class AccountsManagerSpec extends ObjectBehavior{
 			} else {
 				$user_data[$args[0]] = $args[1];
 			}
+		});
+		$user->offsetExists(Argument::any())->will(function($args) use (&$user_data){
+			return isset($user_data[$args[0]]);
 		});
 		$user = $user->reveal();
 		$this->user = $user;
@@ -147,13 +149,15 @@ class AccountsManagerSpec extends ObjectBehavior{
 			return true;
 		});
 		
-		//CONSTRUCT!
+		//FIXTURES
+		$options_object['login_forgot_expiration'] = 1000;
 		
+		//CONSTRUCT!
 		$this->beConstructedWith($db, $options_object, $language_object, null, $role_manager);
 	
 	}
 
-	function it_is_initializable(){
+	function it_is_initializable(UserAccount $user){
 	
 		$this->shouldHaveType('PolyAuth\Accounts\AccountsManager');
 		
@@ -224,55 +228,57 @@ class AccountsManagerSpec extends ObjectBehavior{
 	
 	}
 	
-	function it_should_activate_users(UserAccount $user){
+	function it_should_activate_users(){
 		
-		$this->activate($user)->shouldReturn(true);
-		
-	}
-	
-	function it_should_not_activate_users_on_incorrect_activation_code(UserAccount $user){
-	
-		$this->activate($user, 'nottheactivationcode')->shouldReturn(false);
+		$this->activate($this->user)->shouldReturn(true);
 		
 	}
 	
-	function it_should_activate_users_on_correct_activation_code(UserAccount $user){
+	function it_should_not_activate_users_on_incorrect_activation_code(){
 	
-		$this->activate($user, 'abcd1234')->shouldReturn(true);
+		$this->activate($this->user, 'nottheactivationcode')->shouldReturn(false);
 		
 	}
 	
-	function it_should_deactivate_users_and_return_activation_code(UserAccount $user){
+	function it_should_activate_users_on_correct_activation_code(){
 	
-		$user->active = 1;
-		$user->activationCode = '';
-		$this->deactivate($user)->shouldBeString();
+		$this->activate($this->user, 'abcd1234')->shouldReturn(true);
+		
+	}
+	
+	function it_should_deactivate_users_and_return_activation_code(){
+	
+		$this->user['active'] = 1;
+		$this->user['activationCode'] = '';
+		$this->deactivate($this->user)->shouldBeString();
 	
 	}
 	
-	function it_should_be_able_to_complete_the_forgotten_cycle(UserAccount $user, Options $options, PDOStatement $sth){
+	function it_should_be_able_to_complete_the_forgotten_cycle(PDOStatement $sth){
 	
 		$sth->rowCount()->willReturn(1);
+		
+		//assume login_forgot_expiration was for 1000 seconds (from fixtures)
 	
 		//let's assume that the forgotten emails were sent out
-		$user->forgottenCode = 'abcd1234';
+		$this->user['forgottenCode'] = 'abcd1234';
 		
-		//assume login_forgot_expiration was for 1000 seconds
 		//assume that the user placed the request 900 seconds ago
-		$test_forgotten_time = date('Y-m-d H:i:s', strtotime('- 900 seconds', strtotime(date('Y-m-d H:i:s'))));
-		$user->forgottenTime = $test_forgotten_time;
+		$this->user['forgottenTime'] = date('Y-m-d H:i:s', strtotime('- 900 seconds', strtotime(date('Y-m-d H:i:s'))));
 		
-		$this->forgotten_check($user, 'abcd1234')->shouldReturn(true);
+		$this->forgotten_check($this->user, 'abcd1234')->shouldReturn(true);
 		
-		$this->forgotten_check($user, 'notthecorrectforgottencode')->shouldReturn(false);
+		$this->forgotten_check($this->user, 'notthecorrectforgottencode')->shouldReturn(false);
 		
 		//exceeding the time should return false
-		$user->forgottenTime = date('Y-m-d H:i:s', strtotime('- 3000 seconds', strtotime(date('Y-m-d H:i:s'))));
-		$this->forgotten_check($user, 'abcd1234')->shouldReturn(false);
+		$this->user['forgottenTime'] = date('Y-m-d H:i:s', strtotime('- 3000 seconds', strtotime(date('Y-m-d H:i:s'))));
+		$this->forgotten_check($this->user, 'abcd1234')->shouldReturn(false);
 	
 	}
 	
 	function it_should_manipulate_passwords(){
+	
+		
 	
 	}
 	
