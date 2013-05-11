@@ -39,7 +39,7 @@ class Options implements \ArrayAccess{
 		'email_replyto_name'				=> '',
 		'email_cc'							=> false,
 		'email_bcc'							=> false,
-		'email_type'						=> 'html', //can be text or html
+		'email_html'						=> true, //will determine it was text or html based email
 		'email_activation_template'			=> 'Activation code: {{activation_code}} User id: {{user_id}}. Here is an example link http://example.com/?activation_code={{activation_code}}&user_id={{user_id}}',
 		'email_forgotten_identity_template'	=> 'Identity: {{identity}} User id {{user_id}}.',
 		'email_forgotten_password_template'	=> 'Temporary login: {{forgotten_code}} Identity: {{identity}} User id {{user_id}}.',

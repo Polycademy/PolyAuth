@@ -65,7 +65,7 @@ class Emailer{
 		
 		$body = $this->interpolate_email_body($body, array(
 			'{{user_id}}'			=> $user['id'],
-			'{{identity}}'			=> $user["{$this->options['identity']}"],
+			'{{identity}}'			=> $user[$this->options['login_identity']],
 		));
 		
 		if(!$this->send_mail($user['email'], $subject, $body, $alt_body)){
@@ -87,7 +87,7 @@ class Emailer{
 		
 		$body = $this->interpolate_email_body($body, array(
 			'{{user_id}}'			=> $user['id'],
-			'{{identity}}'			=> $user["{$this->options['identity']}"],
+			'{{identity}}'			=> $user[$this->options['login_identity']],
 			'{{forgotten_code}}'	=> $user['forgottenCode'],
 		));
 		

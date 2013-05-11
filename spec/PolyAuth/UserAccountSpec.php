@@ -10,7 +10,7 @@ use RBAC\Permission;
 
 class UserAccountSpec extends ObjectBehavior{
 
-	function let($subject_id, RoleSet $role_set, Role $role, Permission $permission){
+	function let(RoleSet $role_set, Role $role, Permission $permission){
 	
 		//fixtures
 		$subject_id = 1;
@@ -28,9 +28,10 @@ class UserAccountSpec extends ObjectBehavior{
 		
 	}
 
-	function it_is_initializable(){
+	function it_is_initializable_and_can_be_accessed_as_an_array(){
 	
 		$this->shouldHaveType('PolyAuth\UserAccount');
+		$this->shouldImplement('\ArrayAccess');
 		
 	}
 	
@@ -41,9 +42,9 @@ class UserAccountSpec extends ObjectBehavior{
 			'username'	=> 'CMCDragonkai',
 		));
 	
-		$this->id->shouldReturn(1);
+		$this['id']->shouldReturn(1);
 		$this->set_user(2); //calls the parent::__construct()
-		$this->id->shouldReturn(2);
+		$this['id']->shouldReturn(2);
 		$this->id()->shouldReturn(2);
 	
 	}
@@ -91,11 +92,7 @@ class UserAccountSpec extends ObjectBehavior{
 		$this->set_user_data($user_object);
 		
 		$this->get_user_data()->shouldReturn(array('id' => 1, 'username' => 'CMCDragonkai', 'height' => '8m', 'weight' => '100 kg'));
-		$this->get('username')->shouldReturn('CMCDragonkai');
-		
-		//magic getters
-		$this->username->shouldReturn('CMCDragonkai');
-		$this->id->shouldReturn(1);
+		$this['username']->shouldReturn('CMCDragonkai');
 	
 	}
 	

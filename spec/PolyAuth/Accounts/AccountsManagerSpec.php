@@ -24,7 +24,7 @@ use PolyAuth\Emailer;
 class AccountsManagerSpec extends ObjectBehavior{
 
 	public $prophet;
-	public $options;
+	public $user;
 
 	function let(
 		PDO $db, 
@@ -43,27 +43,39 @@ class AccountsManagerSpec extends ObjectBehavior{
 		$this->prophet = $prophet;
 		
 		//LANGUAGE MOCKS
-		
 		$language_array = $language->lang;
-		$language->offsetGet(Argument::any())->will(function($args) use ($language_array){
+		$language_object = $prophet->prophesize('PolyAuth\Language');
+		$language_object->offsetGet(Argument::any())->will(function($args) use (&$language_array){
 			$key = $args[0];
 			return $language_array[$key];
 		});
+		$language_object->offsetSet(Argument::cetera())->will(function($args) use (&$language_array){
+			if(is_null($args[0])){
+				$language_array[] = $args[1];
+			} else {
+				$language_array[$args[0]] = $args[1];
+			}
+		});
+		$language_object = $language_object->reveal();
 		
 		//OPTIONS MOCKS
-		
-		$option_array = $options->options;
-		$option_array['login_forgot_expiration'] = 1000;
-		
-		$options->offsetGet(Argument::any())->will(function($args) use (&$option_array){
+		$options = $options->options;
+		$options_object = $prophet->prophesize('PolyAuth\Options');
+		$options_object->offsetGet(Argument::any())->will(function($args) use (&$options){
 			$key = $args[0];
-			return $option_array[$key];
+			return $options[$key];
 		});
-		
-		$this->options = $options;
+		$options_object->offsetSet(Argument::cetera())->will(function($args) use (&$options){
+			if(is_null($args[0])){
+				$options[] = $args[1];
+			} else {
+				$options[$args[0]] = $args[1];
+			}
+		});
+		$options_object = $options_object->reveal();
+		$options_object['login_forgot_expiration'] = 1000;
 	
 		//PDO MOCKS
-		
 		$sth->bindParam(Argument::cetera())->willReturn(true);
 		$sth->bindValue(Argument::cetera())->willReturn(true);
 		$sth->execute(Argument::any())->willReturn(true);
@@ -76,26 +88,34 @@ class AccountsManagerSpec extends ObjectBehavior{
 		//USER MOCKS
 		$user_data = array(
 			'id'				=> 1,
+			'username'			=> 'CMCDragonkai',
+			'email'				=> 'example@example.com',
 			'activationCode'	=> 'abcd1234',
+			'forgottenCode'		=> '1234567',
 			'active'			=> 0,
 		);
-		
-		$user->get(Argument::cetera())->will(function($args) use (&$user_data){
-			return (isset($user_data[$args[0]])) ? $user_data[$args[0]] : null;
+		$user = $prophet->prophesize('PolyAuth\UserAccount');
+		$user->offsetGet(Argument::any())->will(function($args) use (&$user_data){
+			$key = $args[0];
+			return $user_data[$key];
 		});
-		
-		$user->set(Argument::cetera())->will(function($args) use (&$user_data){
-			$user_data[$args[0]] = $args[1];
+		$user->offsetSet(Argument::cetera())->will(function($args) use (&$user_data){
+			if(is_null($args[0])){
+				$user_data[] = $args[1];
+			} else {
+				$user_data[$args[0]] = $args[1];
+			}
 		});
+		$user = $user->reveal();
+		$this->user = $user;
 		
 		//ROLE MANAGER MOCKS
-		
 		$permission->permission_id = 1;
 		$permission->name = 'Permission Name';
 		$permission->description = 'A dummy permission';
 		
 		$role->role_id = 1;
-		$role->name = $options->options['role_default'];
+		$role->name = $options_object['role_default'];
 		$role->description = 'A dummy role';
 		$role->hasPermission(Argument::type('RBAC\Permission'))->willReturn(true);
 		$role->getPermissions()->willReturn(array($permission));
@@ -115,7 +135,7 @@ class AccountsManagerSpec extends ObjectBehavior{
 			$args[0]->loadRoleSet($role_set_object);
 		});
 		
-		$role_manager->roleFetchByName($options->options['role_default'])->willReturn($role);
+		$role_manager->roleFetchByName($options_object['role_default'])->willReturn($role);
 		
 		//adds a role to the role set of the role object
 		$role_manager->roleAddSubject(Argument::cetera())->will(function($args){
@@ -129,7 +149,7 @@ class AccountsManagerSpec extends ObjectBehavior{
 		
 		//CONSTRUCT!
 		
-		$this->beConstructedWith($db, $options, $language, null, $role_manager);
+		$this->beConstructedWith($db, $options_object, $language_object, null, $role_manager);
 	
 	}
 

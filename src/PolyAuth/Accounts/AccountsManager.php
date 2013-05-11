@@ -567,7 +567,7 @@ class AccountsManager{
 		}
 		
 		//password complexity check on the new_password
-		if(!$this->password_manager->complex_enough($new_password, $old_password, $user["{$this->options['identity']}"])){
+		if(!$this->password_manager->complex_enough($new_password, $old_password, $user[$this->options['login_identity']])){
 			$this->errors += $this->password_manager->get_errors();
 			return false;
 		}
