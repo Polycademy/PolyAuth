@@ -41,12 +41,12 @@ class Emailer{
 			
 		//use sprintf to insert activation code and user id
 		$body = $this->interpolate_email_body($body, array(
-			'{{user_id}}'			=> $user->id,
-			'{{activation_code}}'	=> $user->activationCode,
+			'{{user_id}}'			=> $user['id'],
+			'{{activation_code}}'	=> $user['activationCode'],
 		));
 		
 		//send email via PHPMailer
-		if(!$this->send_mail($user->email, $subject, $body, $alt_body)){
+		if(!$this->send_mail($user['email'], $subject, $body, $alt_body)){
 			if($this->logger){
 				$this->logger->error('Failed to send activation email.');
 			}
@@ -64,11 +64,11 @@ class Emailer{
 		$body = (empty($body)) ? $this->options['email_forgotten_identity_template'] : $body;
 		
 		$body = $this->interpolate_email_body($body, array(
-			'{{user_id}}'			=> $user->id,
-			'{{identity}}'			=> $user->{$this->options['identity']},
+			'{{user_id}}'			=> $user['id'],
+			'{{identity}}'			=> $user["{$this->options['identity']}"],
 		));
 		
-		if(!$this->send_mail($user->email, $subject, $body, $alt_body)){
+		if(!$this->send_mail($user['email'], $subject, $body, $alt_body)){
 			if($this->logger){
 				$this->logger->error('Failed to send forgotten identity email.');
 			}
@@ -86,12 +86,12 @@ class Emailer{
 		$body = (empty($body)) ? $this->options['email_forgotten_password_template'] : $body;
 		
 		$body = $this->interpolate_email_body($body, array(
-			'{{user_id}}'			=> $user->id,
-			'{{identity}}'			=> $user->{$this->options['identity']},
-			'{{forgotten_code}}'	=> $user->forgottenCode,
+			'{{user_id}}'			=> $user['id'],
+			'{{identity}}'			=> $user["{$this->options['identity']}"],
+			'{{forgotten_code}}'	=> $user['forgottenCode'],
 		));
 		
-		if(!$this->send_mail($user->email, $subject, $body, $alt_body)){
+		if(!$this->send_mail($user['email'], $subject, $body, $alt_body)){
 			if($this->logger){
 				$this->logger->error('Failed to send forgotten password email.');
 			}

@@ -151,7 +151,7 @@ class AccountsManager{
 		}
 		
 		//automatically send the activation email
-		if($this->options['reg_activation'] == 'email' AND $this->options['email'] AND $registered_user->email){
+		if($this->options['reg_activation'] == 'email' AND $this->options['email'] AND $registered_user['email']){
 			$this->emailer->send_activation($registered_user);
 		}
 		
@@ -169,7 +169,7 @@ class AccountsManager{
 	
 		$query = "DELETE FROM {$this->options['table_users']} WHERE id = :user_id";
 		$sth = $this->db->prepare($query);
-		$sth->bindValue(':user_id', $user->id, PDO::PARAM_INT);
+		$sth->bindValue(':user_id', $user['id'], PDO::PARAM_INT);
 		
 		try{
 		
@@ -281,7 +281,7 @@ class AccountsManager{
 		if($this->deactivate($user)){
 		
 			//we don't need to check what the reg_activation is, give options to the end user
-			if($this->options['email'] AND $user->email){
+			if($this->options['email'] AND $user['email']){
 				//$user will contain the new activation code
 				return $this->emailer->send_activation($user);
 			}
@@ -308,7 +308,7 @@ class AccountsManager{
 		}
 		
 		//$user will already contain the activationCode and id
-		if($user->activationCode == $activation_code){
+		if($user['activationCode'] == $activation_code){
 			return $this->force_activate($user);
 		}
 		
@@ -321,19 +321,19 @@ class AccountsManager{
 	
 		$query = "UPDATE {$this->options['table_users']} SET active = 1, activationCode = NULL WHERE id = :id";
 		$sth = $this->db->prepare($query);
-		$sth->bindValue(':id', $user->id, PDO::PARAM_INT);
+		$sth->bindValue(':id', $user['id'], PDO::PARAM_INT);
 		
 		try{
 		
 			$sth->execute();
-			$user->active = 1;
-			$user->activationCode = null;
+			$user['active'] = 1;
+			$user['activationCode'] = null;
 			return true;
 		
 		}catch(PDOException $db_err){
 		
 			if($this->logger){
-				$this->logger->error("Failed to execute query to activate user {$user->id}.", ['exception' => $db_err]);
+				$this->logger->error("Failed to execute query to activate user {$user['id']}.", ['exception' => $db_err]);
 			}
 			$this->errors[] = $this->lang['activate_unsuccessful'];
 			return false;
@@ -355,19 +355,19 @@ class AccountsManager{
 		$query = "UPDATE {$this->options['table_users']} SET active = 0, activationCode = :activation_code WHERE id = :id";
 		$sth = $this->db->prepare($query);
 		$sth->bindValue(':activation_code', $activation_code, PDO::PARAM_STR);
-		$sth->bindValue(':id', $user->id, PDO::PARAM_INT);
+		$sth->bindValue(':id', $user['id'], PDO::PARAM_INT);
 		
 		try{
 		
 			$sth->execute();
-			$user->active = 0;
-			$user->activationCode = $activation_code;
+			$user['active'] = 0;
+			$user['activationCode'] = $activation_code;
 			return $activation_code;
 		
 		}catch(PDOException $db_err){
 		
 			if($this->logger){
-				$this->logger->error("Failed to execute query to deactivate user {$user->id}.", ['exception' => $db_err]);
+				$this->logger->error("Failed to execute query to deactivate user {$user['id']}.", ['exception' => $db_err]);
 			}
 			$this->errors[] = $this->lang['deactivate_unsuccessful'];
 			return false;
@@ -399,14 +399,14 @@ class AccountsManager{
 	 */
 	public function forgotten_password(UserAccount $user){
 	
-		$user->forgottenCode = $this->random->generate(40);
-		$user->forgottenDate = date('Y-m-d H:i:s');
+		$user['forgottenCode'] = $this->random->generate(40);
+		$user['forgottenDate'] = date('Y-m-d H:i:s');
 		
 		$query = "UPDATE {$this->options['table_users']} SET passwordChange = 1, forgottenCode = :forgotten_code, forgottenDate = :forgotten_date WHERE id = :user_id";
 		$sth = $this->db->prepare($query);
-		$sth->bindValue('forgotten_code', $user->forgottenCode, PDO::PARAM_STR);
-		$sth->bindValue('forgotten_date', $user->forgottenDate, PDO::PARAM_STR);
-		$sth->bindValue('user_id', $user->id, PDO::PARAM_INT);
+		$sth->bindValue('forgotten_code', $user['forgottenCode'], PDO::PARAM_STR);
+		$sth->bindValue('forgotten_date', $user['forgottenDate'], PDO::PARAM_STR);
+		$sth->bindValue('user_id', $user['id'], PDO::PARAM_INT);
 		
 		try{
 		
@@ -442,13 +442,13 @@ class AccountsManager{
 	public function forgotten_check(UserAccount $user, $forgotten_code){
 	
 		//check if there is such thing as a forgottenCode and forgottenTime
-		if(!empty($user->forgottenCode) AND $user->forgottenCode == $forgotten_code){
+		if(!empty($user['forgottenCode']) AND $user['forgottenCode'] == $forgotten_code){
 		
 			$allowed_duration = $this->options['login_forgot_expiration'];
 			
 			if($allowed_duration != 0){
 		
-				$forgotten_time = strtotime($user->forgottenTime);
+				$forgotten_time = strtotime($user['forgottenTime']);
 				//add the allowed duration the forgotten time
 				$forgotten_time_duration = strtotime("+ $allowed_duration seconds", $forgotten_time);
 				//compare with the current time
@@ -504,7 +504,7 @@ class AccountsManager{
 	
 		$query = "UPDATE {$this->options['table_users']} SET passwordChange = 0, forgottenCode = NULL, forgottenTime = NULL WHERE id = :user_id";
 		$sth = $this->db->prepare($query);
-		$sth->bindValue('user_id', $user->id, PDO::PARAM_INT);
+		$sth->bindValue('user_id', $user['id'], PDO::PARAM_INT);
 		
 		try{
 		
@@ -516,8 +516,8 @@ class AccountsManager{
 				return false;
 			}
 			
-			$user->forgottenCode = null;
-			$user->forgottenTime = null;
+			$user['forgottenCode'] = null;
+			$user['forgottenTime'] = null;
 			
 			return true;
 		
@@ -549,7 +549,7 @@ class AccountsManager{
 		if($old_password){
 			$query = "SELECT password FROM {$this->options['table_users']} WHERE id = :user_id";
 			$sth = $this->db->prepare($query);
-			$sth->bindValue('user_id', $user->id, PDO::PARAM_INT);
+			$sth->bindValue('user_id', $user['id'], PDO::PARAM_INT);
 			try{
 				$sth->execute();
 				$row = $sth->fetch(PDO::FETCH_OBJ);
@@ -559,7 +559,7 @@ class AccountsManager{
 				}
 			}catch(PDOException $db_err){
 				if($this->logger){
-					$this->logger->error("Failed to execute query to get the password hash from user {$user->id}.", ['exception' => $db_err]);
+					$this->logger->error("Failed to execute query to get the password hash from user {$user['id']}.", ['exception' => $db_err]);
 				}
 				$this->errors[] = $this->lang['password_change_unsuccessful'];
 				return false;
@@ -567,7 +567,7 @@ class AccountsManager{
 		}
 		
 		//password complexity check on the new_password
-		if(!$this->password_manager->complex_enough($new_password, $old_password, $user->{$this->options['identity']})){
+		if(!$this->password_manager->complex_enough($new_password, $old_password, $user["{$this->options['identity']}"])){
 			$this->errors += $this->password_manager->get_errors();
 			return false;
 		}
@@ -579,7 +579,7 @@ class AccountsManager{
 		$query = "UPDATE {$this->options['table_users']} SET password = :new_password, passwordChange = 0 WHERE id = :user_id";
 		$sth = $this->db->prepare($query);
 		$sth->bindValue('new_password', $new_password, PDO::PARAM_STR);
-		$sth->bindValue('user_id', $user->id, PDO::PARAM_INT);
+		$sth->bindValue('user_id', $user['id'], PDO::PARAM_INT);
 		
 		try{
 		
@@ -592,7 +592,7 @@ class AccountsManager{
 		}catch(PDOException $db_err){
 		
 			if($this->logger){
-				$this->logger->error("Failed to execute query to update password hash with user {$user->id}.", ['exception' => $db_err]);
+				$this->logger->error("Failed to execute query to update password hash with user {$user['id']}.", ['exception' => $db_err]);
 			}
 			$this->errors[] = $this->lang['password_change_unsuccessful'];
 			return false;
@@ -636,7 +636,7 @@ class AccountsManager{
 	public function force_password_change(array $users){
 	
 		foreach($users as $user){
-			$in_sql[] = $user->id;
+			$in_sql[] = $user['id'];
 		}
 		
 		$in_sql = implode(',', $in_sql);
