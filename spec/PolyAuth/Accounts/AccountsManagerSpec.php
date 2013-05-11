@@ -192,7 +192,7 @@ class AccountsManagerSpec extends ObjectBehavior{
 	
 	}
 	
-	function it_should_register_new_users_with_appropriate_permissions(PDOStatement $sth, RoleManager $role_manager, Role $role){
+	function it_should_register_new_users_with_appropriate_permissions(PDOStatement $sth){
 		
 		//no need to have "all" the fields, but the necessary ones
 		$user_object = new \stdClass;
@@ -276,39 +276,147 @@ class AccountsManagerSpec extends ObjectBehavior{
 	
 	}
 	
-	function it_should_manipulate_passwords(){
+	function it_should_manipulate_passwords(PDOStatement $sth){
 	
-		
+		$sth->rowCount()->willReturn(1);
 	
-	}
-	
-	function it_should_be_able_to_get_users(){
-	
-		//I always use PDO::FETCH_OBJ, so no need to worry.
-		//but sometimes there's none
-		// $sth->fetch()->will(function($args) use (){
+		$this->change_password($this->user, 'blah1234')->shouldReturn(true);
 		
-		// });
+		$this->change_password($this->user, 's')->shouldReturn(false);
 		
-		// $sth->fetch(PDO::FETCH_OBJ)->will(function($args) use (){
+		$this->change_password($this->user, rand(40, 40))->shouldReturn(false);
 		
-		// });
+		$this->reset_password($this->user)->shouldBeString();
 		
-		// $sth->fetchAll(PDO::FETCH_OBJ)->will(function($args) use (){
-		
-		// });
-		
-		// $sth->rowCount()->will(function($args) use (){
-		
-		// });
-		
-		// $sth->lastInsertId()->will(function($args) use (){
-		
-		// });
+		$this->force_password_change(array($this->user))->shouldReturn(true);
 	
 	}
 	
-	function it_should_manipulate_roles_and_permissions(){
+	function it_should_be_able_to_get_a_user(PDOStatement $sth){
+	
+		//no need to have "all" the fields, but the necessary ones
+		$user_object = new \stdClass;
+		$user_object->id = 1;
+		$user_object->username = 'CMCDragonkai';
+		$user_object->password = 'P@szw0rd';
+		$user_object->email = 'example@example.com';
+		$user_object->extraRandomField = 'Hoopla!';
+		
+		//for the get_user query to return a database object
+		$sth->fetch(PDO::FETCH_OBJ)->willReturn($user_object);
+		
+		$user_account = $this->get_user(1);
+		
+		$user_account->shouldBeAnInstanceOf('PolyAuth\UserAccount');
+		
+		//with no password
+		$user_account->get_user_data()->shouldReturn(array(
+			'id'				=> 1,
+			'username'			=> 'CMCDragonkai',
+			'email'				=> 'example@example.com',
+			'extraRandomField'	=> 'Hoopla!',
+		));
+		
+		$user_account->has_permission('Permission Name')->shouldReturn(true);
+	
+	}
+	
+	function it_should_be_able_to_get_an_array_of_users(PDOStatement $sth){
+	
+		//no need to have "all" the fields, but the necessary ones
+		$user_object = new \stdClass;
+		$user_object->id = 1;
+		$user_object->username = 'CMCDragonkai';
+		$user_object->password = 'P@szw0rd';
+		$user_object->email = 'example@example.com';
+		$user_object->extraRandomField = 'Hoopla!';
+		
+		$user_object2 = new \stdClass;
+		$user_object2->id = 2;
+		$user_object2->username = 'CMCDragonkai';
+		$user_object2->password = 'P@szw0rd';
+		$user_object2->email = 'example@example.com';
+		$user_object2->extraRandomField = 'Hoopla!';
+		
+		$sth->fetchAll(PDO::FETCH_OBJ)->willReturn(array(
+			$user_object,
+			$user_object2,
+		));
+		
+		$this->get_users(array(1, 2))->shouldBeArray();
+		$this->get_users(array(1, 2))->shouldHaveCount(2);
+		
+		$users = $this->get_users(array(1, 2));
+		
+		//based on their ids
+		$users[1]->shouldBeAnInstanceOf('PolyAuth\UserAccount');
+		$users[2]->shouldBeAnInstanceOf('PolyAuth\UserAccount');
+		
+		$users[1]->has_permission('Permission Name')->shouldReturn(true);
+	
+	}
+	
+	function it_should_get_users_by_roles(PDOStatement $sth){
+	
+		$role_object = new \stdClass;
+		$role_object->subject_id = 1;
+		
+		$user_object = new \stdClass;
+		$user_object->id = 1;
+		$user_object->username = 'CMCDragonkai';
+		$user_object->password = 'P@szw0rd';
+		$user_object->email = 'example@example.com';
+		$user_object->extraRandomField = 'Hoopla!';
+		
+		// $sth->fetchAll(PDO::FETCH_OBJ)->willReturn(array($role_object));
+		$sth->fetchAll(PDO::FETCH_OBJ)->will(function() use ($role_object, $user_object){
+			$this->fetchAll(PDO::FETCH_OBJ)->willReturn(array($user_object));
+			return array($role_object);
+		});
+		
+		$users = $this->get_users_by_role(array('random_role_name'));
+		
+		$users->shouldBeArray();
+		$users->shouldHaveCount(1);
+		$users[1]->shouldBeAnInstanceOf('PolyAuth\UserAccount');
+	
+	}
+	
+	function it_should_get_users_by_permissions(PDOStatement $sth){
+	
+		$permission_object = new \stdClass;
+		$permission_object->subject_id = 1;
+		
+		$user_object = new \stdClass;
+		$user_object->id = 1;
+		$user_object->username = 'CMCDragonkai';
+		$user_object->password = 'P@szw0rd';
+		$user_object->email = 'example@example.com';
+		$user_object->extraRandomField = 'Hoopla!';
+		
+		// $sth->fetchAll(PDO::FETCH_OBJ)->willReturn(array($role_object));
+		$sth->fetchAll(PDO::FETCH_OBJ)->will(function() use ($permission_object, $user_object){
+			$this->fetchAll(PDO::FETCH_OBJ)->willReturn(array($user_object));
+			return array($permission_object);
+		});
+		
+		$users = $this->get_users_by_permission(array('random_permission_name'));
+		
+		$users->shouldBeArray();
+		$users->shouldHaveCount(1);
+		$users[1]->shouldBeAnInstanceOf('PolyAuth\UserAccount');
+	
+	}
+	
+	function it_should_get_roles(){
+	
+	}
+	
+	function it_should_register_roles_and_permissions(){
+	
+	}
+	
+	function it_should_delete_roles_and_permissions(){
 	
 	}
 	

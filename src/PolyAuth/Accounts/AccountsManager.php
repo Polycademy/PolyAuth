@@ -716,7 +716,7 @@ class AccountsManager{
 		//some users may not exist, we'll return null for the ones that don't exist
 		$list_of_ids = implode(',', $user_ids);
 		$query = "SELECT * FROM {$this->options['table_users']} WHERE id IN ($list_of_ids)";
-		$sth = $this->db->prepare();
+		$sth = $this->db->prepare($query);
 		
 		try{
 		
@@ -744,7 +744,7 @@ class AccountsManager{
 			$user = new UserAccount($row->id);
 			$user->set_user_data($row);
 			$this->role_manager->loadSubjectRoles($user);
-			$output_users[$id] = $user;
+			$output_users[$row->id] = $user;
 		
 		}
 		
@@ -820,6 +820,8 @@ class AccountsManager{
 			INNER JOIN auth_permissions AS ap ON arp.permission_id = ap.permission_id
 			WHERE ap.name IN ($permission_names)
 		";
+		
+		$sth = $this->db->prepare($query);
 		
 		try{
 			
