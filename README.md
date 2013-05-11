@@ -33,16 +33,11 @@ Features:
 
 To Do:
 
-- OAuth 1 & 2 Consumer
-- OAuth 2 Provider
 - SQL based migration
+- Authentication Strategy Inteface - (Manual (null), HTTP Basic/Digest, OpenID, OAuth 2 Provider, OAuth 1 & 2 Consumer)
 - Storage Interface for Database Independent Functionality, will need to abstract PHPrbac
-- OTP API Integration (multifactor) - Interface or mobile app
-- HTTP Basic/Digest
-- OpenID
-- Captcha Service
-- User Access Logs
 - Cache Interface for DB calls
+- User Access Logs (just use Monolog)
 
 Install with Composer:
 
