@@ -23,13 +23,7 @@ class Language implements \ArrayAccess{
 		'password_diffpass'						=> 'Password must be a bit more different than the last password.',
 		'password_diffidentity'					=> 'Password should not contain your identity.',
 		'password_unique'						=> 'Password must contain more unique characters.',
-		'password_flag'							=> 'Was unable to flag the password for change on the next login.',
-		'forgot_password_unsuccessful'			=> 'Unable to Reset Password',
-		'forgot_unsuccessful'					=> 'Unable to update forgotten code and dates.',
-		'forgot_check_unsuccessful'				=> 'The forgotten code is invalid or forgotten time limit has been exceeded.',
 		// Activation
-		'activate_unsuccessful'					=> 'Unable to Activate Account',
-		'deactivate_unsuccessful'				=> 'Unable to De-Activate Account',
 		'activation_email_unsuccessful'			=> 'Unable to Send Activation Email',
 		// User
 		'user_select_unsuccessful'				=> 'Could not find the user or users.',
@@ -45,13 +39,13 @@ class Language implements \ArrayAccess{
 		'logout_successful'						=> 'Logged Out Successfully',
 		// Account Changes
 		'update_unsuccessful'					=> 'Unable to Update Account Information',
-		'delete_unsuccessful'					=> 'Unable to Delete User',
 		'delete_already'						=> 'User is already Deleted or Doesn\'t Exist.',
 		// Roles
 		'role_not_exists'						=> 'Specified role(s) don\'t exist.',
 		'role_already_exists'					=> 'Role name already taken',
 		'role_delete_unsuccessful'				=> 'Unable to delete role',
 		'role_save_unsuccessful'				=> 'Unable to save one of the roles.',
+		'role_register_unsuccessful'			=> 'Role failed to be registered.',
 		'role_assignment_unsuccessful'			=> 'Could not assign the role to the specified account.',
 		// Permissions
 		'permission_select_unsuccessful'			=> 'Could not select permissions.',

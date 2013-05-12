@@ -2,16 +2,11 @@
 
 namespace PolyAuth;
 
-//for logger
 use Psr\Log\LoggerInterface;
-
-//for options
 use PolyAuth\Options;
-
-//for languages
 use PolyAuth\Language;
-
 use PolyAuth\UserAccount;
+use PolyAuth\EmailException;
 
 //this class handles the sending of emails
 class Emailer{
@@ -21,8 +16,6 @@ class Emailer{
 	protected $logger;
 	protected $mailer;
 	
-	protected $errors = array();
-
 	public function __construct(Options $options, Language $language, \PHPMailer $mailer = null, LoggerInterface $logger = null){
 	
 		$this->options = $options;
@@ -50,8 +43,7 @@ class Emailer{
 			if($this->logger){
 				$this->logger->error('Failed to send activation email.');
 			}
-			$this->errors[] = $this->lang['activation_email_unsuccessful'];
-			return false;
+			throw new EmailException($this->lang['activation_email_unsuccessful']);
 		}
 		
 		return true;
@@ -72,8 +64,7 @@ class Emailer{
 			if($this->logger){
 				$this->logger->error('Failed to send forgotten identity email.');
 			}
-			$this->errors[] = $this->lang['forgotten_identity_email_unsuccessful'];
-			return false;
+			throw new EmailException($this->lang['forgotten_identity_email_unsuccessful']);
 		}
 		
 		return true;
@@ -95,8 +86,7 @@ class Emailer{
 			if($this->logger){
 				$this->logger->error('Failed to send forgotten password email.');
 			}
-			$this->errors[] = $this->lang['forgotten_password_email_unsuccessful'];
-			return false;
+			throw new EmailException($this->lang['forgotten_password_email_unsuccessful']);
 		}
 		
 		return true;
@@ -144,14 +134,6 @@ class Emailer{
 		
 		return true;
 	
-	}
-	
-	public function get_errors(){
-		if(!empty($this->errors)){
-			return $this->errors;
-		}else{
-			return false;
-		}
 	}
 
 }

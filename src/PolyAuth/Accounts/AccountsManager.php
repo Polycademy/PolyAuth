@@ -34,6 +34,11 @@ use PolyAuth\Exceptions\RegisterValidationException;
 use PolyAuth\Exceptions\PasswordValidationException;
 use PolyAuth\Exceptions\UserDuplicateException;
 use PolyAuth\Exceptions\UserNotFoundException;
+use PolyAuth\Exceptions\UserRoleAssignmentException;
+use PolyAuth\Exceptions\RoleNotFoundException;
+use PolyAuth\Exceptions\PermissionNotFoundException;
+use PolyAuth\Exceptions\RoleSaveException;
+use PolyAuth\Exceptions\PermissionSaveException;
 
 class AccountsManager{
 
@@ -713,26 +718,25 @@ class AccountsManager{
 	 */
 	public function get_users(array $user_ids){
 		
-		//some users may not exist, we'll return null for the ones that don't exist
-		$list_of_ids = implode(',', $user_ids);
-		$query = "SELECT * FROM {$this->options['table_users']} WHERE id IN ($list_of_ids)";
+		$select_placeholders = implode(",", array_fill(0, count($user_ids), '?'));
+		
+		$query = "SELECT * FROM {$this->options['table_users']} WHERE id IN ($select_placeholders)";
 		$sth = $this->db->prepare($query);
 		
 		try{
 		
-			$sth->execute();
+			$sth->execute($user_ids);
             $result = $sth->fetchAll(PDO::FETCH_OBJ);
 			if(!$result){
-				return null;
+				throw new UserNotFoundException($this->lang('user_select_unsuccessful'));
 			}
 			
 		}catch(PDOException $db_err){
 		
 			if($this->logger){
-				$this->logger->error("Failed to execute query to select users of $list_of_ids.", ['exception' => $db_err]);
+				$this->logger->error("Failed to execute query to select users.", ['exception' => $db_err]);
 			}
-			$this->errors[] = $this->lang['user_select_unsuccessful'];
-			return false;
+			throw $db_err;
 		
 		}
 		
@@ -753,42 +757,40 @@ class AccountsManager{
 	}
 	
 	/**
-	 * Gets an array of users based on an array of roles
+	 * Gets an array of users based on an array of role names
 	 *
 	 * @param $roles array
 	 * @return $users array | null
 	 */
 	public function get_users_by_role(array $roles){
 	
-		$role_names = implode(',', $roles);
+		$select_placeholders = implode(",", array_fill(0, count($roles), '?'));
 		
 		//double join
 		$query = "
 			SELECT asr.subject_id 
 			FROM auth_subject_role AS asr 
 			INNER JOIN auth_role AS ar ON asr.role_id = ar.role_id 
-			WHERE ar.name IN ($role_names)
+			WHERE ar.name IN ($select_placeholders)
 		";
 		
 		$sth = $this->db->prepare($query);
 		
 		try{
 			
-			$sth->execute();
+			$sth->execute($roles);
 			$result = $sth->fetchAll(PDO::FETCH_OBJ);
 			if(!$result){
 				//no users correspond to any of the roles
-				$this->errors[] = $this->lang['user_role_select_empty'];
-				return null;
+				throw UserNotFoundException($this->lang['user_role_select_empty']);
 			}
 		
 		}catch(PDOException $db_err){
 		
 			if($this->logger){
-				$this->logger->error("Failed to execute query to select subjects from auth subject role based on roles: $role_names", ['exception' => $db_err]);
+				$this->logger->error('Failed to execute query to select subjects from auth subject role based on role names.', ['exception' => $db_err]);
 			}
-			$this->errors[] = $this->lang['user_role_select_unsuccessful'];
-			return false;
+			throw $db_err;
 		
 		}
 		
@@ -803,14 +805,14 @@ class AccountsManager{
 	}
 	
 	/**
-	 * Gets an array of users based on an array of permissions
+	 * Gets an array of users based on an array of permission names
 	 *
 	 * @param $permissions array
 	 * @return $users array | null
 	 */
 	public function get_users_by_permission(array $permissions){
 	
-		$permission_names = implode(',', $permissions);
+		$select_placeholders = implode(",", array_fill(0, count($permissions), '?'));
 		
 		//triple join
 		$query = "
@@ -818,28 +820,26 @@ class AccountsManager{
 			FROM auth_subject_role AS asr 
 			INNER JOIN auth_role_permissions AS arp ON asr.role_id = arp.role_id
 			INNER JOIN auth_permissions AS ap ON arp.permission_id = ap.permission_id
-			WHERE ap.name IN ($permission_names)
+			WHERE ap.name IN ($select_placeholders)
 		";
 		
 		$sth = $this->db->prepare($query);
 		
 		try{
 			
-			$sth->execute();
+			$sth->execute($permissions);
 			$result = $sth->fetchAll(PDO::FETCH_OBJ);
 			if(!$result){
 				//no users correspond to any of the permissions
-				$this->errors[] = $this->lang['user_permission_select_empty'];
-				return null;
+				throw UserNotFoundException($this->lang['user_permission_select_empty']);
 			}
 		
 		}catch(PDOException $db_err){
 		
 			if($this->logger){
-				$this->logger->error("Failed to execute query to select subjects from auth subject role based on permissions: $permission_names", ['exception' => $db_err]);
+				$this->logger->error('Failed to execute query to select subjects from auth subject role based on permission names.', ['exception' => $db_err]);
 			}
-			$this->errors[] = $this->lang['user_permission_select_unsuccessful'];
-			return false;
+			throw $db_err;
 		
 		}
 		
@@ -879,7 +879,10 @@ class AccountsManager{
 		}
 		
 		if(empty($roles)){
-			$this->errors[] = $this->lang['role_not_exists'];
+			if(!empty($requested_roles)){
+				throw new RoleNotFoundException($this->lang['role_not_exists']);
+			}
+			//if it was empty, we just return null as in, no roles exist
 			return null;
 		}
 		
@@ -901,22 +904,22 @@ class AccountsManager{
 		
 		if($requested_permissions){
 		
-			$permission_names = implode(',', $requested_permissions);
-			$query = "SELECT * FROM auth_permission WHERE name IN ($permission_names)";
+			$select_placeholders = implode(",", array_fill(0, count($requested_permissions), '?'));
+			
+			$query = "SELECT * FROM auth_permission WHERE name IN ($select_placeholders)";
 			$sth = $this->db->prepare($query);
 		
 			try{
 			
-				$sth->execute();
+				$sth->execute($requested_permissions);
 				$permissions = $sth->fetchAll(PDO::FETCH_OBJ);
 			
 			}catch(PDOException $db_err){
 			
 				if($this->logger){
-					$this->logger->error("Failed to execute query to select permissions from auth permission based on these permission names: $permission_names", ['exception' => $db_err]);
+					$this->logger->error('Failed to execute query to select permissions from auth permission based on permission names.', ['exception' => $db_err]);
 				}
-				$this->errors[] = $this->lang['permission_select_unsuccessful'];
-				return false;
+				throw $db_err;
 			
 			}
 		
@@ -927,7 +930,10 @@ class AccountsManager{
 		}
 		
 		if(empty($permissions)){
-			$this->errors[] = $this->lang['permission_not_exists'];
+			if(!empty($requested_permissions)){
+				throw new PermissionNotFoundException($this->lang['permission_not_exists']);
+			}
+			//if it was empty, we just return null as in, no permissions exist
 			return null;
 		}
 		
@@ -956,8 +962,7 @@ class AccountsManager{
 		}
 		
 		if(!$this->role_manager->roleSave($role_object)){
-			$this->errors[] = $this->lang('role_save_unsuccessful');
-			return false;
+			throw new RoleSaveException($this->lang('role_save_unsuccessful'));
 		}
 		
 		return $role_object;
@@ -1040,8 +1045,8 @@ class AccountsManager{
 			
 			//if any one of the roles failed to be registered (created/updated), fail it
 			if(!$role_object){
-				return false;
-			}			
+				throw new RoleSaveException($this->lang('role_register_unsuccessful'));
+			}
 			
 			//at this point role object has already been created or updated
 			//if the perms have not been set, there's no need to update it
@@ -1062,12 +1067,10 @@ class AccountsManager{
 					
 						$permission_object = Permission::create($permission_name, $permission_desc);
 						if(!$this->role_manager->permissionSave($permission_object)){
-							$this->errors[] = $this->lang('permission_save_unsuccessful');
-							return false;
+							throw new PermissionSaveException($this->lang('permission_save_unsuccessful'));
 						}
 						if(!$role_object->addPermission($permission_object)){
-							$this->errors[] = $this->lang('permission_assignment_unsuccessful');
-							return false;
+							throw new PermissionSaveException($this->lang('permission_assignment_unsuccessful'));
 						}
 						
 					}
@@ -1075,15 +1078,14 @@ class AccountsManager{
 				}
 				
 				if(!$this->role_manager->roleSave($role_object)){
-					$this->errors[] = $this->lang('role_save_unsuccessful');
-					return false;
+					throw new RoleSaveException($this->lang('role_save_unsuccessful'));
 				}
 				
 			}
 			
 			$role_names[] = $role_name;
 		
-		}		
+		}
 		
 		return $this->get_roles($role_names);
 	
@@ -1099,8 +1101,7 @@ class AccountsManager{
 	
 		if($permission_object = $this->get_permissions(array($permission_name))[0]){
 			if(!$this->role_manager->permissionDelete($permission_object)){
-				$this->errors[] = $this->lang('permission_delete_unsuccessful');
-				return false;
+				throw new PermissionSaveException($this->lang('permission_delete_unsuccessful'));
 			}
 		}
 		return true;
@@ -1150,16 +1151,11 @@ class AccountsManager{
 				if($role_object = $this->role_manager->roleFetchByName($key)){
 				
 					foreach($value as $permission){
-					
-						if(!$this->delete_permission($permission)){
-							return false;
-						}
-					
+						$this->delete_permission($permission);
 					}
 					
 					if(!$this->role_manager->roleDelete($role_object)){
-						$this->errors[] = $this->lang('role_delete_unsuccessful');
-						return false;
+						throw new RoleSaveException($this->lang('role_delete_unsuccessful'));
 					}
 				
 				}
@@ -1170,8 +1166,7 @@ class AccountsManager{
 				if($role_object = $this->role_manager->roleFetchByName($value)){
 				
 					if(!$this->role_manager->roleDelete($role_object)){
-						$this->errors[] = $this->lang('role_delete_unsuccessful');
-						return false;
+						throw new RoleSaveException($this->lang('role_delete_unsuccessful'));
 					}
 				
 				}
@@ -1197,8 +1192,7 @@ class AccountsManager{
 			if(is_object($role)){
 				//if at any times the roleSave failed, we have to return false
 				if(!$this->role_manager->roleSave($role)){
-					$this->errors[] = $this->lang('role_save_unsuccessful');
-					return false;
+					throw new RoleSaveException($this->lang('role_save_unsuccessful'));
 				}
 			}
 		}
@@ -1221,13 +1215,11 @@ class AccountsManager{
 			$role = $this->role_manager->roleFetchByName($role_name);
 			
 			if(!$role){
-				$errors[] = $this->lang['role_not_exists'];
-				return false;
+				throw new RoleNotFoundException($this->lang['role_not_exists']);
 			}
 			
 			if(!$this->role_manager->roleAddSubject($role, $user)){
-				$this->errors[] = $this->lang['role_assignment_unsuccessful'];
-				return false;
+				throw new UserRoleAssignmentException($this->lang['role_assignment_unsuccessful']);
 			}
 			
 		}
