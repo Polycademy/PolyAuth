@@ -54,6 +54,8 @@ class Language implements \ArrayAccess{
 		'role_save_unsuccessful'				=> 'Unable to save one of the roles.',
 		'role_assignment_unsuccessful'			=> 'Could not assign the role to the specified account.',
 		// Permissions
+		'permission_select_unsuccessful'			=> 'Could not select permissions.',
+		'permission_not_exists'					=> 'Specified permission(s) don\'t exist.',
 		'permission_delete_unsuccessful'		=> 'Unable to delete permission.',
 		'permission_save_unsuccessful'			=> 'Unable to save one of the permissions.',
 		'permission_assignment_unsuccessful'	=> 'Could no assign the permission to the specified role.', 

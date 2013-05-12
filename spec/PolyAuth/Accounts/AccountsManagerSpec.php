@@ -117,10 +117,11 @@ class AccountsManagerSpec extends ObjectBehavior{
 		$permission->description = 'A dummy permission';
 		
 		$role->role_id = 1;
-		$role->name = $options_object['role_default'];
+		$role->name = 'members';
 		$role->description = 'A dummy role';
 		$role->hasPermission(Argument::type('RBAC\Permission'))->willReturn(true);
 		$role->getPermissions()->willReturn(array($permission));
+		$role->addPermission(Argument::any())->willReturn(true);
 		
 		$dummy_list_of_roles = array();
 		
@@ -137,7 +138,10 @@ class AccountsManagerSpec extends ObjectBehavior{
 			$args[0]->loadRoleSet($role_set_object);
 		});
 		
-		$role_manager->roleFetchByName($options_object['role_default'])->willReturn($role);
+		$role_manager->roleFetchByName('members')->willReturn($role);
+		$role_manager->roleFetch()->willReturn(array($role));
+		$role_manager->roleSave(Argument::any())->willReturn(true);
+		$role_manager->permissionFetch()->willReturn(array($permission));
 		
 		//adds a role to the role set of the role object
 		$role_manager->roleAddSubject(Argument::cetera())->will(function($args){
@@ -349,10 +353,10 @@ class AccountsManagerSpec extends ObjectBehavior{
 		$users = $this->get_users(array(1, 2));
 		
 		//based on their ids
+		$users[0]->shouldBeAnInstanceOf('PolyAuth\UserAccount');
 		$users[1]->shouldBeAnInstanceOf('PolyAuth\UserAccount');
-		$users[2]->shouldBeAnInstanceOf('PolyAuth\UserAccount');
 		
-		$users[1]->has_permission('Permission Name')->shouldReturn(true);
+		$users[0]->has_permission('Permission Name')->shouldReturn(true);
 	
 	}
 	
@@ -378,7 +382,7 @@ class AccountsManagerSpec extends ObjectBehavior{
 		
 		$users->shouldBeArray();
 		$users->shouldHaveCount(1);
-		$users[1]->shouldBeAnInstanceOf('PolyAuth\UserAccount');
+		$users[0]->shouldBeAnInstanceOf('PolyAuth\UserAccount');
 	
 	}
 	
@@ -404,15 +408,78 @@ class AccountsManagerSpec extends ObjectBehavior{
 		
 		$users->shouldBeArray();
 		$users->shouldHaveCount(1);
-		$users[1]->shouldBeAnInstanceOf('PolyAuth\UserAccount');
+		$users[0]->shouldBeAnInstanceOf('PolyAuth\UserAccount');
 	
 	}
 	
-	function it_should_get_roles(){
+	function it_should_get_roles_and_permissions(PDOStatement $sth, Permission $permission){
+	
+		$sth->fetchAll(PDO::FETCH_OBJ)->willReturn(array($permission));
+		
+		//default role
+		$roles = $this->get_roles(array('members'));
+		$roles->shouldBeArray();
+		$roles->shouldHaveCount(1);
+		$permissions = $roles[0]->getPermissions();
+		$permissions->shouldBeArray();
+		$permissions[0]->shouldBeAnInstanceOf('RBAC\Permission');
+		
+		//all the roles
+		$roles = $this->get_roles();
+		$roles->shouldBeArray();
+		$roles->shouldHaveCount(1);
+		
+		$permissions = $this->get_permissions(array('Permission Name'));
+		$permissions->shouldBeArray();
+		$permissions->shouldHaveCount(1);
+		$permissions[0]->shouldBeAnInstanceOf('RBAC\Permission');
+		$permissions = $this->get_permissions();
+		$permissions->shouldBeArray();
+		$permissions->shouldHaveCount(1);
+		$permissions[0]->shouldBeAnInstanceOf('RBAC\Permission');
 	
 	}
 	
-	function it_should_register_roles_and_permissions(){
+	function it_should_register_roles_and_permissions(RoleManager $role_manager, Role $role){
+		
+		$role_manager->roleFetchByName('members')->will(function() use ($role){
+			$this->roleFetchByName('members')->willReturn($role);
+			return false;
+		});
+		
+		$role_manager->permissionDelete(Argument::any())->willReturn(true);
+		$role_manager->permissionSave(Argument::any())->will(function($args){
+			//add a permission id to the permission object
+			$args[0]->permission_id = 1;
+			return true;
+		});
+	
+		$this->register_role('members', 'This is the role description')->shouldBeAnInstanceOf('RBAC\Role\Role');
+		
+		$roles = $this->register_roles(array(
+			'members'	=> 'role description',
+		));
+		
+		$roles->shouldBeArray();
+		
+		$roles = $this->register_roles(array(
+			'members',
+			'members',
+		));
+		
+		$roles->shouldBeArray();
+		
+		$roles = $this->register_roles_permissions(array(
+			'members'	=> array(
+				'desc'	=> 'This is an awesome role',
+				'perms'	=> array(
+					'Permission Name'	=> 'This is a dummy permission',
+				),
+			),
+		));
+		
+		$roles->shouldBeArray();
+		$roles[0]->shouldBeAnInstanceOf('RBAC\Role\Role');
 	
 	}
 	
