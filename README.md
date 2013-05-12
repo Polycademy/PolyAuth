@@ -26,6 +26,7 @@ Features:
 - Autologin with Cookies
 - SQL setup as Codeigniter Migrations (easy to turn into your own)
 - Configurable Language for Returned Errors
+- Error Handling through SPL Exceptions
 - Highly Configurable User Data/Profile
 - Password Complexity Checks
 - Excellent Random Token Generator
@@ -39,6 +40,7 @@ To Do:
 - Cache Interface for DB calls
 - User Access Logs (just use Monolog)
 - CSRF checks
+- User Banning
 
 Note that this does not do filtering or validation of data input. You still need to do this to prevent any problems.
 

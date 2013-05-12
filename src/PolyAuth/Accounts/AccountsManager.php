@@ -29,6 +29,11 @@ use RBAC\Manager\RoleManager;
 //for registration
 use PolyAuth\Emailer;
 
+//for exceptions
+use PolyAuth\Exceptions\RegisterValidationException;
+use PolyAuth\Exceptions\PasswordValidationException;
+use PolyAuth\Exceptions\UserDuplicateException;
+
 class AccountsManager{
 
 	protected $db;
@@ -40,8 +45,6 @@ class AccountsManager{
 	protected $random;
 	protected $emailer;
 	protected $bcrypt_fallback = false;
-	
-	protected $errors = array();
 	
 	//expects PDO connection (potentially using $this->db->conn_id)
 	public function __construct(
@@ -84,26 +87,23 @@ class AccountsManager{
 		
 		//login_data should have username, password or email
 		if(empty($data[$this->options['login_identity']]) OR empty($data['password'])){
-			$this->errors[] = $this->lang['account_creation_invalid'];
-			return false;
+			throw new RegisterValidationException($this->lang['account_creation_invalid']);
 		}
 		
 		if($this->options['email']){
 			if(empty($data['email'])){
-				$this->errors[] = $this->lang['account_creation_email_invalid'];
-				return false;
+				throw new RegisterValidationException($this->lang['account_creation_email_invalid']);
 			}
 		}
 		
 		//check for duplicates based on identity
-		if(!$this->identity_check($data[$this->options['login_identity']])){
-			return false;
+		if(!$this->duplicate_identity_check($data[$this->options['login_identity']])){
+			throw new UserDuplicateException($this->lang["account_creation_duplicate_{$this->options['login_identity']}"]);
 		}
 		
 		//check if password is complex enough
 		if(!$this->password_manager->complex_enough($data['password'])){
-			$this->errors += $this->password_manager->get_errors();
-			return false;
+			throw new PasswordValidationException(implode(', ', $this->password_manager->get_errors()));
 		}
 		
 		$ip = (!empty($_SERVER['REMOTE_ADDR'])) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1';
@@ -121,15 +121,15 @@ class AccountsManager{
 			$data['activationCode'] = $this->random->generate(40); 
 		}
 		
-		$column_string = implode(',', array_keys($data));
-		$value_string = implode(',', array_fill(0, count($data), '?'));
+		$insert_placeholders = implode(',', array_fill(0, count($data), '?'));
 		
-		$query = "INSERT INTO {$this->options['table_users']} ({$column_string}) VALUES ({$value_string})";
+		$query = "INSERT INTO {$this->options['table_users']} ({$insert_placeholders}) VALUES ({$insert_placeholders})";
+		
 		$sth = $this->db->prepare($query);
 		
 		try {
 		
-			$sth->execute(array_values($data));
+			$sth->execute(array_merge(array_keys($data), array_values($data)));
 			$last_insert_id = $this->db->lastInsertId();
 			
 		}catch(PDOException $db_err){
@@ -137,8 +137,8 @@ class AccountsManager{
 			if($this->logger){
 				$this->logger->error('Failed to execute query to register a new user and assign permissions.', ['exception' => $db_err]);
 			}
-			$this->errors[] = $this->lang['account_creation_unsuccessful'];
-			return false;
+			
+			throw $db_err;
 			
 		}
 		
@@ -146,9 +146,7 @@ class AccountsManager{
 		$registered_user = $this->get_user($last_insert_id);
 		
 		//now we've got to add the default roles and permissions
-		if(!$registered_user = $this->register_user_roles($registered_user, array($this->options['role_default']))){
-			return false;
-		}
+		$registered_user = $this->register_user_roles($registered_user, array($this->options['role_default']));
 		
 		//automatically send the activation email
 		if($this->options['reg_activation'] == 'email' AND $this->options['email'] AND $registered_user['email']){
@@ -200,7 +198,7 @@ class AccountsManager{
 	 * @param $identity string - depends on the options
 	 * @return boolean
 	 */
-	public function identity_check($identity){
+	public function duplicate_identity_check($identity){
 		
 		$query = "SELECT id FROM {$this->options['table_users']} WHERE {$this->options['login_identity']} = :identity";
 		$sth = $this->db->prepare($query);
@@ -211,7 +209,6 @@ class AccountsManager{
 			//there basically should be nothing returned, if something is returned then identity check fails
 			$sth->execute();
 			if($sth->fetch()){
-				$this->errors[] = $this->lang["account_creation_duplicate_{$this->options['login_identity']}"];
 				return false;
 			}
 			return true;
@@ -221,8 +218,8 @@ class AccountsManager{
 			if($this->logger){
 				$this->logger->error('Failed to execute query to check duplicate login identities.', ['exception' => $db_err]);
 			}
-			$this->errors[] = $this->lang['account_creation_unsuccessful'];
-			return false;
+			
+			throw $db_err;
 			
 		}
 	
@@ -568,8 +565,7 @@ class AccountsManager{
 		
 		//password complexity check on the new_password
 		if(!$this->password_manager->complex_enough($new_password, $old_password, $user[$this->options['login_identity']])){
-			$this->errors += $this->password_manager->get_errors();
-			return false;
+			throw new PasswordValidationException(implode(', ', $this->password_manager->get_errors()));
 		}
 		
 		//hash new password
