@@ -16,6 +16,7 @@ class Options implements \ArrayAccess{
 		'hash_method'						=> PASSWORD_DEFAULT,	//can be PASSWORD_DEFAULT or PASSWORD_BCRYPT
 		'hash_rounds'						=> 10,
 		//session options
+		'session_autostart'					=> true,
 		'session_encrypt'					=> true, //should the session data be encrypted? (only for the cookie)
 		'session_key'						=> 'hiddenpassword', //session encryption key, any number of characters and depends on session_encrypt
 		'session_handler'					=> null, //object that implements the SessionInterface

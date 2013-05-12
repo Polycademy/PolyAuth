@@ -35,7 +35,7 @@ Features:
 To Do:
 
 - SQL based migration
-- Authentication Strategy Inteface - (Manual (null), HTTP Basic/Digest, OpenID, OAuth 2 Provider, OAuth 1 & 2 Consumer)
+- Authentication Strategy Inteface - (HTTP Basic/Digest, Cookie, OAuth 1 & 2 Consumer, OAuth 2 Provider, OpenID)
 - Storage Interface for Database Independent Functionality, will need to abstract PHPrbac
 - Cache Interface for DB calls
 - User Access Logs (just use Monolog)
