@@ -46,7 +46,7 @@ class Language implements \ArrayAccess{
 		// Account Changes
 		'update_unsuccessful'					=> 'Unable to Update Account Information',
 		'delete_unsuccessful'					=> 'Unable to Delete User',
-		'delete_already'						=> 'User is already Deleted.',
+		'delete_already'						=> 'User is already Deleted or Doesn\'t Exist.',
 		// Roles
 		'role_not_exists'						=> 'Specified role(s) don\'t exist.',
 		'role_already_exists'					=> 'Role name already taken',

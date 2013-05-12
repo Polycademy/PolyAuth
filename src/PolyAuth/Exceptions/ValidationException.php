@@ -2,4 +2,4 @@
 
 namespace PolyAuth\Exceptions;
 
-class ValidationException extends \Exception {}
+class ValidationException extends \InvalidArgumentException {}

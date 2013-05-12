@@ -33,6 +33,7 @@ use PolyAuth\Emailer;
 use PolyAuth\Exceptions\RegisterValidationException;
 use PolyAuth\Exceptions\PasswordValidationException;
 use PolyAuth\Exceptions\UserDuplicateException;
+use PolyAuth\Exceptions\UserNotFoundException;
 
 class AccountsManager{
 
@@ -177,16 +178,15 @@ class AccountsManager{
 				return true;
 			}
 			
-			$this->errors[] = $this->lang['delete_already'];
-			return false;
+			throw new UserNotFoundException($this->lang['delete_already']);
 			
 		}catch(PDOException $db_err){
 		
 			if($this->logger){
 				$this->logger->error('Failed to execute query to delete a user.', ['exception' => $db_err]);
 			}
-			$this->errors[] = $this->lang['delete_unsuccessful'];
-			return false;
+			
+			throw $db_err;
 		
 		}
 	
@@ -277,7 +277,6 @@ class AccountsManager{
 	
 		if($this->deactivate($user)){
 		
-			//we don't need to check what the reg_activation is, give options to the end user
 			if($this->options['email'] AND $user['email']){
 				//$user will contain the new activation code
 				return $this->emailer->send_activation($user);
@@ -309,7 +308,6 @@ class AccountsManager{
 			return $this->force_activate($user);
 		}
 		
-		$this->errors[] = $this->lang['activate_unsuccessful'];
 		return false;
 	
 	}
@@ -323,17 +321,21 @@ class AccountsManager{
 		try{
 		
 			$sth->execute();
-			$user['active'] = 1;
-			$user['activationCode'] = null;
-			return true;
+			if($sth->rowCount() < 1){
+				return false;
+			}else{
+				$user['active'] = 1;
+				$user['activationCode'] = null;
+				return true;
+			}
 		
 		}catch(PDOException $db_err){
 		
 			if($this->logger){
 				$this->logger->error("Failed to execute query to activate user {$user['id']}.", ['exception' => $db_err]);
 			}
-			$this->errors[] = $this->lang['activate_unsuccessful'];
-			return false;
+			
+			throw $db_err;
 		
 		}
 		
@@ -357,20 +359,23 @@ class AccountsManager{
 		try{
 		
 			$sth->execute();
-			$user['active'] = 0;
-			$user['activationCode'] = $activation_code;
-			return $activation_code;
-		
+			if($sth->rowCount() < 1){
+				return false;
+			}else{
+				$user['active'] = 0;
+				$user['activationCode'] = $activation_code;
+				return $activation_code;
+			}
+			
 		}catch(PDOException $db_err){
 		
 			if($this->logger){
 				$this->logger->error("Failed to execute query to deactivate user {$user['id']}.", ['exception' => $db_err]);
 			}
-			$this->errors[] = $this->lang['deactivate_unsuccessful'];
-			return false;
+			
+			throw $db_err;
 		
 		}
-		
 	
 	}
 	
@@ -409,12 +414,8 @@ class AccountsManager{
 		
 			$sth->execute();
 			if($sth->rowCount() < 1){
-				//no one was updated
-				$this->errors[] = $this->lang['forgot_unsuccessful'];
 				return false;
 			}
-			
-			//continue to send email
 			return $this->emailer->send_forgot_password($user);
 		
 		}catch(PDOException $db_err){
@@ -422,9 +423,9 @@ class AccountsManager{
 			if($this->logger){
 				$this->logger->error("Failed to execute query to update user with forgotten code and date", ['exception' => $db_err]);
 			}
-			$this->errors[] = $this->lang['deactivate_unsuccessful'];
-			return false;
-		
+			
+			throw $db_err;
+			
 		}
 	
 	}
@@ -456,7 +457,6 @@ class AccountsManager{
 					//we have exceeded the time, so we need to clear the forgotten so that it defaults back to normal
 					//or else there'd be no way of resolving this issue
 					$this->forgotten_clear($user);
-					$this->errors[] = $this->lang['forgot_check_unsuccessful'];
 					return false;
 				
 				}
@@ -468,8 +468,7 @@ class AccountsManager{
 		
 		}
 
-		//if the forgottenCode doesn't exist or the code doesn't match, then we just return false, no need to clear
-		$this->errors[] = $this->lang['forgot_check_unsuccessful'];
+		//if the forgottenCode doesn't exist or the code doesn't match
 		return false;
 	
 	}
@@ -508,8 +507,6 @@ class AccountsManager{
 			$sth->execute();
 			
 			if($sth->rowCount() < 1){
-				//no one was updated
-				$this->errors[] = $this->lang['forgot_unsuccessful'];
 				return false;
 			}
 			
@@ -523,8 +520,8 @@ class AccountsManager{
 			if($this->logger){
 				$this->logger->error("Failed to execute query to clear the forgotten code and forgotten time.", ['exception' => $db_err]);
 			}
-			$this->errors[] = $this->lang['forgot_unsuccessful'];
-			return false;
+			
+			throw $db_err;
 		
 		}
 	
@@ -544,23 +541,29 @@ class AccountsManager{
 	
 		//if old password exists, we need to check if it matches the database record
 		if($old_password){
+		
 			$query = "SELECT password FROM {$this->options['table_users']} WHERE id = :user_id";
 			$sth = $this->db->prepare($query);
 			$sth->bindValue('user_id', $user['id'], PDO::PARAM_INT);
+			
 			try{
+			
 				$sth->execute();
 				$row = $sth->fetch(PDO::FETCH_OBJ);
 				if(!hash_password_verify($old_password, $row->password)){
-					$this->errors[] = $this->lang['password_change_unsuccessful'];
-					return false;
+					throw new PasswordValidationException($this->lang['password_change_unsuccessful']);
 				}
+				
 			}catch(PDOException $db_err){
+			
 				if($this->logger){
 					$this->logger->error("Failed to execute query to get the password hash from user {$user['id']}.", ['exception' => $db_err]);
 				}
-				$this->errors[] = $this->lang['password_change_unsuccessful'];
-				return false;
+				
+				throw $db_err;
+				
 			}
+			
 		}
 		
 		//password complexity check on the new_password
@@ -581,7 +584,6 @@ class AccountsManager{
 		
 			$sth->execute();
 			if($sth->rowCount() < 1){
-				$this->errors[] = $this->lang['password_change_unsuccessful'];
 				return false;
 			}
 		
@@ -590,8 +592,8 @@ class AccountsManager{
 			if($this->logger){
 				$this->logger->error("Failed to execute query to update password hash with user {$user['id']}.", ['exception' => $db_err]);
 			}
-			$this->errors[] = $this->lang['password_change_unsuccessful'];
-			return false;
+			
+			throw $db_err;
 		
 		}
 		
@@ -626,23 +628,27 @@ class AccountsManager{
 	/**
 	 * Switches on the password change flag, forcing the user to change their passwords upon their next login
 	 *
-	 * @param $users array of objects
+	 * @param $users array of objects | array of ids
 	 * @return boolean
 	 */
 	public function force_password_change(array $users){
 	
 		foreach($users as $user){
-			$in_sql[] = $user['id'];
+			if($user instanceof UserAccount){
+				$user_ids[] = $user['id'];
+			}else{
+				$user_ids[] = $user;
+			}
 		}
 		
-		$in_sql = implode(',', $in_sql);
+		$update_placeholders = implode(",", array_fill(0, count($user_ids), '?'));
 		
-		$query = "UPDATE {$this->options['table_users']} SET passwordChange = 1 WHERE id IN ($in_sql)";
+		$query = "UPDATE {$this->options['table_users']} SET passwordChange = 1 WHERE id IN ($update_placeholders)";
 		$sth = $this->db->prepare($query);
 		
 		try{
 		
-			$sth->execute();
+			$sth->execute($user_ids);
 			//if they were already flagged, then the job has been done
 			return true;
 		
@@ -651,8 +657,8 @@ class AccountsManager{
 			if($this->logger){
 				$this->logger->error("Failed to execute query to flag the password for change.", ['exception' => $db_err]);
 			}
-			$this->errors[] = $this->lang['password_flag'];
-			return false;
+			
+			throw $db_err;
 		
 		}
 	
@@ -675,8 +681,7 @@ class AccountsManager{
 			$sth->execute();
 			$row = $sth->fetch(PDO::FETCH_OBJ);
 			if(!$row){
-				$this->errors[] = $this->lang('user_select_unsuccessful');
-				return false;
+				throw new UserNotFoundException($this->lang('user_select_unsuccessful'));
 			}
 		
 		}catch(PDOException $db_err){
@@ -684,8 +689,7 @@ class AccountsManager{
 			if($this->logger){
 				$this->logger->error("Failed to execute query to select user $user_id.", ['exception' => $db_err]);
 			}
-			$this->errors[] = $this->lang['user_select_unsuccessful'];
-			return false;
+			throw $db_err;
 		
 		}
 		
