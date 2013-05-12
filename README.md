@@ -38,6 +38,9 @@ To Do:
 - Storage Interface for Database Independent Functionality, will need to abstract PHPrbac
 - Cache Interface for DB calls
 - User Access Logs (just use Monolog)
+- CSRF checks
+
+Note that this does not do filtering or validation of data input. You still need to do this to prevent any problems.
 
 Install with Composer:
 
