@@ -1090,6 +1090,41 @@ class AccountsManager{
 	}
 	
 	/**
+	 * Delete a single permission
+	 *
+	 * @param $permission_name string
+	 * @return boolean
+	 */
+	public function delete_permission($permission_name){
+	
+		if($permission_object = $this->get_permissions(array($permission_name))[0]){
+			if(!$this->role_manager->permissionDelete($permission_object)){
+				$this->errors[] = $this->lang('permission_delete_unsuccessful');
+				return false;
+			}
+		}
+		return true;
+		
+	}
+	
+	/**
+	 * Delete an array of permissions
+	 *
+	 * @param $permission array
+	 * @return boolean
+	 */
+	public function delete_permissions(array $permissions){
+	
+		foreach($permissions as $permission_name){
+			if(!$this->delete_permission($permission_name)){
+				return false;
+			}
+		}
+		return true;
+	
+	}
+	
+	/**
 	 * Deletes Roles and their associated Permissions. Use this to delete roles by them selves too
 	 * Roles that don't exist will be ignored, their associated permissions will also be ignored.
 	 *
@@ -1102,12 +1137,12 @@ class AccountsManager{
 	 * 		'role_name',
 	 * 	);
 	 *
-	 * @param $role_permissions
+	 * @param $roles_permissions
 	 * @return boolean
 	 */
 	public function delete_roles_permissions(array $roles_permissions){
 	
-		foreach($role_permissions as $key => $value){
+		foreach($roles_permissions as $key => $value){
 		
 			if(is_array($value)){
 			
@@ -1145,41 +1180,6 @@ class AccountsManager{
 		
 		}
 		
-		return true;
-	
-	}
-	
-	/**
-	 * Delete a single permission
-	 *
-	 * @param $permission_name string
-	 * @return boolean
-	 */
-	public function delete_permission($permission_name){
-	
-		if($permission_object = $this->role_manager->permissionFetchByName($permission)){
-			if(!$this->role_manager->permissionDelete($permission_object)){
-				$this->errors[] = $this->lang('permission_delete_unsuccessful');
-				return false;
-			}
-		}
-		return true;
-		
-	}
-	
-	/**
-	 * Delete an array of permissions
-	 *
-	 * @param $permission array
-	 * @return boolean
-	 */
-	public function delete_permissions(array $permissions){
-	
-		foreach($permissions as $permission_name){
-			if(!$this->delete_permission($permission_name)){
-				return false;
-			}
-		}
 		return true;
 	
 	}

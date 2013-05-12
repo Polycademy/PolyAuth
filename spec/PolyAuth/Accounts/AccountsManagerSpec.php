@@ -483,7 +483,21 @@ class AccountsManagerSpec extends ObjectBehavior{
 	
 	}
 	
-	function it_should_delete_roles_and_permissions(){
+	function it_should_delete_roles_and_permissions(PDOStatement $sth, Permission $permission, RoleManager $role_manager){
+		
+		$sth->fetchAll(PDO::FETCH_OBJ)->willReturn(array($permission));
+		$role_manager->permissionDelete(Argument::any())->willReturn(true);
+		$role_manager->roleDelete(Argument::any())->willReturn(true);
+	
+		$this->delete_permission('Permission Name')->shouldReturn(true);
+		
+		$this->delete_permissions(array('Permission Name'))->shouldReturn(true);
+		
+		$this->delete_roles_permissions(array(
+			'members'	=> array(
+				'Permission Name',
+			),
+		))->shouldReturn(true);
 	
 	}
 	
