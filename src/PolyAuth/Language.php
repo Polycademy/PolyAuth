@@ -7,13 +7,13 @@ class Language implements \ArrayAccess{
 
 	public $lang = array(
 		// Account Creation
-		'account_creation_unsuccessful'			=> 'Unable to Create Account',
-		'account_creation_duplicate_email'		=> 'Email already used or invalid',
-		'account_creation_duplicate_username'	=> 'Username already used or invalid',
+		'account_creation_unsuccessful'			=> 'Unable to create account.',
+		'account_creation_duplicate_email'		=> 'Email already used or invalid.',
+		'account_creation_duplicate_username'	=> 'Username already used or invalid.',
 		'account_creation_invalid'				=> 'Cannot register without an identity or password.',
 		'account_creation_email_invalid'		=> 'Cannot use email activation without a emails being registered.',
 		// Password
-		'password_change_unsuccessful'			=> 'Unable to Change Password',
+		'password_change_unsuccessful'			=> 'Unable to change password.',
 		'password_min'							=> 'Password is not long enough.',
 		'password_max'							=> 'Password is too long.',
 		'password_lowercase'					=> 'Password requires a lowercase letter.',

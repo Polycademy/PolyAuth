@@ -27,7 +27,7 @@ class PasswordComplexity{
 	protected $unique = 4;
 	protected $complexity_level;
 	
-	protected $errors = array();
+	protected $error;
 	
 	public function __construct(Options $options, Language $language){
 	
@@ -76,8 +76,6 @@ class PasswordComplexity{
 	}
 	
 	public function complex_enough($new_pass, $old_pass = false, $identity = false){
-	
-		$enough = TRUE;
 		
 		//if the complexity level is left at 0, just return true since it's complex enough!
 		if($this->complexity_level !== 0){
@@ -91,8 +89,8 @@ class PasswordComplexity{
 					$result = call_user_func_array(array($this, $name), array($new_pass, $old_pass, $identity));
 					
 					if($result !== TRUE){
-						$enough = FALSE;
-						$this->errors[] = $result;
+						$this->error = $result;
+						return false;
 					}
 					
 				}
@@ -101,12 +99,12 @@ class PasswordComplexity{
 		
 		}
 		
-		return $enough;
+		return true;
 		
 	}
 	
-	public function get_errors(){
-		return $this->errors;
+	public function get_error(){
+		return $this->error;
 	}
 	
 	protected function require_min($new_pass){

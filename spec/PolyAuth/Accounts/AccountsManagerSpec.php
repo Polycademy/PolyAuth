@@ -21,6 +21,16 @@ use RBAC\Role\RoleSet;
 use RBAC\Manager\RoleManager;
 use PolyAuth\Emailer;
 
+use PolyAuth\Exceptions\RegisterValidationException;
+use PolyAuth\Exceptions\PasswordValidationException;
+use PolyAuth\Exceptions\UserDuplicateException;
+use PolyAuth\Exceptions\UserNotFoundException;
+use PolyAuth\Exceptions\UserRoleAssignmentException;
+use PolyAuth\Exceptions\RoleNotFoundException;
+use PolyAuth\Exceptions\PermissionNotFoundException;
+use PolyAuth\Exceptions\RoleSaveException;
+use PolyAuth\Exceptions\PermissionSaveException;
+
 class AccountsManagerSpec extends ObjectBehavior{
 
 	public $prophet;
@@ -178,8 +188,8 @@ class AccountsManagerSpec extends ObjectBehavior{
 			'email'				=> 'example@example.com',
 			'extraRandomField'	=> 'Hoopla!',
 		);
-	
-		$this->register($input_data)->shouldReturn(false);
+		
+		$this->shouldThrow(new UserDuplicateException('Username already used or invalid.'))->duringRegister($input_data);
 	
 	}
 	
@@ -191,8 +201,8 @@ class AccountsManagerSpec extends ObjectBehavior{
 			'email'				=> 'example@example.com',
 			'extraRandomField'	=> 'Hoopla!',
 		);
-	
-		$this->register($input_data)->shouldReturn(false);
+		
+		$this->shouldThrow(new PasswordValidationException('Password is not long enough.'))->duringRegister($input_data);
 	
 	}
 	
@@ -232,7 +242,9 @@ class AccountsManagerSpec extends ObjectBehavior{
 	
 	}
 	
-	function it_should_activate_users(){
+	function it_should_activate_users(PDOStatement $sth){
+	
+		$sth->rowCount()->willReturn(1);
 		
 		$this->activate($this->user)->shouldReturn(true);
 		
@@ -244,13 +256,17 @@ class AccountsManagerSpec extends ObjectBehavior{
 		
 	}
 	
-	function it_should_activate_users_on_correct_activation_code(){
+	function it_should_activate_users_on_correct_activation_code(PDOStatement $sth){
+	
+		$sth->rowCount()->willReturn(1);
 	
 		$this->activate($this->user, 'abcd1234')->shouldReturn(true);
 		
 	}
 	
-	function it_should_deactivate_users_and_return_activation_code(){
+	function it_should_deactivate_users_and_return_activation_code(PDOStatement $sth){
+	
+		$sth->rowCount()->willReturn(1);
 	
 		$this->user['active'] = 1;
 		$this->user['activationCode'] = '';
@@ -286,9 +302,9 @@ class AccountsManagerSpec extends ObjectBehavior{
 	
 		$this->change_password($this->user, 'blah1234')->shouldReturn(true);
 		
-		$this->change_password($this->user, 's')->shouldReturn(false);
+		$this->shouldThrow(new PasswordValidationException('Password is not long enough.'))->duringChange_password($this->user, 's');
 		
-		$this->change_password($this->user, rand(40, 40))->shouldReturn(false);
+		$this->shouldThrow(new PasswordValidationException('Password is too long.'))->duringChange_password($this->user, uniqid('abcdpefdgdutrghksdfnufg', true));
 		
 		$this->reset_password($this->user)->shouldBeString();
 		

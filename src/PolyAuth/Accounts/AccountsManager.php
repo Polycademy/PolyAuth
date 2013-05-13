@@ -109,7 +109,7 @@ class AccountsManager{
 		
 		//check if password is complex enough
 		if(!$this->password_manager->complex_enough($data['password'])){
-			throw new PasswordValidationException(implode(', ', $this->password_manager->get_errors()));
+			throw new PasswordValidationException($this->password_manager->get_error());
 		}
 		
 		$ip = (!empty($_SERVER['REMOTE_ADDR'])) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1';
@@ -573,7 +573,7 @@ class AccountsManager{
 		
 		//password complexity check on the new_password
 		if(!$this->password_manager->complex_enough($new_password, $old_password, $user[$this->options['login_identity']])){
-			throw new PasswordValidationException(implode(', ', $this->password_manager->get_errors()));
+			throw new PasswordValidationException($this->password_manager->get_error());
 		}
 		
 		//hash new password
