@@ -55,13 +55,7 @@ class LoginLogout{
 		
 		$this->db = $db;
 		$this->logger = $logger;
-		$this->cookie_manager = ($cookie_manager) ? $cookie_manager : new CookieManager(
-			$this->options['cookie_domain'],
-			$this->options['cookie_path'],
-			$this->options['cookie_prefix'],
-			$this->options['cookie_secure'],
-			$this->options['cookie_httponly']
-		);
+		$this->cookie_manager = ($cookie_manager) ? $cookie_manager : new CookieManager($options);
 		$this->session_manager = ($session_manager) ? $session_manager : new SessionManager(new SegmentFactory, new CsrfTokenFactory);
 		$this->accounts_manager = ($accounts_manager) ? $accounts_manager : new AccountsManager($db, $options, $language, $logger);
 		

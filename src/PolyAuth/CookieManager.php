@@ -1,23 +1,17 @@
 <?php
 
-//replicates CI's cookie styles
+namespace PolyAuth;
 
-namespace PolyAuth\Sessions;
+use PolyAuth\Options;
 
 class CookieManager{
 
 	protected $options;
 	
 	//setup some configuration
-	public function __construct($domain = '', $path = '/', $prefix = '', $secure = false, $httponly = false){
+	public function __construct(Options $options){
 	
-		$this->options = array(
-			'domain'	=> $domain,
-			'path'		=> $path,
-			'prefix'	=> $prefix,
-			'secure'	=> $secure,
-			'httponly'	=> $httponly,
-		);
+		$this->options = $options;
 		
 	}
 	
@@ -29,14 +23,14 @@ class CookieManager{
 		}else{
 			$expire = ($expire > 0) ? time() + $expire : 0;
 		}
-
-		return setcookie($this->options['prefix'] . $name, $value, $expire, $this->options['path'], $this->options['domain'], $this->options['secure'], $this->options['httponly']);
+		
+		return setcookie($this->options['cookie_prefix'] . $name, $value, $expire, $this->options['cookie_path'], $this->options['cookie_domain'], $this->options['cookie_secure'], $this->options['cookie_httponly']);
 		
 	}
 	
 	public function get_cookie($index = ''){
 	
-		$prefix = isset($_COOKIE[$index]) ? '' : $this->options['prefix'];
+		$prefix = isset($_COOKIE[$index]) ? '' : $this->options['cookie_prefix'];
 		$index = $prefix . $index;
 		return $this->fetch_from_array($_COOKIE, $index);
 	
@@ -44,17 +38,18 @@ class CookieManager{
 	
 	public function delete_cookie($name = ''){
 	
+		unset($_COOKIE[$name]);
 		return $this->set_cookie($name, '', '');
 		
 	}
 	
 	protected function fetch_from_array(&$array, $index = ''){
 	
-		if (isset($array[$index])){
+		if(isset($array[$index])){
 		
 			$value = $array[$index];
 			
-		}elseif (($count = preg_match_all('/(?:^[^\[]+)|\[[^]]*\]/', $index, $matches)) > 1){
+		}elseif(($count = preg_match_all('/(?:^[^\[]+)|\[[^]]*\]/', $index, $matches)) > 1){
 		
 			$value = $array;
 			for ($i = 0; $i < $count; $i++){
