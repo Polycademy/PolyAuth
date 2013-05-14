@@ -10,7 +10,7 @@ class Language implements \ArrayAccess{
 		'account_creation_unsuccessful'			=> 'Unable to create account.',
 		'account_creation_duplicate_email'		=> 'Email already used or invalid.',
 		'account_creation_duplicate_username'	=> 'Username already used or invalid.',
-		'account_creation_invalid'				=> 'Cannot register without an identity or password.',
+		'account_creation_invalid'				=> 'Cannot register without valid data fields.',
 		'account_creation_email_invalid'		=> 'Cannot use email activation without a emails being registered.',
 		// Password
 		'password_change_unsuccessful'			=> 'Unable to change password.',
@@ -38,8 +38,9 @@ class Language implements \ArrayAccess{
 		'login_timeout'							=> 'Temporarily Locked Out.  Try again later.',
 		'logout_successful'						=> 'Logged Out Successfully',
 		// Account Changes
-		'update_unsuccessful'					=> 'Unable to Update Account Information',
-		'delete_already'						=> 'User is already Deleted or Doesn\'t Exist.',
+		'account_update_unsuccessful'			=> 'Unable to Update Account Information',
+		'account_update_invalid'				=> 'Cannot update without valid data fields.',
+		'account_delete_already'						=> 'User is already Deleted or Doesn\'t Exist.',
 		// Roles
 		'role_not_exists'						=> 'Specified role(s) don\'t exist.',
 		'role_already_exists'					=> 'Role name already taken',

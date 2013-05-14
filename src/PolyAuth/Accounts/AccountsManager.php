@@ -32,6 +32,7 @@ use PolyAuth\Emailer;
 //for exceptions
 use PolyAuth\Exceptions\RegisterValidationException;
 use PolyAuth\Exceptions\PasswordValidationException;
+use PolyAuth\Exceptions\DatabaseValidationException;
 use PolyAuth\Exceptions\UserDuplicateException;
 use PolyAuth\Exceptions\UserNotFoundException;
 use PolyAuth\Exceptions\UserRoleAssignmentException;
@@ -127,15 +128,25 @@ class AccountsManager{
 			$data['activationCode'] = $this->random->generate(40); 
 		}
 		
+		//we need to validate that the columns actually exist
+		$columns = array_keys($data);
+		foreach($columns as $column){
+			if(!$this->validate_column($this->options['table_users'], $column)){
+				throw new DatabaseValidationException($this->lang['account_creation_invalid']);
+			}
+		}
+		$columns = implode(',', $columns);
+		
 		$insert_placeholders = implode(',', array_fill(0, count($data), '?'));
 		
-		$query = "INSERT INTO {$this->options['table_users']} ({$insert_placeholders}) VALUES ({$insert_placeholders})";
+		//this wont work...
+		$query = "INSERT INTO {$this->options['table_users']} ($columns) VALUES ($insert_placeholders)";
 		
 		$sth = $this->db->prepare($query);
 		
 		try {
 		
-			$sth->execute(array_merge(array_keys($data), array_values($data)));
+			$sth->execute(array_values($data));
 			$last_insert_id = $this->db->lastInsertId();
 			
 		}catch(PDOException $db_err){
@@ -183,7 +194,7 @@ class AccountsManager{
 				return true;
 			}
 			
-			throw new UserNotFoundException($this->lang['delete_already']);
+			throw new UserNotFoundException($this->lang['account_delete_already']);
 			
 		}catch(PDOException $db_err){
 		
@@ -399,7 +410,9 @@ class AccountsManager{
 	
 	/**
 	 * Forgotten password, run this after you have done some identity validation such as security questions.
-	 * Generates a forgotten code and forgotten time
+	 * Generates a forgotten code and forgotten time, and the code is sent via email.
+	 * This is idempotent, it can be used multiple times with no side effects other than the changing of the code.
+	 * If the user accidentally hits this, it won't change anything. The forgotten code and forgotten date will persist however
 	 *
 	 * @param $user object
 	 * @return boolean
@@ -409,7 +422,7 @@ class AccountsManager{
 		$user['forgottenCode'] = $this->random->generate(40);
 		$user['forgottenDate'] = date('Y-m-d H:i:s');
 		
-		$query = "UPDATE {$this->options['table_users']} SET passwordChange = 1, forgottenCode = :forgotten_code, forgottenDate = :forgotten_date WHERE id = :user_id";
+		$query = "UPDATE {$this->options['table_users']} SET forgottenCode = :forgotten_code, forgottenDate = :forgotten_date WHERE id = :user_id";
 		$sth = $this->db->prepare($query);
 		$sth->bindValue('forgotten_code', $user['forgottenCode'], PDO::PARAM_STR);
 		$sth->bindValue('forgotten_date', $user['forgottenDate'], PDO::PARAM_STR);
@@ -437,6 +450,7 @@ class AccountsManager{
 	
 	/**
 	 * Checks if the forgotten code is valid and that it has been used within the time limit
+	 * If it passes, it will update the user with the passwordChange flag, forcing a change in passwords on next login
 	 *
 	 * @param $user object
 	 * @param $forgotten_code string
@@ -444,14 +458,14 @@ class AccountsManager{
 	 */
 	public function forgotten_check(UserAccount $user, $forgotten_code){
 	
-		//check if there is such thing as a forgottenCode and forgottenTime
+		//check if there is such thing as a forgottenCode and forgottenDate
 		if(!empty($user['forgottenCode']) AND $user['forgottenCode'] == $forgotten_code){
 		
 			$allowed_duration = $this->options['login_forgot_expiration'];
 			
 			if($allowed_duration != 0){
 		
-				$forgotten_time = strtotime($user['forgottenTime']);
+				$forgotten_time = strtotime($user['forgottenDate']);
 				//add the allowed duration the forgotten time
 				$forgotten_time_duration = strtotime("+ $allowed_duration seconds", $forgotten_time);
 				//compare with the current time
@@ -468,11 +482,28 @@ class AccountsManager{
 			
 			}
 			
-			//at this point everything should be good to go
+			$query = "UPDATE {$this->options['table_users']} SET passwordChange = 1 WHERE id = :user_id";
+			$sth = $this->db->prepare($query);
+			$sth->bindValue('user_id', $user['id'], PDO::PARAM_INT);
+			
+			try{
+			
+				$sth->execute();
+				$user['passwordChange'] = 1;
+			
+			}catch(PDOException $db_err){
+			
+				if($this->logger){
+					$this->logger->error("Failed to execute query to set the the passwordChange flag to 1.", ['exception' => $db_err]);
+				}
+				throw $db_err;
+			
+			}
+			
 			return true;
 		
 		}
-
+		
 		//if the forgottenCode doesn't exist or the code doesn't match
 		return false;
 	
@@ -480,6 +511,8 @@ class AccountsManager{
 	
 	/**
 	 * Finishes the forgotten cycle, clears the forgotten code and updates the user with the new password
+	 * You would call this once the user passes the forgotten check, and automatically changes to the new password.
+	 * If you do not call this, the user should be prompted to change on the next login. Use LoginLogout for that.
 	 *
 	 * @param $user object
 	 * @param $forgotten_code string
@@ -487,10 +520,13 @@ class AccountsManager{
 	 */
 	public function forgotten_complete(UserAccount $user, $new_password){
 	
+		$this->forgotten_clear($user);
+		
 		//clear the forgotten first and update with new password
-		if($this->forgotten_clear($user) AND $this->change_password($user, $new_password)){
+		if($this->change_password($user, $new_password)){
 			return true;
 		}
+		
 		return false;
 	
 	}
@@ -499,11 +535,11 @@ class AccountsManager{
 	 * Clears the forgotten code and forgotten time when we have completed the cycle or if the time limit was exceeded
 	 *
 	 * @param $user object
-	 * @return boolean
+	 * @return boolean true
 	 */
 	public function forgotten_clear(UserAccount $user){
 	
-		$query = "UPDATE {$this->options['table_users']} SET passwordChange = 0, forgottenCode = NULL, forgottenTime = NULL WHERE id = :user_id";
+		$query = "UPDATE {$this->options['table_users']} SET forgottenCode = NULL, forgottenDate = NULL WHERE id = :user_id";
 		$sth = $this->db->prepare($query);
 		$sth->bindValue('user_id', $user['id'], PDO::PARAM_INT);
 		
@@ -511,13 +547,10 @@ class AccountsManager{
 		
 			$sth->execute();
 			
-			if($sth->rowCount() < 1){
-				return false;
-			}
-			
 			$user['forgottenCode'] = null;
-			$user['forgottenTime'] = null;
+			$user['forgottenDate'] = null;
 			
+			//will always return true (should be idempotent)
 			return true;
 		
 		}catch(PDOException $db_err){
@@ -535,7 +568,7 @@ class AccountsManager{
 	/**
 	 * Changes the password of the user. If the old password was provided, it will be checked against the user, otherwise the password change will be forced.
 	 * Also passes the password through the complexity checks.
-	 * Also sets turns off the password change flag
+	 * Also sets turns off the password change flag, this is the only place that does this.
 	 *
 	 * @param $user object
 	 * @param $new_password string
@@ -580,7 +613,7 @@ class AccountsManager{
 		$new_password = $this->hash_password($new_password, $this->options['hash_method'], $this->options['hash_rounds']);
 		
 		//update with new password
-		$query = "UPDATE {$this->options['table_users']} SET password = :new_password, passwordChange = 0 WHERE id = :user_id";
+		$query = "UPDATE {$this->options['table_users']} SET passwordChange = 0, password = :new_password WHERE id = :user_id";
 		$sth = $this->db->prepare($query);
 		$sth->bindValue('new_password', $new_password, PDO::PARAM_STR);
 		$sth->bindValue('user_id', $user['id'], PDO::PARAM_INT);
@@ -588,9 +621,12 @@ class AccountsManager{
 		try{
 		
 			$sth->execute();
+			
 			if($sth->rowCount() < 1){
 				return false;
 			}
+			
+			$user['passwordChange'] = 0;
 		
 		}catch(PDOException $db_err){
 		
@@ -634,7 +670,7 @@ class AccountsManager{
 	 * Switches on the password change flag, forcing the user to change their passwords upon their next login
 	 *
 	 * @param $users array of objects | array of ids
-	 * @return boolean
+	 * @return boolean true
 	 */
 	public function force_password_change(array $users){
 	
@@ -654,6 +690,7 @@ class AccountsManager{
 		try{
 		
 			$sth->execute($user_ids);
+			$user['passwordChange'] =  1;
 			//if they were already flagged, then the job has been done
 			return true;
 		
@@ -850,6 +887,74 @@ class AccountsManager{
 		}
 		
 		return $this->get_users($user_ids);
+	
+	}
+	
+	/**
+	 * Updates a user's profile. This updates the user's information according to the database columns.
+	 * If you need to change client session data, use UserSessionsManager instead.
+	 *
+	 * @param $user object UserAccount
+	 * @param $new_user_data array optional
+	 * @return $user object | null
+	 */
+	public function update_user(UserAccount $user, array $new_user_data = null){
+	
+		if($new_user_data){
+			$user->set_user_data($new_user_data);
+		}
+		
+		if(!empty($user['password'])){
+		
+			if(!empty($user['old_password'])){
+				$this->change_password($user, $user['password'], $user['old_password']);
+			}else{
+				$this->change_password($user, $user['password']);
+			}
+		
+		}
+		
+		//we've done with passwords
+		unset($user['password']);
+		unset($user['old_password']);
+		
+		//we never update the id
+		$user_id = $user['id'];
+		unset($user['id']);
+		
+		//now we have to update all the user's fields
+		$columns = array_keys($user);
+		foreach($columns as $column){
+			if(!$this->validate_column($this->options['table_users'], $column)){
+				throw new DatabaseValidationException($this->lang['account_update_invalid']);
+			}
+		}
+		
+		$update_placeholder = implode(' = ?, ', $columns);
+		
+		$query = "UPDATE {$this->options['table_users']} SET $update_placeholder WHERE id = :user_id";
+		$sth = $this->db->prepare($query);
+		$sth->bindValue('user_id', $user_id, PDO::PARAM_INT);
+		
+		try{
+		
+			//execute like an array!
+			$sth->execute(array_values($user));
+			if($sth->rowCount() < 1){
+				return false;
+			}
+			//put the id back into the user
+			$user['id'] = $user_id;
+			return $user;
+		
+		}catch(PDOException $db_err){
+		
+			if($this->logger){
+				$this->logger->error("Failed to execute query to update user $user_id", ['exception' => $db_err]);
+			}
+			throw $db_err;
+		
+		}
 	
 	}
 	
@@ -1225,6 +1330,36 @@ class AccountsManager{
 		}
 		
 		return $user;
+	
+	}
+	
+	protected function validate_column($table, $column){
+	
+		$sth = $this->db->prepare("DESCRIBE $table");
+		
+		try{
+		
+			$sth->execute();
+			$table_fields = $q->fetchAll(PDO::FETCH_COLUMN);
+			
+		}catch(PDOExcepton $db_err){
+		
+			if($this->logger){
+				$this->logger->error("Failed to execute query to describe $table.", ['exception' => $db_err]);
+			}
+			throw $db_err;
+			
+		}
+		
+		foreach($table_fields as $field){
+		
+			if($field['Field'] == $column){
+				return true;
+			}
+			
+		}
+		
+		return false;
 	
 	}
 	
