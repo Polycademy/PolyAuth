@@ -23,6 +23,7 @@ use PolyAuth\Emailer;
 
 use PolyAuth\Exceptions\RegisterValidationException;
 use PolyAuth\Exceptions\PasswordValidationException;
+use PolyAuth\Exceptions\DatabaseValidationException;
 use PolyAuth\Exceptions\UserDuplicateException;
 use PolyAuth\Exceptions\UserNotFoundException;
 use PolyAuth\Exceptions\UserRoleAssignmentException;
@@ -35,7 +36,7 @@ class AccountsManagerSpec extends ObjectBehavior{
 
 	public $prophet;
 	public $user;
-
+	
 	function let(
 		PDO $db, 
 		PDOStatement $sth, 
@@ -89,6 +90,23 @@ class AccountsManagerSpec extends ObjectBehavior{
 		$sth->bindValue(Argument::cetera())->willReturn(true);
 		$sth->execute(Argument::any())->willReturn(true);
 		$sth->fetch()->willReturn(false);
+		$sth->fetchAll(PDO::FETCH_COLUMN, 0)->willReturn(array(
+			'id',
+			'ipAddress',
+			'username',
+			'password',
+			'passwordChange',
+			'email',
+			'activationCode',
+			'forgottenCode',
+			'forgottenDate',
+			'autoCode',
+			'createdOn',
+			'lastLogin',
+			'active',
+			'extraRandomField',
+			'anotherRandomField',
+		));
 		
 		$db->prepare(Argument::any())->willReturn($sth);
 		$db->lastInsertId()->willReturn(1);
@@ -104,6 +122,20 @@ class AccountsManagerSpec extends ObjectBehavior{
 			'active'			=> 0,
 		);
 		$user = $prophet->prophesize('PolyAuth\UserAccount');
+		$user->set_user_data(Argument::any())->will(function($args) use (&$user_data){
+			$data = $args[0];
+			$type = gettype($data);
+			if($type != 'object' AND $type != 'array'){
+				return false;
+			}
+			if($type == 'object'){
+				$data = get_object_vars($data);
+			}
+			$user_data = array_merge($user_data, $data);
+		});
+		$user->get_user_data()->will(function() use (&$user_data){
+			return $user_data;
+		});
 		$user->offsetGet(Argument::any())->will(function($args) use (&$user_data){
 			$key = $args[0];
 			return $user_data[$key];
@@ -117,6 +149,10 @@ class AccountsManagerSpec extends ObjectBehavior{
 		});
 		$user->offsetExists(Argument::any())->will(function($args) use (&$user_data){
 			return isset($user_data[$args[0]]);
+		});
+		$user->offsetUnset(Argument::any())->will(function($args) use (&$user_data){
+			$key = $args[0];
+			unset($user_data[$key]);
 		});
 		$user = $user->reveal();
 		$this->user = $user;
@@ -428,7 +464,24 @@ class AccountsManagerSpec extends ObjectBehavior{
 	
 	}
 	
-	function it_should_update_users_with_new_data(){
+	function it_should_update_users_with_new_data(PDOStatement $sth){
+	
+		$sth->rowCount()->willReturn(1);
+	
+		$this->user['extraRandomField'] = 'Blah';
+		
+		$new_additional_data['anotherRandomField'] = 'Blah2';
+		$new_additional_data['extraRandomField'] = 'Replaced';
+	
+		$user_account = $this->update_user($this->user, $new_additional_data);
+		
+		$user_account->shouldBeAnInstanceOf('PolyAuth\UserAccount');
+		
+		$user_account['extraRandomField']->shouldReturn('Replaced');
+		$user_account['anotherRandomField']->shouldReturn('Blah2');
+		$user_account['id']->shouldReturn(1);
+		
+		$this->shouldThrow(new DatabaseValidationException('Cannot update without valid data fields.'))->duringUpdate_user($this->user, array('nonexisting' => 'notgoingtowork'));
 	
 	}
 	

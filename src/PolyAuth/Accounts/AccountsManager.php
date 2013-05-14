@@ -923,7 +923,7 @@ class AccountsManager{
 		unset($user['id']);
 		
 		//now we have to update all the user's fields
-		$columns = array_keys($user);
+		$columns = array_keys($user->get_user_data());
 		foreach($columns as $column){
 			if(!$this->validate_column($this->options['table_users'], $column)){
 				throw new DatabaseValidationException($this->lang['account_update_invalid']);
@@ -939,7 +939,7 @@ class AccountsManager{
 		try{
 		
 			//execute like an array!
-			$sth->execute(array_values($user));
+			$sth->execute($user->get_user_data());
 			if($sth->rowCount() < 1){
 				return false;
 			}
@@ -1340,7 +1340,8 @@ class AccountsManager{
 		try{
 		
 			$sth->execute();
-			$table_fields = $q->fetchAll(PDO::FETCH_COLUMN);
+			//will return an numerically indexed array of field names
+			$table_fields = $sth->fetchAll(PDO::FETCH_COLUMN, 0);
 			
 		}catch(PDOExcepton $db_err){
 		
@@ -1351,14 +1352,9 @@ class AccountsManager{
 			
 		}
 		
-		foreach($table_fields as $field){
-		
-			if($field['Field'] == $column){
-				return true;
-			}
-			
+		if(in_array($column, $table_fields)){
+			return true;
 		}
-		
 		return false;
 	
 	}
