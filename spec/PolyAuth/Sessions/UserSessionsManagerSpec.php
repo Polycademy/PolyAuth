@@ -1,0 +1,46 @@
+<?php
+
+namespace spec\PolyAuth\Sessions;
+
+use PhpSpec\ObjectBehavior;
+use Prophecy\Argument;
+use Prophecy\Prophet;
+
+class UserSessionsManagerSpec extends ObjectBehavior{
+
+	function let(array $auth_strategies){
+	
+		$auth_strategies = array(
+			new CookieStrategy,
+			new HTTPStrategy,
+		);
+	
+	}
+
+	function it_is_initializable(){
+	
+		$this->shouldHaveType('PolyAuth\Sessions\LoginLogout');
+	
+	}
+	
+	function it_should_autologin_based_on_cookie_strategy(){
+	
+	}
+	
+	function it_should_login_based_on_cookie_strategy(){
+	
+	}
+	
+	function it_should_autologin_based_on_http_strategy(){
+	
+	}
+	
+	function it_should login_based_on_http_strategy(){
+	
+	}
+	
+	function it_should_increment_login_attempts_at_each_login(){
+	
+	}
+
+}

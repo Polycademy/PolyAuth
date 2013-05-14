@@ -2,31 +2,21 @@
 
 namespace PolyAuth\Sessions;
 
-//for database
 use PDO;
 use PDOException;
-
-//for logger
 use Psr\Log\LoggerInterface;
 
-//for options
-use PolyAuth\Options;
-
-//for languages
-use PolyAuth\Language;
-
-//for sessions
-use PolyAuth\CookieManager;
 use Aura\Session\Manager as SessionManager;
 use Aura\Session\SegmentFactory;
 use Aura\Session\CsrfTokenFactory;
 
-//for handling accounts
+use PolyAuth\Options;
+use PolyAuth\Language;
 use PolyAuth\UserAccount;
 use PolyAuth\Accounts\AccountsManager;
 
 //this class handles all the login and logout functionality
-class LoginLogout{
+class UserSessionsManager{
 
 	protected $auth_strategies;
 	protected $db;
@@ -58,27 +48,34 @@ class LoginLogout{
 		$this->cookie_manager = ($cookie_manager) ? $cookie_manager : new CookieManager($options);
 		$this->session_manager = ($session_manager) ? $session_manager : new SessionManager(new SegmentFactory, new CsrfTokenFactory);
 		$this->accounts_manager = ($accounts_manager) ? $accounts_manager : new AccountsManager($db, $options, $language, $logger);
-		
-		if($this->options['session_autostart']{
-			$this->start();
-		}
 	
 	}
 	
-	//remember to ask to change passwords if it detects a forgottenCode and forgottenTime and call the necessary method in accounts manager
+	//basically $loginlogout = new LoginLogout; try{ $loginlogout->start(); }catch(PasswordChangeException){ -> redirect to change password page }
+	
+	//remember to ask to change passwords if it detects passwordChange flag and call the necessary method in accounts manager (forgotten_complete), if the passwords needed to change, then don't just change the password, also call the forgotten_complete to reset the forgotten code and password Change
+	
+	
+	
+	
+	/**
+	 * Call this to begin tracking sessions, login details (cookies/HTTP tokens) and autologin.
+	 * This will throw an exception called PasswordChangeException if it detects that the user needs to change password
+	 * You would wrap this call in a try catch block and redirect to change password page.
+	 * The functionality of this depends on the authentication strategies.
+	 *
+	 * @return boolean
+	 */
 	public function start(){
 	
-		//only two checks are necessary (whether they are logged in/authenticated, and whether autologin is switched on)
-		//then it will proceed to go through the strategies
-		//immediately logs the person in if they have identity, rememberCode and are not currently logged in
-		if(!$this->authenticated() && $this->cookie_manager->get_cookie('identity') && $this->cookie_manager->get_cookie('rememberCode')){
+		if($this->options['login_autologin'] AND !$this->authenticated()){
 			$this->autologin();
 		}
 		
-		//... continue
-		
-		//if the person is logged in, we're going to check for forgottenCode and forgottenTime (actually can't do that)
-		
+		//now the person may not be logged in or may have autologin off
+		//if the person is logged in, detect whether passwordChange is necessary
+		//if so, throw an exception, the API should pass back an error
+		//if it's an SPA, your SPA should detect an error code from your server, then your SPA would demand a change in passwords
 	
 	}
 	
@@ -87,12 +84,36 @@ class LoginLogout{
 	//if it was cookies, look in to cookies
 	protected function autologin(){
 	
+		//requires identity and autoCode
+		//will call $this->login, once the details are set
+		//actually why not just the id and autoCode? (also autoCode should be encrypted!), the autoCode is equivalent to a password
+		//encrypted autoCode and id of the user (not username)
+		//one single encrypted autologin cookie -> serialized array. Store the identity and autoCode. But we need be able to specify which strategy to use...?
+		
+		//if autologin failed, then do not go to login, or else it may increment login attempts
+	
 	}
 	
-	//THIS IS ALWAYS A MANUAL login
-	public function login(){
+	//THIS IS ALWAYS A MANUAL login (don't call this until you have the Oauth token)
+	//in the case of Oauth, first do the redirect stuff (probably using $this->social_login()), on the redirect page, $this->exchange token, then call $this->login();
+	public function login(array $data = null){
+	
+		//$data can be ['identity'] => 'username OR email',
+		//['password'] => 'password' //<- optional
+		
+		//MANUAL first
+		//then in the order of strategies (it will try each one of them until one of them works)
+		//call the login_hook to return the $data and any morphs
+		//then use the $data's identity and password to login
+		//if in the case of Oauth, the $data would be null, then we'd pass null in, but the login_hook, so extract the OAuth token
+		//then use the Oauth token to authenticate against the API and extract valuable data, fill the data with whatever and pass back
+		//We would check the data's identity and password to match, if we detect ['oauth'] true, then these are registered or inserted...
 	
 		//automatically logout first, then login
+		//if it detects that passwordChange is required (it will throw an exception)
+		//if it detects that there is forgottenCode and stuff, it will run $accounts_manager->forgotten_clear
+		
+		//if this fails at any time, we'll do the whole login throttling.
 	
 	}
 	
