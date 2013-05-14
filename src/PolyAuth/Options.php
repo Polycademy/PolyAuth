@@ -16,7 +16,6 @@ class Options implements \ArrayAccess{
 		'hash_method'						=> PASSWORD_DEFAULT,	//can be PASSWORD_DEFAULT or PASSWORD_BCRYPT
 		'hash_rounds'						=> 10,
 		//session options
-		'session_autostart'					=> true,
 		'session_encrypt'					=> true, //should the session data be encrypted? (only for the cookie)
 		'session_key'						=> 'hiddenpassword', //session encryption key, any number of characters and depends on session_encrypt
 		'session_handler'					=> null, //object that implements the SessionInterface
@@ -59,7 +58,7 @@ class Options implements \ArrayAccess{
 			'diffidentity'	=> false,
 			'unique'		=> false, //number of unique characters ('' or false or 4) ('' defaults to 4)
 		), //can be an array or empty array
-		'login_persistent'					=> true, //allowing remember me or not
+		'login_autologin'					=> true, //allowing remember me or not
 		'login_expiration'					=> 86500, // How long to remember the user (seconds). Set to zero for no expiration
 		'login_expiration_extend'			=> true, //allowing whether autologin extends the login_expiration
 		'login_attempts'					=> 0, //if 0, then it is disabled
@@ -90,9 +89,16 @@ class Options implements \ArrayAccess{
 			return;
 		}
 		
-		//second parameter is to register the shutdown function
-		//make sure this runs before sessions are started
-		session_set_save_handler($session_handler, true);
+		session_set_save_handler(
+			array($session_handler, 'open'),
+			array($session_handler, 'close'),
+			array($session_handler, 'read'),
+			array($session_handler, 'write'),
+			array($session_handler, 'destroy'),
+			array($session_handler, 'gc')
+		);
+		
+		register_shutdown_function('session_write_close');
 	
 	}
 	

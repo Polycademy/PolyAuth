@@ -5,16 +5,16 @@ namespace PolyAuth;
 //if you're implementing the php 5.4 interface, then just implement both of them!
 interface SessionInterface{
 
-	abstract public bool close ( void )
+	public function close();
 	
-	abstract public bool destroy ( string $session_id )
+	public function destroy($session_id);
 	
-	abstract public bool gc ( string $maxlifetime )
+	public function gc($maxlifetime);
 	
-	abstract public bool open ( string $save_path , string $name )
+	public function open($save_path, $name);
 	
-	abstract public string read ( string $session_id )
+	public function read($session_id);
 	
-	abstract public bool write ( string $session_id , string $session_data )
+	public function write($session_id, $session_data);
 	
 }
