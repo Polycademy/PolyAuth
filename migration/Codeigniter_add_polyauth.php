@@ -108,7 +108,7 @@ class Migration_add_polyauth extends CI_Migration {
 				'type' => 'DATETIME',
 				'null' => TRUE
 			),
-			'rememberCode' => array(
+			'autoCode' => array(
 				'type' => 'VARCHAR',
 				'constraint' => '40',
 				'null' => TRUE
