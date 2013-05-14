@@ -42,5 +42,9 @@ class UserSessionsManagerSpec extends ObjectBehavior{
 	function it_should_increment_login_attempts_at_each_login(){
 	
 	}
+	
+	function it_should_be_able_to_modify_client_session_data(){
+	
+	}
 
 }

@@ -158,6 +158,27 @@ class UserSessionsManager{
 	
 	}
 	
+	//get current client session data
+	//this is the server side session, not the cookie data...
+	//use this to store temporary information about the user, such as shopping carts... etc
+	//three places to modify user data
+	//$user for serverside to database ORM
+	//user session (tmp) or database session depending on interface (this stuff is a serialised version of $user, but can have other things in it, this doesn't need to map to the database)
+	public function get_user_session(){
+	
+	}
+	
+	//modify client session data
+	public function update_user_session(){
+	
+		//decrypt session
+		//modify/update it as an array
+		//encrypt it again
+		
+		//also should it possible to do to only the current session, or multiple sessions??
+	
+	}
+	
 	//this is for cookie data and session storage
 	//please note that the cookie data should not contain all of the user's data (only the necessary ones)
 	//such as autologin key and current session (so they don't have to constantly login)
