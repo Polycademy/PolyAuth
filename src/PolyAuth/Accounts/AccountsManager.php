@@ -135,11 +135,10 @@ class AccountsManager{
 				throw new DatabaseValidationException($this->lang['account_creation_invalid']);
 			}
 		}
-		$columns = implode(',', $columns);
+		$columns = implode(', ', $columns);
 		
-		$insert_placeholders = implode(',', array_fill(0, count($data), '?'));
+		$insert_placeholders = implode(', ', array_fill(0, count($data), '?'));
 		
-		//this wont work...
 		$query = "INSERT INTO {$this->options['table_users']} ($columns) VALUES ($insert_placeholders)";
 		
 		$sth = $this->db->prepare($query);
@@ -930,7 +929,7 @@ class AccountsManager{
 			}
 		}
 		
-		$update_placeholder = implode(' = ?, ', $columns);
+		$update_placeholder = implode(' = ?, ', $columns) . ' = ?';
 		
 		$query = "UPDATE {$this->options['table_users']} SET $update_placeholder WHERE id = :user_id";
 		$sth = $this->db->prepare($query);
