@@ -284,14 +284,14 @@ class AccountsManagerSpec extends ObjectBehavior{
 		$this->user['forgottenCode'] = 'abcd1234';
 		
 		//assume that the user placed the request 900 seconds ago
-		$this->user['forgottenTime'] = date('Y-m-d H:i:s', strtotime('- 900 seconds', strtotime(date('Y-m-d H:i:s'))));
+		$this->user['forgottenDate'] = date('Y-m-d H:i:s', strtotime('- 900 seconds', strtotime(date('Y-m-d H:i:s'))));
 		
 		$this->forgotten_check($this->user, 'abcd1234')->shouldReturn(true);
 		
 		$this->forgotten_check($this->user, 'notthecorrectforgottencode')->shouldReturn(false);
 		
 		//exceeding the time should return false
-		$this->user['forgottenTime'] = date('Y-m-d H:i:s', strtotime('- 3000 seconds', strtotime(date('Y-m-d H:i:s'))));
+		$this->user['forgottenDate'] = date('Y-m-d H:i:s', strtotime('- 3000 seconds', strtotime(date('Y-m-d H:i:s'))));
 		$this->forgotten_check($this->user, 'abcd1234')->shouldReturn(false);
 	
 	}
@@ -425,6 +425,10 @@ class AccountsManagerSpec extends ObjectBehavior{
 		$users->shouldBeArray();
 		$users->shouldHaveCount(1);
 		$users[0]->shouldBeAnInstanceOf('PolyAuth\UserAccount');
+	
+	}
+	
+	function it_should_update_users_with_new_data(){
 	
 	}
 	
