@@ -4,7 +4,7 @@ namespace PolyAuth;
 
 use PolyAuth\Options;
 
-class CookieManager{
+class Cookies{
 
 	protected $options;
 	

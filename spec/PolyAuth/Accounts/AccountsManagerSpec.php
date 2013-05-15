@@ -12,8 +12,8 @@ use PDOStatement;
 
 use PolyAuth\Options;
 use PolyAuth\Language;
-use PolyAuth\Accounts\PasswordComplexity;
-use PolyAuth\Accounts\Random;
+use PolyAuth\Security\PasswordComplexity;
+use PolyAuth\Security\Random;
 use PolyAuth\UserAccount;
 use RBAC\Permission;
 use RBAC\Role\Role;

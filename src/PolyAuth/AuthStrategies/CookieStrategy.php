@@ -2,21 +2,45 @@
 
 namespace PolyAuth\AuthStrategies;
 
-use PolyAuth\AuthStrategies\AuthStrategyInterface;
-use PolyAuth\CookieManager;
+use PolyAuth\Options;
+use PolyAuth\Cookies;
+use PolyAuth\Security\Encryption;
 
 class CookieStrategy implements AuthStrategyInterface{
 
+	protected $cookies;
+	protected $encryption;
+	
+	public function __construct(Cookies $cookies = null, Encryption $encryption = null){
+		
+		$this->cookies = ($cookies) ? $cookies : new Cookies(new Options);
+		$this->encryption = ($encryption) ? $encryption : new Encryption;
+		
+	}
+
 	public function autologin(){
+	
+		//should create a session
+		//cookies need options to be setup...
 	
 	}
 	
 	//this just returns the $data because the cookie based authentication doesn't do anything at this point
+	//but also assigns the cookies
 	public function login_hook($data){
+		//assign $data to cookies (using encryption)
+		
+		//the thing to assign should just be the session id, and also any extra data to store
+		//does the session id need to be encrypted?
+		
+		//should create a session
+		
+		
+		
 		return $data;
 	}
 	
-	public function logged_in(){
+	public function logout_hook(){
 	
 	}
 

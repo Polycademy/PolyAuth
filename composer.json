@@ -1,7 +1,7 @@
 {
     "require":{
-		"aura/session": "1.0.0-beta1",
-		"leighmacdonald/php_rbac": "dev-master",
+		"aura/session": "dev-master",
+		"leighmacdonald/php_rbac": "<=1.0",
 		"ircmaxell/password-compat": "*",
 		"phpmailer/phpmailer": "5.2.*",
 		"psr/log": "1.0.0"

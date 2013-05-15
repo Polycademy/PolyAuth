@@ -12,19 +12,20 @@ class Options implements \ArrayAccess{
 		'table_users'						=> 'user_accounts',
 		'table_login_attempts'				=> 'login_attempts',
 		//security options
+		'security_key'						=> 'hiddenpassword', //session encryption key, any number of characters
+		//password options
 		'hash_fallback'						=> false, //set whether to use bcrypt fallback (if you're behind 5.3.7 in PHP version, this will not seamlessly upgrade, if you switch PHP versions, make sure to rehash your passwords manually)
 		'hash_method'						=> PASSWORD_DEFAULT,	//can be PASSWORD_DEFAULT or PASSWORD_BCRYPT
 		'hash_rounds'						=> 10,
 		//session options
-		'session_encrypt'					=> true, //should the session data be encrypted? (only for the cookie)
-		'session_key'						=> 'hiddenpassword', //session encryption key, any number of characters and depends on session_encrypt
 		'session_handler'					=> null, //object that implements the SessionInterface
 		//cookie options
 		'cookie_domain'						=> '',
 		'cookie_path'						=> '/',
-		'cookie_prefix'						=> '',
+		'cookie_prefix'						=> 'polyauth',
 		'cookie_secure'						=> false,
 		'cookie_httponly'					=> false,
+		'cookie_lifetime'					=> 0,
 		//email options (email data should be passed in as a string, end user manages their own stuff)
 		'email'								=> false, //make this true to use the emails by PHPMailer, otherwise false if you want to roll your own email solution, watch out for email activation
 		'email_smtp'						=> false,

@@ -3,7 +3,7 @@
         "This file locks the dependencies of your project to a known state",
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
-    "hash": "8188fadd24ad9a4d691fd7519c34a7c3",
+    "hash": "e13141cd974ec8122433eb73fac7df59",
     "packages": [
         {
             "name": "aura/installer-default",
@@ -48,16 +48,16 @@
         },
         {
             "name": "aura/session",
-            "version": "1.0.0-beta1",
+            "version": "dev-master",
             "source": {
                 "type": "git",
-                "url": "https://github.com/auraphp/Aura.Session",
-                "reference": "1.0.0-beta1"
+                "url": "https://github.com/auraphp/Aura.Session.git",
+                "reference": "1.0.0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://github.com/auraphp/Aura.Session/archive/1.0.0-beta1.zip",
-                "reference": "1.0.0-beta1",
+                "url": "https://api.github.com/repos/auraphp/Aura.Session/zipball/1.0.0",
+                "reference": "1.0.0",
                 "shasum": ""
             },
             "require": {
@@ -81,6 +81,11 @@
                     "homepage": "http://paul-m-jones.com"
                 },
                 {
+                    "name": "Akihito Koriyama",
+                    "email": "akihito.koriyama@gmail.com",
+                    "homepage": "https://github.com/koriym"
+                },
+                {
                     "name": "Aura.Session Contributors",
                     "homepage": "https://github.com/auraphp/Aura.Session/contributors"
                 }
@@ -91,7 +96,7 @@
                 "session",
                 "sessions"
             ],
-            "time": "2012-11-29 00:00:00"
+            "time": "2013-05-10 00:06:31"
         },
         {
             "name": "ircmaxell/password-compat",
@@ -134,16 +139,16 @@
         },
         {
             "name": "leighmacdonald/php_rbac",
-            "version": "dev-master",
+            "version": "0.9.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/leighmacdonald/php_rbac.git",
-                "reference": "9802bd073fea86b43f5d1418c91eab640936e151"
+                "reference": "0.9.0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/leighmacdonald/php_rbac/zipball/9802bd073fea86b43f5d1418c91eab640936e151",
-                "reference": "9802bd073fea86b43f5d1418c91eab640936e151",
+                "url": "https://api.github.com/repos/leighmacdonald/php_rbac/zipball/0.9.0",
+                "reference": "0.9.0",
                 "shasum": ""
             },
             "require": {
@@ -181,7 +186,7 @@
                 "database",
                 "rbac"
             ],
-            "time": "2013-04-30 07:25:58"
+            "time": "2013-05-12 08:49:38"
         },
         {
             "name": "phpmailer/phpmailer",
@@ -630,8 +635,7 @@
     ],
     "minimum-stability": "stable",
     "stability-flags": {
-        "aura/session": 10,
-        "leighmacdonald/php_rbac": 20,
+        "aura/session": 20,
         "phpspec/phpspec": 20
     },
     "platform": [

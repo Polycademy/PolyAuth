@@ -1,6 +1,6 @@
 <?php
 
-namespace PolyAuth\Accounts;
+namespace PolyAuth\Security;
 
 class BcryptFallback{
 

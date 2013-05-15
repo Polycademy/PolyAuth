@@ -16,9 +16,9 @@ use PolyAuth\Options;
 use PolyAuth\Language;
 
 //for security
-use PolyAuth\Accounts\BcryptFallback;
 use PolyAuth\Accounts\PasswordComplexity;
-use PolyAuth\Accounts\Random;
+use PolyAuth\Security\BcryptFallback;
+use PolyAuth\Security\Random;
 
 //for RBAC (to CRUD roles and permissions)
 use PolyAuth\UserAccount;

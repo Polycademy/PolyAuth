@@ -9,73 +9,131 @@ use Psr\Log\LoggerInterface;
 use Aura\Session\Manager as SessionManager;
 use Aura\Session\SegmentFactory;
 use Aura\Session\CsrfTokenFactory;
+use Aura\Session\Randval;
+use Aura\Session\Phpfunc;
 
 use PolyAuth\Options;
 use PolyAuth\Language;
+
+//for making sure auth strategies are real strategies
+use PolyAuth\AuthStrategies\AuthStrategyInterface;
+
+//for encrypting session data
+use PolyAuth\Security\Encryption;
+
+//for manipulating the user
 use PolyAuth\UserAccount;
 use PolyAuth\Accounts\AccountsManager;
+
+//various exceptions
+use PolyAuth\Exceptions\PasswordChangeException;
+use PolyAuth\Exceptions\PasswordValidationException;
+use PolyAuth\Exceptions\DatabaseValidationException;
+use PolyAuth\Exceptions\UserNotFoundException;
 
 //this class handles all the login and logout functionality
 class UserSessionsManager{
 
-	protected $auth_strategies;
+	protected $strategies;
 	protected $db;
 	protected $options;
 	protected $lang;
 	protected $logger;
-	protected $session_manager;
+	protected $encryption;
 	protected $accounts_manager;
-	
-	protected $user; //this is used to represent the user account for the RBAC, it is only initialised when a person logs in, it is not be used for any other purposes, always must represent the currently logged in user
+	protected $session_manager;
 
 	public function __construct(
-		array $auth_strategies,
+		array $strategies,
 		PDO $db, 
 		Options $options, 
 		Language $language, 
 		LoggerInterface $logger = null,
+		Encryption $encryption = null,
 		AccountsManager $accounts_manager = null,
-		CookieManager $cookie_manager = null,
 		SessionManager $session_manager = null
 	){
-	
-		$this->auth_strategies = $auth_strategies;
+		
+		//this shouldn't happen should it!?
+		foreach($strategies as $strategy){
+			if(!$strategy instanceof AuthStrategyInterface){
+				throw new \InvalidArgumentException('Strategies must implement the AuthStrategyInterface');
+			}
+		}
+		
+		$this->strategies = $strategies;
 		$this->options = $options;
 		$this->lang = $language;
 		
 		$this->db = $db;
 		$this->logger = $logger;
-		$this->cookie_manager = ($cookie_manager) ? $cookie_manager : new CookieManager($options);
-		$this->session_manager = ($session_manager) ? $session_manager : new SessionManager(new SegmentFactory, new CsrfTokenFactory);
+		
+		$this->encryption = ($encryption) ? $encryption : new Encryption;
 		$this->accounts_manager = ($accounts_manager) ? $accounts_manager : new AccountsManager($db, $options, $language, $logger);
+		
+		if($session_manager){
+			$this->session_manager = $session_manager;
+		}else{
+			$this->session_manager = new SessionManager(
+				new SegmentFactory,
+				new CsrfTokenFactory(
+					new Randval(
+						new Phpfunc
+					)
+				),
+				$_COOKIE
+			);
+		}
+		
+		//setting up cookie parameters for the session manager (which uses PHP sessions)
+		//note that if you're using this for an API, and using HTTP authentication, sessions may be ignored by the client
+		//the client will simply have to login in each time, based on RESTful style
+		//this will still work, but you can't rely on a shopping cart in such a situation!
+		$this->session_manager->setCookieParams(array(
+			'lifetime'	=> $this->options['cookie_lifetime'],
+			'path'		=> $this->options['cookie_path'],
+			'domain'	=> $this->options['cookie_domain'],
+			'secure'	=> $this->options['secure'],
+			'httponly'	=> $this->options['httponly'],
+		));
 	
 	}
-	
-	//basically $loginlogout = new LoginLogout; try{ $loginlogout->start(); }catch(PasswordChangeException){ -> redirect to change password page }
-	
-	//remember to ask to change passwords if it detects passwordChange flag and call the necessary method in accounts manager (forgotten_complete), if the passwords needed to change, then don't just change the password, also call the forgotten_complete to reset the forgotten code and password Change
-	
-	
-	
 	
 	/**
 	 * Call this to begin tracking sessions, login details (cookies/HTTP tokens) and autologin.
 	 * This will throw an exception called PasswordChangeException if it detects that the user needs to change password
 	 * You would wrap this call in a try catch block and redirect to change password page.
-	 * The functionality of this depends on the authentication strategies.
-	 *
-	 * @return boolean
+	 * You should then redirect to acquiring the new password, and then call forgotten_complete in AccountsManager
 	 */
 	public function start(){
 	
+		//check if the person is not logged in, and that autologin was set to true
 		if($this->options['login_autologin'] AND !$this->authenticated()){
 			$this->autologin();
 		}
 		
-		//now the person may not be logged in or may have autologin off
-		//if the person is logged in, detect whether passwordChange is necessary
-		//if so, throw an exception, the API should pass back an error
-		//if it's an SPA, your SPA should detect an error code from your server, then your SPA would demand a change in passwords
+		//if the person is now logged in and we detect if password change is necessary
+		if($this->authenticated() AND $this->needs_to_change_password()){
+			throw new PasswordChangeException($this->lang['password_change_required']);
+		}
+	
+	}
+	
+	/**
+	 * Checks if the user needs to change his current password.
+	 *
+	 * @return boolean
+	 */
+	public function needs_to_change_password(){
+	
+		//will return a UserAccount!
+		$user = $this->get_user_session();
+		
+		if($user['passwordChange'] === 1){
+			return true;
+		}else{
+			return false;
+		}
 	
 	}
 	
@@ -91,6 +149,8 @@ class UserSessionsManager{
 		//one single encrypted autologin cookie -> serialized array. Store the identity and autoCode. But we need be able to specify which strategy to use...?
 		
 		//if autologin failed, then do not go to login, or else it may increment login attempts
+		
+		//CREATE A NEW SESSION with the new user session
 	
 	}
 	
@@ -114,6 +174,9 @@ class UserSessionsManager{
 		//if it detects that there is forgottenCode and stuff, it will run $accounts_manager->forgotten_clear
 		
 		//if this fails at any time, we'll do the whole login throttling.
+		
+		
+		//CREATE A SESSION! with the new user
 	
 	}
 	
@@ -130,6 +193,18 @@ class UserSessionsManager{
 		//OR you can use the Aura Sessions, which will be constructed for any particular user.
 		//it's better to use the session data which would be an encoded version of the UserAccount
 		//in fact we only need to check if session data exists (but serialisation and unserialisation works)
+		
+		//actually don't use sessions for this, this is because sessions relies on a cookies
+		//instead simply check if $this->user is filled
+		//$this->user will be filled, everytime the person auto logs in, and manually logs in.
+		//For HTTP strategy, each request logs in. They constantly logs in.
+		//For cookie strategy, autologin will fill it, but otherwise if they don't autologin..?
+		
+		//No this should use sessions to test whether someone is logged in.
+		//If the client doesn't use cookies, sessions can be appended via the URL (most likely API usage)
+		//If the client doesn't respect the URL session id, or that is switched off, it doesn't matter, because they will constantly login
+		//on each request
+		//Even with OAuth, it'd be the same
 	
 	}
 	
@@ -153,8 +228,13 @@ class UserSessionsManager{
 	
 	}
 	
-	//use this function to determine if the user needs to change password?
-	public function needs_to_change_password(){
+	//saves a new user for this session
+	public function save_user_session(UserAccount $user){
+	
+		$user = $this->encryption->encrypt($user, $this->options['security_key']);
+		
+		//continue to save this encrypted $user into the session now...
+
 	
 	}
 	
@@ -164,41 +244,26 @@ class UserSessionsManager{
 	//three places to modify user data
 	//$user for serverside to database ORM
 	//user session (tmp) or database session depending on interface (this stuff is a serialised version of $user, but can have other things in it, this doesn't need to map to the database)
-	public function get_user_session(){
+	public function get_user_session(UserAccount $user){
+	
+		//there is no session to get if it was unauthenticated
+		if(!$this->authenticated){
+			return null;
+		}
+		
 	
 	}
 	
 	//modify client session data
+	//use this for shopping carts or temporary user data
+	//this will not save the data to the database!
+	//it is not for updating the user's account
 	public function update_user_session(){
 	
 		//decrypt session
 		//modify/update it as an array
 		//encrypt it again
-		
-		//also should it possible to do to only the current session, or multiple sessions??
 	
 	}
 	
-	//this is for cookie data and session storage
-	//please note that the cookie data should not contain all of the user's data (only the necessary ones)
-	//such as autologin key and current session (so they don't have to constantly login)
-	//of course such would only exist if there were cookies
-	//in the situation without cookies, this would only be used for the session storage on the server
-	//to track the user on the client, we would have to use HTTP tokens (or in PHPBB, token strings)
-	//also allow the ability to add flash data to that session
-	//the cookie is only there to track who the user is (a session id), this will lead to data on the database being associated with it (that's it..), yea screw you RoyFielding!
-	public function encrypt_session($data, $key){
-	
-		$data = serialize($data);
-		return base64_encode(mcrypt_encrypt(MCRYPT_RIJNDAEL_256, md5($key), $data, MCRYPT_MODE_CBC, md5(md5($key))));
-
-	}
-	
-	public function decrypt_session($data, $key){
-	
-		$data = rtrim(mcrypt_decrypt(MCRYPT_RIJNDAEL_256, md5($key), base64_decode($data), MCRYPT_MODE_CBC, md5(md5($key))), "\0");
-		return unserialize($data);
-	
-	}
-
 }

@@ -1,6 +1,6 @@
 <?php
 
-namespace spec\PolyAuth\Accounts;
+namespace spec\PolyAuth\Security;
 
 use PhpSpec\ObjectBehavior;
 
