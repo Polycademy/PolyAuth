@@ -109,13 +109,28 @@ class UserSessionsManager{
 	
 		//check if the person is not logged in, and that autologin was set to true
 		if($this->options['login_autologin'] AND !$this->authenticated()){
+			//this will make authenticated true if it worked, it will also create a session for the logged in user
 			$this->autologin();
 		}
 		
-		//if the person is now logged in and we detect if password change is necessary
-		if($this->authenticated() AND $this->needs_to_change_password()){
-			throw new PasswordChangeException($this->lang['password_change_required']);
+		if($this->authenticated){
+		
+			//this means the session is "logged in"
+			
+			if($this->needs_to_change_password()){
+				throw new PasswordChangeException($this->lang['password_change_required']);
+			}
+		
+		}else{
+		
+			//this means the session is "anonymous", the session hasn't been created yet
+			
+			//assign anonymous an anonymous session
+			
+		
 		}
+		
+		//time out long lived sessions (to log people if someone left their browser on)
 	
 	}
 	
@@ -137,9 +152,10 @@ class UserSessionsManager{
 	
 	}
 	
-	//autologin strategy depends on what the auth strategy is
-	//if it was HTTP, look into headers (or OAuth)
-	//if it was cookies, look in to cookies
+	/**
+	 *
+	 *
+	 */
 	protected function autologin(){
 	
 		//requires identity and autoCode
@@ -153,6 +169,8 @@ class UserSessionsManager{
 		//CREATE A NEW SESSION with the new user session
 	
 	}
+	
+
 	
 	//THIS IS ALWAYS A MANUAL login (don't call this until you have the Oauth token)
 	//in the case of Oauth, first do the redirect stuff (probably using $this->social_login()), on the redirect page, $this->exchange token, then call $this->login();
@@ -176,11 +194,15 @@ class UserSessionsManager{
 		//if this fails at any time, we'll do the whole login throttling.
 		
 		
+		//also regenerate user session (refresh the ID), but use the "same" session to store the user variable
 		//CREATE A SESSION! with the new user
 	
 	}
 	
 	public function logout(){
+	
+		//call regenerate user session
+		//create a new anonymous session
 	
 	}
 	
@@ -246,10 +268,7 @@ class UserSessionsManager{
 	//user session (tmp) or database session depending on interface (this stuff is a serialised version of $user, but can have other things in it, this doesn't need to map to the database)
 	public function get_user_session(UserAccount $user){
 	
-		//there is no session to get if it was unauthenticated
-		if(!$this->authenticated){
-			return null;
-		}
+		//this can work for anonymous sessions too!
 		
 	
 	}
@@ -263,6 +282,20 @@ class UserSessionsManager{
 		//decrypt session
 		//modify/update it as an array
 		//encrypt it again
+	
+	}
+	
+	/**
+	 * Regenerate the session id and empties out the $_SESSION.
+	 * Use this when:
+	 * 1. the role or permissions of the current user was changed programmatically.
+	 * 2. the user updates their profile
+	 * 3. the user logs in or logs out (to prevent session fixation) -> (done automatically)
+	 */
+	public function regenerate_user_session(){
+	
+		$this->session_manager->regenerateId();
+		$_SESSION = array();
 	
 	}
 	
