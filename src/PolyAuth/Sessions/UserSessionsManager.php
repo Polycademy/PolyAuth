@@ -25,6 +25,9 @@ use PolyAuth\Security\Encryption;
 use PolyAuth\UserAccount;
 use PolyAuth\Accounts\AccountsManager;
 
+//for cookie management
+// use PolyAuth\Cookies;
+
 //various exceptions
 use PolyAuth\Exceptions\PasswordChangeException;
 use PolyAuth\Exceptions\PasswordValidationException;
@@ -42,6 +45,7 @@ class UserSessionsManager{
 	protected $encryption;
 	protected $accounts_manager;
 	protected $session_manager;
+	// protected $cookies;
 
 	public function __construct(
 		array $strategies,
@@ -50,6 +54,7 @@ class UserSessionsManager{
 		Language $language, 
 		LoggerInterface $logger = null,
 		Encryption $encryption = null,
+		// Cookies $cookies = null,
 		AccountsManager $accounts_manager = null,
 		SessionManager $session_manager = null
 	){
@@ -69,6 +74,7 @@ class UserSessionsManager{
 		$this->logger = $logger;
 		
 		$this->encryption = ($encryption) ? $encryption : new Encryption;
+		// $this->cookies = ($cookies) ? $cookies : new Cookies($options);
 		$this->accounts_manager = ($accounts_manager) ? $accounts_manager : new AccountsManager($db, $options, $language, $logger);
 		
 		if($session_manager){
@@ -107,6 +113,19 @@ class UserSessionsManager{
 	 */
 	public function start(){
 	
+		//multiple possibilities:
+		
+		//FIRST: ANONYMOUS NO SESSION USER
+			//Can go into SECOND (via just normal assignment)
+			//Can go into THIRD (via autologin)
+		//SECOND: ANONYMOUS SESSION USER
+			//not possible for this to autologin... because the session has already been assigned
+		//THIRD: LOGGED IN USER
+	
+	
+		//this will be used for all sessions
+		$segment = $this->session_manager->newSegment('PolyAuth-UserSession');
+	
 		//check if the person is not logged in, and that autologin was set to true
 		if($this->options['login_autologin'] AND !$this->authenticated()){
 			//this will make authenticated true if it worked, it will also create a session for the logged in user
@@ -120,17 +139,51 @@ class UserSessionsManager{
 			if($this->needs_to_change_password()){
 				throw new PasswordChangeException($this->lang['password_change_required']);
 			}
+			
+			//create a logged in session...
 		
 		}else{
 		
-			//this means the session is "anonymous", the session hasn't been created yet
+			//this either the session is anonymous, or there are no sessions at all
 			
-			//assign anonymous an anonymous session
+			//if there are no sessions at all, we shall create an anonymous session
+			if(!$this->session_manager->isAvailable){
+			
+				//assign anonymous an anonymous session
+				$segment->anonymous = true;
+				$segment->timeout = time();
+			
+			}
 			
 		
 		}
 		
-		//time out long lived sessions (to log people if someone left their browser on)
+		//time out long lived sessions (to log people if someone left their browser hanging on public computers)
+		if(isset($segment->timeout) AND $this->options['session_expiration'] !== 0){
+		
+			$time_to_live = time() - $segment->timeout;
+			if($time_to_live > $this->options['session_expiration']){
+			
+				//destroys the current session
+				$params = $this->session_manager->getCookieParams();
+				setcookie(
+					$this->session_manager->getName(), 
+					'', 
+					time() - 86500, 
+					$params["path"], 
+					$params["domain"], 
+					$params["secure"], 
+					$params["httponly"]
+				);
+				$this->session_manager->destroy();
+				
+				//creates a new one anonymous session (lazy loading)
+				$segment->anonymous = true;
+				$segment->timeout = time();
+			
+			}
+		
+		}
 	
 	}
 	
@@ -293,6 +346,9 @@ class UserSessionsManager{
 	 * 3. the user logs in or logs out (to prevent session fixation) -> (done automatically)
 	 */
 	public function regenerate_user_session(){
+	
+		//this needs to cater to AJAX, it has the problem of concurrent requests...
+		//actually this may not be a problem, this is only called on log in or log out, autologin only happens if the session has expired
 	
 		$this->session_manager->regenerateId();
 		$_SESSION = array();

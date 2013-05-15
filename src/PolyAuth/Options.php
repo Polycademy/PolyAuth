@@ -19,13 +19,14 @@ class Options implements \ArrayAccess{
 		'hash_rounds'						=> 10,
 		//session options
 		'session_handler'					=> null, //object that implements the SessionInterface
+		'session_expiration'				=> 43200, //expiration of a single session (set to 0 for infinite)
 		//cookie options
 		'cookie_domain'						=> '',
 		'cookie_path'						=> '/',
 		'cookie_prefix'						=> 'polyauth',
 		'cookie_secure'						=> false,
 		'cookie_httponly'					=> false,
-		'cookie_lifetime'					=> 0,
+		'cookie_lifetime'					=> 0, //for when the browser is closed (how long should the cookies be remembered for) (0 means the cookie dies as soon as the browser closes)
 		//email options (email data should be passed in as a string, end user manages their own stuff)
 		'email'								=> false, //make this true to use the emails by PHPMailer, otherwise false if you want to roll your own email solution, watch out for email activation
 		'email_smtp'						=> false,
@@ -60,7 +61,7 @@ class Options implements \ArrayAccess{
 			'unique'		=> false, //number of unique characters ('' or false or 4) ('' defaults to 4)
 		), //can be an array or empty array
 		'login_autologin'					=> true, //allowing remember me or not
-		'login_expiration'					=> 86500, // How long to remember the user (seconds). Set to zero for no expiration
+		'login_expiration'					=> 86500, // autologin expiration (seconds). Set to zero for no expiration
 		'login_expiration_extend'			=> true, //allowing whether autologin extends the login_expiration
 		'login_attempts'					=> 0, //if 0, then it is disabled
 		'login_lockout'						=> 0, //lockout time in seconds
