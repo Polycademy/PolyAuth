@@ -205,20 +205,32 @@ class UserSessionsManager{
 		if(!$this->session_manager->isStarted()){
 			$this->session_manager->start();
 		}
-	
-		//requires identity and autoCode
-		//will call $this->login, once the details are set
-		//actually why not just the id and autoCode? (also autoCode should be encrypted!), the autoCode is equivalent to a password
-		//encrypted autoCode and id of the user (not username)
-		//one single encrypted autologin cookie -> serialized array. Store the identity and autoCode. But we need be able to specify which strategy to use...?
 		
-		//if autologin failed, then do not go to login, or else it may increment login attempts
+		$user_id = false;
+		//cycle through the auth strategies and check that at least one of them works
+		foreach($this->auth_strategies as $strategy){
+			if($user_id = $strategy->autologin()){
+				//as soon as one of them works, break it
+				break;
+			}
+		}
 		
-		//CREATE A NEW SESSION with the new user session
+		//do note that if you are using OAuth or OpenId, this user_id may be created on the fly and immediately registered due to third party login
+		if($user_id){
+		
+			//update last login
+			//create the session
+			//set the session segment's timeout to the current time
+			
+			return $user_id
+		
+		}else{
+		
+			return false;
+		
+		}
 	
 	}
-	
-
 	
 	//THIS IS ALWAYS A MANUAL login (don't call this until you have the Oauth token)
 	//in the case of Oauth, first do the redirect stuff (probably using $this->social_login()), on the redirect page, $this->exchange token, then call $this->login();
@@ -249,6 +261,9 @@ class UserSessionsManager{
 		
 		//also regenerate user session (refresh the ID), but use the "same" session to store the user variable
 		//CREATE A SESSION! with the new user
+		
+		//set the session segment timeout to time()
+		
 	
 	}
 	

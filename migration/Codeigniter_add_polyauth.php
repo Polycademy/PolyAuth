@@ -113,6 +113,10 @@ class Migration_add_polyauth extends CI_Migration {
 				'constraint' => '40',
 				'null' => TRUE
 			),
+			'autoDate' => array(
+				'type' => 'DATETIME',
+				'null' => TRUE
+			),
 			'createdOn' => array(
 				'type' => 'DATETIME',
 			),
