@@ -226,7 +226,7 @@ class Migration_add_polyauth extends CI_Migration {
 			//create the role
 			$created_role = Role::create($role, $default_roles[$role]);
 			
-			foreach($permissions_array as $permission as $reason){
+			foreach($permissions_array as $permission => $reason){
 
 				//create the permission
 				$created_permission = Permission::create($permission, $reason);

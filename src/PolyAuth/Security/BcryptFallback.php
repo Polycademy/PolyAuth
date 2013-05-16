@@ -2,6 +2,9 @@
 
 namespace PolyAuth\Security;
 
+/**
+ * This BcryptFallback was in case password_compat could not be used. It is not currently used by PolyAuth
+ */
 class BcryptFallback{
 
 	private $rounds;

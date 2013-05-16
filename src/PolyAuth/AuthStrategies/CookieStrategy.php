@@ -4,17 +4,14 @@ namespace PolyAuth\AuthStrategies;
 
 use PolyAuth\Options;
 use PolyAuth\Cookies;
-use PolyAuth\Security\Encryption;
 
 class CookieStrategy implements AuthStrategyInterface{
 
 	protected $cookies;
-	protected $encryption;
 	
 	public function __construct(Cookies $cookies = null, Encryption $encryption = null){
 		
 		$this->cookies = ($cookies) ? $cookies : new Cookies(new Options);
-		$this->encryption = ($encryption) ? $encryption : new Encryption;
 		
 	}
 

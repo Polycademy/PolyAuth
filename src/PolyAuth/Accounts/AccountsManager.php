@@ -17,7 +17,6 @@ use PolyAuth\Language;
 
 //for security
 use PolyAuth\Accounts\PasswordComplexity;
-use PolyAuth\Security\BcryptFallback;
 use PolyAuth\Security\Random;
 
 //for RBAC (to CRUD roles and permissions)
@@ -51,7 +50,6 @@ class AccountsManager{
 	protected $password_manager;
 	protected $random;
 	protected $emailer;
-	protected $bcrypt_fallback = false;
 	
 	//expects PDO connection (potentially using $this->db->conn_id)
 	public function __construct(
@@ -62,8 +60,7 @@ class AccountsManager{
 		RoleManager $role_manager = null, 
 		PasswordComplexity $password_manager = null,
 		Random $random = null,
-		Emailer $emailer = null,
-		BcryptFallback $bcrypt_fallback = null
+		Emailer $emailer = null
 	){
 	
 		$this->options = $options;
@@ -75,11 +72,6 @@ class AccountsManager{
 		$this->password_manager = ($password_manager) ? $password_manager : new PasswordComplexity($options, $language);
 		$this->random = ($random) ? $random : new Random;
 		$this->emailer = ($emailer) ? $emailer : new Emailer($options, $language, $logger);
-		
-		//if you use bcrypt fallback, you must always use bcrypt fallback, you cannot switch servers!
-		if($this->options['hash_fallback']){
-			$this->bcrypt_fallback = ($bcrypt_fallback) ? $bcrypt_fallback : new BcryptFallback($this->options['hash_rounds']);
-		}
 		
 	}
 	
@@ -254,29 +246,17 @@ class AccountsManager{
 	
 	public function hash_password($password, $method, $cost){
 	
-		if(!$this->bcrypt_fallback){
-			$hash = password_hash($password, $method, ['cost' => $cost]);
-		}else{
-			$hash = $this->bcrypt_fallback->hash($password);
-		}
+		$hash = password_hash($password, $method, ['cost' => $cost]);
 		return $hash;
 		
 	}
 	
 	public function hash_password_verify($password, $hash){
 	
-		if(!$this->bcrypt_fallback){
-			if(password_verify($password, $hash)){
-				return true;
-			} else {
-				return false;
-			}
-		}else{
-			if($this->bcrypt_fallback->verify($password, $hash)){
-				return true;
-			}else{
-				return false;
-			}
+		if(password_verify($password, $hash)){
+			return true;
+		} else {
+			return false;
 		}
 		
 	}

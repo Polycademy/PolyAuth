@@ -18,15 +18,9 @@ use PolyAuth\Language;
 //for making sure auth strategies are real strategies
 use PolyAuth\AuthStrategies\AuthStrategyInterface;
 
-//for encrypting session data
-use PolyAuth\Security\Encryption;
-
 //for manipulating the user
 use PolyAuth\UserAccount;
 use PolyAuth\Accounts\AccountsManager;
-
-//for cookie management
-// use PolyAuth\Cookies;
 
 //various exceptions
 use PolyAuth\Exceptions\PasswordChangeException;
@@ -45,7 +39,7 @@ class UserSessionsManager{
 	protected $encryption;
 	protected $accounts_manager;
 	protected $session_manager;
-	// protected $cookies;
+	protected $session_segment;
 
 	public function __construct(
 		array $strategies,
@@ -53,15 +47,9 @@ class UserSessionsManager{
 		Options $options, 
 		Language $language, 
 		LoggerInterface $logger = null,
-		Encryption $encryption = null,
-		// Cookies $cookies = null,
 		AccountsManager $accounts_manager = null,
 		SessionManager $session_manager = null
 	){
-	
-		//output buffering is for SID bug https://bugs.php.net/bug.php?id=38104
-		ob_start();
-		register_shutdown_function(self::end);
 		
 		//this shouldn't happen should it!?
 		foreach($strategies as $strategy){
@@ -77,8 +65,6 @@ class UserSessionsManager{
 		$this->db = $db;
 		$this->logger = $logger;
 		
-		$this->encryption = ($encryption) ? $encryption : new Encryption;
-		// $this->cookies = ($cookies) ? $cookies : new Cookies($options);
 		$this->accounts_manager = ($accounts_manager) ? $accounts_manager : new AccountsManager($db, $options, $language, $logger);
 		
 		if($session_manager){
@@ -106,125 +92,111 @@ class UserSessionsManager{
 			'secure'	=> $this->options['cookie_secure'],
 			'httponly'	=> $this->options['cookie_httponly'],
 		));
-	
-	}
-	
-	protected function end(){
-		//extract the cookie headers, and replace it with one single SID header
 		
-		ob_get_clean();
+		//resolving session locking problems
+		ob_start();
+		register_shutdown_function(self::finish);
+		
+		//establishing namespaced segment (this will be our session data
+		$this->session_segment = $this->session_manager->newSegment('PolyAuth\UserSession');
+	
 	}
 	
 	/**
-	 * Call this to begin tracking sessions, login details (cookies/HTTP tokens) and autologin.
-	 * This will throw an exception called PasswordChangeException if it detects that the user needs to change password
-	 * You would wrap this call in a try catch block and redirect to change password page.
-	 * You should then redirect to acquiring the new password, and then call forgotten_complete in AccountsManager
+	 * Start the tracking sessions. It will assign anonymous users an anonymous session, attempt autologin, detect whether passwords need to change, and expire long lived sessions.
+	 * Wrap this call in a try catch block and redirect to change password page.
+	 * Then redirect to password change page and then call AccountsManager::forgotten_complete()
+	 *
+	 * @throw Exception PasswordChangeException
 	 */
 	public function start(){
-	
-		//multiple possibilities:
 		
-		//FIRST: ANONYMOUS NO SESSION USER
-			//Can go into SECOND (via just normal assignment)
-			//Can go into THIRD (via autologin)
-		//SECOND: ANONYMOUS SESSION USER
-			//not possible for this to autologin... because the session has already been assigned
-		//THIRD: LOGGED IN USER
-			//IF password needs change, throw exception (don't logout, since you need know who the "person" is
-	
-	
-		//this will be used for all sessions
-		$segment = $this->session_manager->newSegment('PolyAuth-UserSession');
-	
-		//check if the person is not logged in, and that autologin was set to true
-		if($this->options['login_autologin'] AND !$this->authenticated()){
-			//this will make authenticated true if it worked, it will also create a session for the logged in user
-			$this->autologin();
+		//starting the session if it hasn't been started yet
+		if(!$this->session_manager->isStarted()){
+			$this->session_manager->start();
 		}
 		
-		if($this->authenticated){
+		//check if the user is not logged in and hasn't been set an anonymous session
+		if(!$this->authenticated() AND !isset($this->session_segment->anonymous)){
 		
-			//this means the session is "logged in"
+			//anonymous session user
+			$this->set_anonymous_session();
 			
-			if($this->needs_to_change_password()){
-				throw new PasswordChangeException($this->lang['password_change_required']);
+			//attempt autologin
+			if($this->options['login_autologin'] AND $user_id = $this->autologin()){
+				//check password change
+				$this->check_password_change($user_id);
 			}
-			
-			//create a logged in session...
 		
-		}else{
+		//check if the user is not logged in and has been set an anonymous session
+		}elseif(!$this->authenticated() AND $this->session_segment->anonymous == true){
 		
-			//this either the session is anonymous, or there are no sessions at all
-			
-			//if there are no sessions at all, we shall create an anonymous session
-			if(!$this->session_manager->isAvailable){
-			
-				//assign anonymous an anonymous session
-				$segment->anonymous = true;
-				$segment->timeout = time();
-			
+			//attempt autologin, otherwise leave it be
+			if($this->options['login_autologin'] AND $user_id = $this->autologin()){
+				//check password change
+				$this->check_password_change($user_id);
 			}
-			
+		
+		//check if the user is logged in
+		}elseif($this->authenticated()){
+		
+			//autologin and login will add the user's id into session segment
+			$user_id = $this->session_segment->user_id;
+			//check password change
+			$this->check_password_change($user_id);
 		
 		}
 		
-		//time out long lived sessions (to log people if someone left their browser hanging on public computers)
-		if(isset($segment->timeout) AND $this->options['session_expiration'] !== 0){
-		
-			$time_to_live = time() - $segment->timeout;
+		//time out long lived sessions
+		if(
+			$this->options['session_expiration'] !== 0 
+			AND is_int($this->session_segment->timeout)
+		){
+			$time_to_live = time() - $this->session_segment->timeout;
 			if($time_to_live > $this->options['session_expiration']){
-			
-				//destroys the current session
-				$params = $this->session_manager->getCookieParams();
-				setcookie(
-					$this->session_manager->getName(), 
-					'', 
-					time() - 86500, 
-					$params["path"], 
-					$params["domain"], 
-					$params["secure"], 
-					$params["httponly"]
-				);
-				$this->session_manager->destroy();
-				
-				//creates a new one anonymous session (lazy loading)
-				$segment->anonymous = true;
-				$segment->timeout = time();
-			
+				$this->logout();
 			}
-		
 		}
 		
-		//this calls session_write_close(), it will close the ability to update the sessions
-		//it reduces the probability of concurrent ajax requests hanging due to any session writes
+		//this calls session_write_close(), it will close the session lock
+		//it reduces the probability of concurrent ajax requests hanging
 		$this->session_manager->commit();
 	
 	}
 	
 	/**
-	 * Checks if the user needs to change his current password.
-	 *
-	 * @return boolean
+	 * Finish will intercept the cookies in the headers before they are sent out.
+	 * It will make sure that only one SID cookie is sent.
+	 * It will also preserve any cookie headers prior to this library being used.
 	 */
-	public function needs_to_change_password(){
+	protected function finish(){
 	
-		//will return a UserAccount!
-		$user = $this->get_user_session();
-		
-		if($user['passwordChange'] === 1){
-			return true;
-		}else{
-			return false;
+		if(SID){
+			$headers =  array_unique(headers_list());   
+			$cookie_strings = array();
+			foreach($headers as $header){
+				if(preg_match('/^Set-Cookie: (.+)/', $header, $matches)){
+					$cookie_strings[] = $matches[1];
+				}
+			}
+			header_remove('Set-Cookie');
+			foreach($cookie_strings as $cookie){
+				header('Set-Cookie: ' . $cookie, false);
+			}
 		}
-	
+		ob_flush();
+		
 	}
 	
 	/**
-	 *
+	 * Needs to set session_segment to be anonymous = false, timeout = time() and user_id = id
 	 *
 	 */
 	protected function autologin(){
+	
+		if(!$this->session_manager->isStarted()){
+			$this->session_manager->start();
+		}
 	
 		//requires identity and autoCode
 		//will call $this->login, once the details are set
@@ -244,8 +216,9 @@ class UserSessionsManager{
 	//in the case of Oauth, first do the redirect stuff (probably using $this->social_login()), on the redirect page, $this->exchange token, then call $this->login();
 	public function login(array $data = null){
 	
-		//login will destroy the old session, and create a new one (can't use regenerate ID), because the session itself is gone!
-		$this->session_manager->start(); //this will reopen the session, however we're going to get some errors
+		if(!$this->session_manager->isStarted()){
+			$this->session_manager->start();
+		}
 	
 	
 		//$data can be ['identity'] => 'username OR email',
@@ -271,10 +244,41 @@ class UserSessionsManager{
 	
 	}
 	
+	/**
+	 * Logout, this will destroy all the previous session data and recreate an anonymous session.
+	 * It is possible to call this without calling $this->start().
+	 */
 	public function logout(){
-	
-		//call regenerate user session
-		//create a new anonymous session
+		
+		if(!$this->session_manager->isStarted()){
+			$this->session_manager->start();
+		}
+		
+		//delete the php session cookie	
+		$params = $this->session_manager->getCookieParams();
+		setcookie(
+			$this->session_manager->getName(), 
+			'', 
+			time() - 86500, 
+			$params['path'], 
+			$params['domain'], 
+			$params['secure'], 
+			$params['httponly']
+		);
+		
+		//delete the autologin cookie
+		
+		//this calls session_destroy() and session_unset()
+		$this->session_manager->destroy();
+		
+		//start a new session
+		$this->session_manager->start();
+		//clear the segment
+		$this->session_segment->clear();
+		//setup the the anonymous session
+		$this->set_anonymous_session();
+		//close the handle
+		$this->session_manager->commit();
 	
 	}
 	
@@ -302,6 +306,59 @@ class UserSessionsManager{
 	
 	}
 	
+	/**
+	 * Gets the current user's session segment.
+	 * The segment can be used to store extra data, remove data, unset or clear data.
+	 */
+	public function get_session(){
+	
+		return $this->session_segment;
+	
+	}
+	
+	/**
+	 * Regenerate the user's session id. Can be used without calling $this->start()
+	 * Use this when:
+	 * 1. the role or permissions of the current user was changed programmatically.
+	 * 2. the user updates their profile
+	 * 3. the user logs in or logs out (to prevent session fixation) -> (done automatically)
+	 */
+	public function regenerate_session(){
+	
+		if(!$this->session_manager->isStarted()){
+			$this->session_manager->start();
+		}
+		$this->session_manager->regenerateId();
+	
+	}
+	
+	/**
+	 * Sets up an anonymous session for the session segment.
+	 */
+	protected function set_anonymous_session(){
+	
+		$this->session_segment->anonymous = true;
+		$this->session_segment->timeout = time();
+	
+	}
+	
+	/**
+	 * Checks if a user needs to change his current password.
+	 *
+	 * @throw Exception PasswordChangeException
+	 */
+	protected function check_password_change($user_id){
+	
+		$user = $this->accounts_manager->get_user($user_id);
+		
+		if($user['passwordChange'] === 1){
+			throw new PasswordChangeException($this->lang['password_change_required']);
+		}
+	
+	}
+	
+	//LOGIN ATTEMPTS STUFF
+	
 	public function is_max_login_attempts_exceeded(){
 	
 	}
@@ -319,60 +376,6 @@ class UserSessionsManager{
 	}
 	
 	public function clear_login_attempts(){
-	
-	}
-	
-	//saves a new user for this session
-	public function save_user_session(UserAccount $user){
-	
-		$user = $this->encryption->encrypt($user, $this->options['security_key']);
-		
-		//continue to save this encrypted $user into the session now...
-
-	
-	}
-	
-	//get current client session data
-	//this is the server side session, not the cookie data...
-	//use this to store temporary information about the user, such as shopping carts... etc
-	//three places to modify user data
-	//$user for serverside to database ORM
-	//user session (tmp) or database session depending on interface (this stuff is a serialised version of $user, but can have other things in it, this doesn't need to map to the database)
-	public function get_user_session(UserAccount $user){
-	
-		//this can work for anonymous sessions too!
-		
-	
-	}
-	
-	//modify client session data
-	//use this for shopping carts or temporary user data
-	//this will not save the data to the database!
-	//it is not for updating the user's account
-	public function update_user_session(){
-	
-		//decrypt session
-		//modify/update it as an array
-		//encrypt it again
-	
-	}
-	
-	/**
-	 * Regenerate the user's session. Destroys current session, and creates one again with different ID.
-	 * Use this when:
-	 * 1. the role or permissions of the current user was changed programmatically.
-	 * 2. the user updates their profile
-	 * 3. the user logs in or logs out (to prevent session fixation) -> (done automatically)
-	 */
-	public function regenerate_user_session(){
-	
-		//this needs to cater to AJAX, it has the problem of concurrent requests...
-		//actually this may not be a problem, this is only called on log in or log out, autologin only happens if the session has expired
-		
-		//delete the old session
-	
-		$this->session_manager->regenerateId();
-		$_SESSION = array();
 	
 	}
 	

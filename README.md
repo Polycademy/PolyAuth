@@ -5,6 +5,7 @@ PolyAuth is a PHP authentication and authorisation library that is framework ind
 
 It relies on this current stack:
 
+PHP >= 5.4.0
 PDO + MySQL (although may work with any SQL database that supports foreign keys)
 Aura/Session
 leighmacdonald/php_rbac

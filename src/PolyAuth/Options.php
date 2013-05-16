@@ -11,11 +11,8 @@ class Options implements \ArrayAccess{
 		//table options, see that the migration to be reflected. (RBAC options are not negotiable)
 		'table_users'						=> 'user_accounts',
 		'table_login_attempts'				=> 'login_attempts',
-		//security options
-		'security_key'						=> 'hiddenpassword', //session encryption key, any number of characters
 		//password options
-		'hash_fallback'						=> false, //set whether to use bcrypt fallback (if you're behind 5.3.7 in PHP version, this will not seamlessly upgrade, if you switch PHP versions, make sure to rehash your passwords manually)
-		'hash_method'						=> PASSWORD_DEFAULT,	//can be PASSWORD_DEFAULT or PASSWORD_BCRYPT
+		'hash_method'						=> PASSWORD_DEFAULT, //PASSWORD_DEFAULT || PASSWORD_BCRYPT
 		'hash_rounds'						=> 10,
 		//session options
 		'session_handler'					=> null, //object that implements the SessionInterface

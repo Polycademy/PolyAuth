@@ -1,5 +1,6 @@
 {
     "require":{
+		"php": ">=5.4.0",
 		"aura/session": "dev-master",
 		"leighmacdonald/php_rbac": "<=1.0",
 		"ircmaxell/password-compat": "*",

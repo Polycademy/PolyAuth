@@ -6,6 +6,7 @@ namespace PolyAuth\Security;
  * This encryption class serialises data and encrypts with a given key. It can of course do the opposite. This is not for password hashing.
  * PolyAuth will be using this in order to encrypt cookie and session data.
  * Such as the autologin token, and generally PHP session data. The PHPSESSID will not be encrypted.
+ * This is not used in PolyAuth natively. Extend the session handler and use this if you wish to have encryption.
  */
 class Encryption{
 
