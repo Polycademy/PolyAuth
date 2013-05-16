@@ -22,6 +22,8 @@ use PolyAuth\AuthStrategies\AuthStrategyInterface;
 use PolyAuth\UserAccount;
 use PolyAuth\Accounts\AccountsManager;
 
+use PolyAuth\Cookies;
+
 //various exceptions
 use PolyAuth\Exceptions\PasswordChangeException;
 use PolyAuth\Exceptions\PasswordValidationException;
@@ -40,6 +42,7 @@ class UserSessionsManager{
 	protected $accounts_manager;
 	protected $session_manager;
 	protected $session_segment;
+	protected $cookies;
 
 	public function __construct(
 		array $strategies,
@@ -48,10 +51,10 @@ class UserSessionsManager{
 		Language $language, 
 		LoggerInterface $logger = null,
 		AccountsManager $accounts_manager = null,
-		SessionManager $session_manager = null
+		SessionManager $session_manager = null,
+		Cookies $cookies = null
 	){
 		
-		//this shouldn't happen should it!?
 		foreach($strategies as $strategy){
 			if(!$strategy instanceof AuthStrategyInterface){
 				throw new \InvalidArgumentException('Strategies must implement the AuthStrategyInterface');
@@ -61,9 +64,10 @@ class UserSessionsManager{
 		$this->strategies = $strategies;
 		$this->options = $options;
 		$this->lang = $language;
-		
 		$this->db = $db;
 		$this->logger = $logger;
+		
+		$this->cookies = ($cookies) ? $cookies : new Cookies($options);
 		
 		$this->accounts_manager = ($accounts_manager) ? $accounts_manager : new AccountsManager($db, $options, $language, $logger);
 		
@@ -80,6 +84,10 @@ class UserSessionsManager{
 				$_COOKIE
 			);
 		}
+		
+		$session_name = ini_get('session.name');
+		$session_name = $this->options['cookie_prefix'] . $session_name;
+		ini_set('session.name', $session_name);
 		
 		//setting up cookie parameters for the session manager (which uses PHP sessions)
 		//note that if you're using this for an API, and using HTTP authentication, sessions may be ignored by the client
@@ -247,6 +255,7 @@ class UserSessionsManager{
 	/**
 	 * Logout, this will destroy all the previous session data and recreate an anonymous session.
 	 * It is possible to call this without calling $this->start().
+	 * It will also delete the session cookie and autologin cookie.
 	 */
 	public function logout(){
 		
@@ -254,19 +263,9 @@ class UserSessionsManager{
 			$this->session_manager->start();
 		}
 		
-		//delete the php session cookie	
-		$params = $this->session_manager->getCookieParams();
-		setcookie(
-			$this->session_manager->getName(), 
-			'', 
-			time() - 86500, 
-			$params['path'], 
-			$params['domain'], 
-			$params['secure'], 
-			$params['httponly']
-		);
-		
-		//delete the autologin cookie
+		//delete the php session cookie and autologin cookie
+		$this->cookies->delete_cookie($this->session_manager->getName());
+		$this->cookies->delete_cookie('autologin');
 		
 		//this calls session_destroy() and session_unset()
 		$this->session_manager->destroy();
