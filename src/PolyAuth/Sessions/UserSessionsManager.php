@@ -58,6 +58,10 @@ class UserSessionsManager{
 		AccountsManager $accounts_manager = null,
 		SessionManager $session_manager = null
 	){
+	
+		//output buffering is for SID bug https://bugs.php.net/bug.php?id=38104
+		ob_start();
+		register_shutdown_function(self::end);
 		
 		//this shouldn't happen should it!?
 		foreach($strategies as $strategy){
@@ -99,10 +103,16 @@ class UserSessionsManager{
 			'lifetime'	=> $this->options['cookie_lifetime'],
 			'path'		=> $this->options['cookie_path'],
 			'domain'	=> $this->options['cookie_domain'],
-			'secure'	=> $this->options['secure'],
-			'httponly'	=> $this->options['httponly'],
+			'secure'	=> $this->options['cookie_secure'],
+			'httponly'	=> $this->options['cookie_httponly'],
 		));
 	
+	}
+	
+	protected function end(){
+		//extract the cookie headers, and replace it with one single SID header
+		
+		ob_get_clean();
 	}
 	
 	/**
@@ -121,6 +131,7 @@ class UserSessionsManager{
 		//SECOND: ANONYMOUS SESSION USER
 			//not possible for this to autologin... because the session has already been assigned
 		//THIRD: LOGGED IN USER
+			//IF password needs change, throw exception (don't logout, since you need know who the "person" is
 	
 	
 		//this will be used for all sessions
@@ -184,6 +195,10 @@ class UserSessionsManager{
 			}
 		
 		}
+		
+		//this calls session_write_close(), it will close the ability to update the sessions
+		//it reduces the probability of concurrent ajax requests hanging due to any session writes
+		$this->session_manager->commit();
 	
 	}
 	
@@ -228,6 +243,10 @@ class UserSessionsManager{
 	//THIS IS ALWAYS A MANUAL login (don't call this until you have the Oauth token)
 	//in the case of Oauth, first do the redirect stuff (probably using $this->social_login()), on the redirect page, $this->exchange token, then call $this->login();
 	public function login(array $data = null){
+	
+		//login will destroy the old session, and create a new one (can't use regenerate ID), because the session itself is gone!
+		$this->session_manager->start(); //this will reopen the session, however we're going to get some errors
+	
 	
 		//$data can be ['identity'] => 'username OR email',
 		//['password'] => 'password' //<- optional
@@ -339,7 +358,7 @@ class UserSessionsManager{
 	}
 	
 	/**
-	 * Regenerate the session id and empties out the $_SESSION.
+	 * Regenerate the user's session. Destroys current session, and creates one again with different ID.
 	 * Use this when:
 	 * 1. the role or permissions of the current user was changed programmatically.
 	 * 2. the user updates their profile
@@ -349,6 +368,8 @@ class UserSessionsManager{
 	
 		//this needs to cater to AJAX, it has the problem of concurrent requests...
 		//actually this may not be a problem, this is only called on log in or log out, autologin only happens if the session has expired
+		
+		//delete the old session
 	
 		$this->session_manager->regenerateId();
 		$_SESSION = array();
