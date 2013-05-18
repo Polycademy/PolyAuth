@@ -347,7 +347,7 @@ class UserSessionsManager{
 	
 	/**
 	 * Checks if a user needs to change his current password.
-	 * Results are cached at 'user/#id'
+	 * Results are cached at 'user/#id' (this will be changed when other functions reset the cache)
 	 *
 	 * @throw Exception PasswordChangeException
 	 */
