@@ -40,10 +40,11 @@ To Do:
 
 - Storage Interface for Database Independent Functionality, will need to abstract PHPRBAC
 - User Access Logs (just use Monolog)
-- User Banning via 1. Switch on ban flag for user account (to prevent logging in and reregistering) -> 2. Checking IP -> 3. Setting an Evercookie. This is different from deregistering.
+- User Banning via 1. Switch on ban flag for user account (to prevent logging in and reregistering) -> 2. Checking IP/Block cookie. This is different from deregistering.
 - Complete SQL Migration
 - Complete Implementing Caching for Expensive Calls and a Cache Map
 - Complete Authentication Strategy Interface
+- Change exceptions to extend from PolyAuth base exception
 
 Note that this does not do filtering or validation of data input. You still need to do this to prevent any problems.
 This does not do CSRF checks. I do not consider that to be part of a user authentication system.
