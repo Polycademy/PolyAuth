@@ -22,7 +22,11 @@ use PolyAuth\AuthStrategies\AuthStrategyInterface;
 use PolyAuth\UserAccount;
 use PolyAuth\Accounts\AccountsManager;
 
+//for manipulating cookies
 use PolyAuth\Cookies;
+
+//for caching
+use PolyAuth\Caching\CacheInterface;
 
 //various exceptions
 use PolyAuth\Exceptions\PasswordChangeException;
@@ -37,6 +41,7 @@ class UserSessionsManager{
 	protected $db;
 	protected $options;
 	protected $lang;
+	protected $cache;
 	protected $logger;
 	protected $encryption;
 	protected $accounts_manager;
@@ -49,10 +54,11 @@ class UserSessionsManager{
 		PDO $db, 
 		Options $options, 
 		Language $language, 
+		CacheInterface $cache = null
 		LoggerInterface $logger = null,
 		AccountsManager $accounts_manager = null,
 		SessionManager $session_manager = null,
-		Cookies $cookies = null
+		Cookies $cookies = null,
 	){
 		
 		foreach($strategies as $strategy){
@@ -62,15 +68,12 @@ class UserSessionsManager{
 		}
 		
 		$this->strategies = $strategies;
+		$this->db = $db;
 		$this->options = $options;
 		$this->lang = $language;
-		$this->db = $db;
+		$this->cache = $cache;
 		$this->logger = $logger;
-		
-		$this->cookies = ($cookies) ? $cookies : new Cookies($options);
-		
 		$this->accounts_manager = ($accounts_manager) ? $accounts_manager : new AccountsManager($db, $options, $language, $logger);
-		
 		if($session_manager){
 			$this->session_manager = $session_manager;
 		}else{
@@ -84,22 +87,7 @@ class UserSessionsManager{
 				$_COOKIE
 			);
 		}
-		
-		$session_name = ini_get('session.name');
-		$session_name = $this->options['cookie_prefix'] . $session_name;
-		ini_set('session.name', $session_name);
-		
-		//setting up cookie parameters for the session manager (which uses PHP sessions)
-		//note that if you're using this for an API, and using HTTP authentication, sessions may be ignored by the client
-		//the client will simply have to login in each time, based on RESTful style
-		//this will still work, but you can't rely on a shopping cart in such a situation!
-		$this->session_manager->setCookieParams(array(
-			'lifetime'	=> $this->options['cookie_lifetime'],
-			'path'		=> $this->options['cookie_path'],
-			'domain'	=> $this->options['cookie_domain'],
-			'secure'	=> $this->options['cookie_secure'],
-			'httponly'	=> $this->options['cookie_httponly'],
-		));
+		$this->cookies = ($cookies) ? $cookies : new Cookies($options);
 		
 		//resolving session locking problems
 		ob_start();
@@ -358,18 +346,32 @@ class UserSessionsManager{
 	}
 	
 	/**
-	 * Checks if a user needs to change his current password. This should be cached...
+	 * Checks if a user needs to change his current password.
+	 * Results are cached at 'user/#id'
 	 *
 	 * @throw Exception PasswordChangeException
 	 */
 	protected function check_password_change($user_id){
 	
-		$user = $this->accounts_manager->get_user($user_id);
+		if($this->cache){
+		
+			if($this->cache->exists('user/' . $user_id){
+				$user = $this->cache->get('user/' . $user_id);
+			}else{
+				$user = $this->accounts_manager->get_user($user_id);
+				$this->cache->set('user/' . $user_id, $user, $this->options['cache_expiration']);
+			}
+		
+		}else{
+		
+			$user = $this->accounts_manager->get_user($user_id);
+		
+		}
 		
 		if($user['passwordChange'] === 1){
 			throw new PasswordChangeException($this->lang['password_change_required']);
 		}
-	
+		
 	}
 	
 	//LOGIN ATTEMPTS STUFF

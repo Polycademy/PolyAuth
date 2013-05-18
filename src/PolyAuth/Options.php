@@ -65,6 +65,10 @@ class Options implements \ArrayAccess{
 		'login_forgot_expiration'			=> 0, //how long before the temporary password expires in seconds!
 		//registration options
 		'reg_activation'					=> false, //can be email, manual, or false
+		//cache options
+		'cache_expiration'					=> false, //cache time in seconds for particular items, this may be overwritten by the APC ttl, false leaves it by default
+		'cache_directory'					=> '', //this is only relevant to the FileSystemCache
+		'cache_ttl'							=> 3600, //maximum time an item can live in memory, this is only relevant to APCCache
 	);
 	
 	public function __construct(array $options = null){
@@ -73,8 +77,9 @@ class Options implements \ArrayAccess{
 			$this->set_options($options);
 		}
 		
-		//this should only run once at startup
+		//this should only run once at startup (should create this as a singleton)
 		$this->set_session_handler($this->options['session_handler']);
+		$this->set_cookie_settings();
 		
 	}
 	
@@ -98,6 +103,22 @@ class Options implements \ArrayAccess{
 		);
 		
 		register_shutdown_function('session_write_close');
+	
+	}
+	
+	protected function set_cookie_settings(){
+	
+		$session_name = ini_get('session.name');
+		$session_name = $this->options['cookie_prefix'] . $session_name;
+		ini_set('session.name', $session_name);
+		
+		session_set_cookie_params(
+			$this->options['cookie_lifetime'],
+			$this->options['cookie_path'],
+			$this->options['cookie_domain'],
+			$this->options['cookie_secure'],
+			$this->options['cookie_httponly']
+		);
 	
 	}
 	
