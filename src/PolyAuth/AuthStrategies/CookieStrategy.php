@@ -37,6 +37,14 @@ class CookieStrategy implements AuthStrategyInterface{
 		
 	}
 	
+	/**
+	 * Autologin Cookie Strategy, this checks whether the autologin cookie exists, and checks if the cookie's credentials are valid.
+	 * If it is valid, it will return the user id. It may also extend the autologin expiration time.
+	 * If it is invalid, it will clear the autologin details in the database, and also delete the autologin cookie.
+	 * If the user id didn't exist, it doesn't really matter, since the update will still pass.
+	 *
+	 * @return $user_id int | boolean
+	 */
 	public function autologin(){
 	
 		//should return an array
@@ -80,8 +88,6 @@ class CookieStrategy implements AuthStrategyInterface{
 				
 					//clear the autoCode in the DB, since it failed
 					$this->clear_autologin($id);
-					//clear the cookie aswell to prevent multiple attempts
-					$this->cookies->delete_cookie('autologin');
 					return false;
 					
 				}
@@ -101,6 +107,7 @@ class CookieStrategy implements AuthStrategyInterface{
 	
 	/**
 	 * Set the autologin cookie, autologin code and autologin date for the specified user id.
+	 * Can also be used to reset the autologin cookie.
 	 *
 	 * @param $id integer
 	 * @return boolean
@@ -145,8 +152,12 @@ class CookieStrategy implements AuthStrategyInterface{
 	 * Clears the autologin cookie, autologin code and autologin date for the specified user id.
 	 *
 	 * @param $id integer
+	 * @return boolean
 	 */
 	protected function clear_autologin($id){
+	
+		//clear the cookie to prevent multiple attempts
+		$this->cookies->delete_cookie('autologin');
 	
 		$query = "UPDATE {$this->options['table_users']} SET autoCode = NULL, autoDate = NULL WHERE id = :id";
 		$sth = $this->db->prepare($query);
