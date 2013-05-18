@@ -1,14 +1,18 @@
 {
-    "require":{
+    "require": {
 		"php": ">=5.4.0",
 		"aura/session": "dev-master",
 		"leighmacdonald/php_rbac": "<=1.0",
 		"ircmaxell/password-compat": "*",
 		"phpmailer/phpmailer": "5.2.*",
-		"psr/log": "1.0.0"
+		"psr/log": "1.0.0",
+		"tedivm/stash": "0.10.*"
 	},
-	"require-dev":{
+	"require-dev": {
 		"phpspec/phpspec": "2.0.*@dev"
+	},
+	"suggest": {
+		"ext-apc": "Can provide a faster memory cache for PolyAuth."
 	},
     "config": {
         "bin-dir": "bin/"

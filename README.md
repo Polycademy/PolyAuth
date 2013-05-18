@@ -12,6 +12,7 @@ leighmacdonald/php_rbac
 ircmaxell/password-compat
 PHPMailer/PHPMailer
 php-fig/log
+tedivm/stash
 
 Features:
 
@@ -31,6 +32,7 @@ Features:
 - Highly Configurable User Data/Profile
 - Password Complexity Checks
 - Excellent Random Token Generator
+- APC or Filesystem based caching for expensive calls. You can also implement the interface to extend it.
 - SpecBDD tested with Continuous Integration at Travis so you can trust that it works!
 
 To Do:
