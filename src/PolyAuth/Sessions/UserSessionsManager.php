@@ -41,7 +41,7 @@ class UserSessionsManager{
 	protected $encryption;
 	protected $accounts_manager;
 	protected $session_manager;
-	protected $session_segment;
+	protected $session_segment; //expect 3 properties: user_id int, anonymous boolean, timeout seconds
 	protected $cookies;
 
 	public function __construct(
@@ -156,10 +156,7 @@ class UserSessionsManager{
 		}
 		
 		//time out long lived sessions
-		if(
-			$this->options['session_expiration'] !== 0 
-			AND is_int($this->session_segment->timeout)
-		){
+		if($this->options['session_expiration'] !== 0 AND is_int($this->session_segment->timeout)){
 			$time_to_live = time() - $this->session_segment->timeout;
 			if($time_to_live > $this->options['session_expiration']){
 				$this->logout();
@@ -197,8 +194,11 @@ class UserSessionsManager{
 	}
 	
 	/**
-	 * Needs to set session_segment to be anonymous = false, timeout = time() and user_id = id
+	 * Autologin cycles through all of the authentication strategies to check if at least one of the autologins worked.
+	 * As soon as one of them works, it breaks the loop, and then updates the last login, and sets the session parameters.
+	 * The user_id gets set the passed back user id. The anonymous becomes false, and the timeout is refreshed.
 	 *
+	 * @return $user_id int | boolean
 	 */
 	protected function autologin(){
 	
@@ -218,10 +218,10 @@ class UserSessionsManager{
 		//do note that if you are using OAuth or OpenId, this user_id may be created on the fly and immediately registered due to third party login
 		if($user_id){
 		
-			//update last login
-			//create the session
-			//set the session segment's timeout to the current time
-			
+			$this->update_last_login($user_id);
+			$this->session_segment->user_id = $user_id;
+			$this->session_segment->anonymous = false;
+			$this->session_segment->timeout = time();
 			return $user_id
 		
 		}else{
@@ -351,13 +351,14 @@ class UserSessionsManager{
 	 */
 	protected function set_anonymous_session(){
 	
+		$this->session_segment->user_id = false;
 		$this->session_segment->anonymous = true;
 		$this->session_segment->timeout = time();
 	
 	}
 	
 	/**
-	 * Checks if a user needs to change his current password.
+	 * Checks if a user needs to change his current password. This should be cached...
 	 *
 	 * @throw Exception PasswordChangeException
 	 */
