@@ -28,9 +28,6 @@ use RBAC\Manager\RoleManager;
 //for registration
 use PolyAuth\Emailer;
 
-//for caching
-use PolyAuth\Caching\CacheInterface;
-
 //for exceptions
 use PolyAuth\Exceptions\ValidationExceptions\RegisterValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\PasswordValidationException;
@@ -48,7 +45,6 @@ class AccountsManager{
 	protected $db;
 	protected $options;
 	protected $lang;
-	protected $cache;
 	protected $logger;
 	protected $role_manager;
 	protected $password_manager;
@@ -60,7 +56,6 @@ class AccountsManager{
 		PDO $db, 
 		Options $options, 
 		Language $language, 
-		CacheInterface $cache = null, 
 		LoggerInterface $logger = null, 
 		RoleManager $role_manager = null, 
 		PasswordComplexity $password_manager = null, 
@@ -71,7 +66,6 @@ class AccountsManager{
 		$this->db = $db;
 		$this->options = $options;
 		$this->lang = $language;
-		$this->cache = $cache;
 		$this->logger = $logger;
 		$this->role_manager  = ($role_manager) ? $role_manager : new RoleManager($db, $logger);
 		$this->password_manager = ($password_manager) ? $password_manager : new PasswordComplexity($options, $language);
@@ -112,7 +106,7 @@ class AccountsManager{
 		
 		$ip = (!empty($_SERVER['REMOTE_ADDR'])) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1';
 		$data['ipAddress'] = $this->prepare_ip($ip);
-		$data['password'] = $this->hash_password($data['password'], $this->options['hash_method'], $this->options['hash_rounds']);
+		$data['password'] = password_hash($data['password'], $this->options['hash_method'], ['cost' => $this->options['hash_rounds']]);
 		
 		$data += array(
 		    'createdOn'	=> date('Y-m-d H:i:s'),
@@ -245,23 +239,6 @@ class AccountsManager{
 			return $ip_address;
 		}else{
 			return inet_pton($ip_address);
-		}
-		
-	}
-	
-	public function hash_password($password, $method, $cost){
-	
-		$hash = password_hash($password, $method, ['cost' => $cost]);
-		return $hash;
-		
-	}
-	
-	public function hash_password_verify($password, $hash){
-	
-		if(password_verify($password, $hash)){
-			return true;
-		} else {
-			return false;
 		}
 		
 	}
@@ -572,7 +549,7 @@ class AccountsManager{
 			
 				$sth->execute();
 				$row = $sth->fetch(PDO::FETCH_OBJ);
-				if(!hash_password_verify($old_password, $row->password)){
+				if(!password_verify($old_password, $row->password)){
 					throw new PasswordValidationException($this->lang['password_change_unsuccessful']);
 				}
 				
@@ -594,7 +571,7 @@ class AccountsManager{
 		}
 		
 		//hash new password
-		$new_password = $this->hash_password($new_password, $this->options['hash_method'], $this->options['hash_rounds']);
+		$new_password = password_hash($new_password, $this->options['hash_method'], ['cost' => $this->options['hash_rounds']]);
 		
 		//update with new password
 		$query = "UPDATE {$this->options['table_users']} SET passwordChange = 0, password = :new_password WHERE id = :user_id";
@@ -692,17 +669,11 @@ class AccountsManager{
 	
 	/**
 	 * Gets the user according to their id. The user is an augmented object of UserAccount including all the user's data (minus the password) and with any current permissions loaded in.
-	 * Results are cached at 'user/#id' (this will be changed when other functions reset the cache)
 	 *
 	 * @param $user_id int
 	 * @return $user object
 	 */
 	public function get_user($user_id){
-	
-		if($this->cache AND $this->cache->exists('user/' . $user_id)){
-			$user = $this->cache->get('user/' . $user_id);
-			return $user;
-		}
 		
 		$query = "SELECT * FROM {$this->options['table_users']} WHERE id = :user_id";
 		$sth = $this->db->prepare($query);
@@ -732,10 +703,6 @@ class AccountsManager{
 		
 		//load in the roles and permissions of the user
 		$this->role_manager->loadSubjectRoles($user);
-		
-		if($this->cache){
-			$this->cache->set('user/' . $user_id, $user, $this->options['cache_expiration']);
-		}
 		
 		return $user;
 		
@@ -937,8 +904,10 @@ class AccountsManager{
 			if($sth->rowCount() < 1){
 				return false;
 			}
+			
 			//put the id back into the user
 			$user['id'] = $user_id;
+			
 			return $user;
 		
 		}catch(PDOException $db_err){

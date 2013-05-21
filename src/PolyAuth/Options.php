@@ -66,7 +66,6 @@ class Options implements \ArrayAccess{
 		//registration options
 		'reg_activation'					=> false, //can be email, manual, or false
 		//cache options
-		'cache_expiration'					=> false, //cache time in seconds for particular items, this may be overwritten by the APC ttl, false leaves it by default
 		'cache_directory'					=> '', //this is only relevant to the FileSystemCache
 		'cache_ttl'							=> 3600, //maximum time an item can live in memory, this is only relevant to APCCache
 	);
