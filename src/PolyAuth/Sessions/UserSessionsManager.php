@@ -35,7 +35,6 @@ use PolyAuth\Exceptions\UserExceptions\UserBannedException;
 use PolyAuth\Exceptions\ValidationExceptions\PasswordValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\DatabaseValidationException;
 
-//this class handles all the login and logout functionality
 class UserSessionsManager{
 
 	protected $strategies;
@@ -47,9 +46,8 @@ class UserSessionsManager{
 	protected $encryption;
 	protected $accounts_manager;
 	protected $session_manager;
-	protected $session_segment; //expect 3 properties: user_id int, anonymous boolean, timeout seconds
+	protected $session_segment;
 	protected $cookies;
-	
 	protected $user;
 
 	public function __construct(
@@ -125,10 +123,8 @@ class UserSessionsManager{
 				$this->autologin();
 			}
 		
-		//check if the user is logged in
-		}elseif($this->authenticated()){
+		}else{
 		
-			//setup the user variable
 			$this->user = $this->accounts_manager->get_user($this->session_segment->user_id);
 		
 		}
@@ -176,7 +172,7 @@ class UserSessionsManager{
 	 * As soon as one of them works, it breaks the loop, and then updates the last login, and sets the session parameters.
 	 * The user_id gets set the passed back user id. The anonymous becomes false, and the timeout is refreshed.
 	 * This checks for password change and banned status and will throw appropriate exceptions.
-	 * It will assign the user account to the user variable.
+	 * It will assign the user account to the $this->user variable.
 	 *
 	 * @return boolean
 	 */
@@ -199,13 +195,13 @@ class UserSessionsManager{
 		if($user_id){
 		
 			$this->user = $this->accounts_manager->get_user($user_id);
-			
-			//final checks before we proceed
-			$this->check_banned();
-			$this->check_password_change();
-			
 			$this->update_last_login($this->user);
+			$this->regenerate_session();
 			$this->set_default_session($user_id, false);
+			
+			//final checks before we proceed (banned would logout the user)
+			$this->check_banned($this->user);
+			$this->check_password_change($this->user);
 			
 			return true;
 		
@@ -249,8 +245,12 @@ class UserSessionsManager{
 		
 		//set the session segment timeout to time()
 		
-			$this->check_banned();
-			$this->check_password_change();
+		$this->user = $this->accounts_manager->get_user($user_id);
+		$this->update_last_login($user);
+		$this->regenerate_session();
+		$this->set_default_session($user_id, false);
+		$this->check_banned($user);
+		$this->check_password_change($user);
 		
 	
 	}
@@ -259,6 +259,7 @@ class UserSessionsManager{
 	 * Logout, this will destroy all the previous session data and recreate an anonymous session.
 	 * It is possible to call this without calling $this->start().
 	 * It will also delete the session cookie and autologin cookie.
+	 * It will clear the $this->user variable
 	 */
 	public function logout(){
 		
@@ -272,6 +273,8 @@ class UserSessionsManager{
 		
 		//this calls session_destroy() and session_unset()
 		$this->session_manager->destroy();
+		//clears the current user
+		$this->user = null;
 		
 		//start a new session
 		$this->session_manager->start();
@@ -305,6 +308,17 @@ class UserSessionsManager{
 		//If the client doesn't respect the URL session id, or that is switched off, it doesn't matter, because they will constantly login
 		//on each request
 		//Even with OAuth, it'd be the same
+		
+		//YOU HAVE TO BE WARY OF SESSION CONSIDERATIONS, FOR clients that dont' accept cookies
+		//you can't use your own sessions to know if someone is authenticated or not
+		//you'll have to authenticate each time, that is autologin needs to run, or login needs to run
+		//if they run through, then the user IS authenticated
+		//perhaps another hook is required...?
+		//the problem is if, even if I autologin, because this obviously returned false due to lack of sessions, then subsequent requests to "authenticated" would fail, as there's nothing anchoring the user to be authenticated.
+		//two solutions: use a $this->user memory variable that only exists for the script's session and assign it when autologgedin or loggedin and destroy on log out
+		//or a hook on each authentication strategy that asks if the user is logged in or not
+		//im choosing the first option, the latter results in too much code for the end user
+		//this will first check the sessions, then it will check the $this->user variable
 	
 	}
 	
@@ -351,32 +365,38 @@ class UserSessionsManager{
 	
 	/**
 	 * Checks if a user needs to change his current password.
-	 * This expects that the user account has been loaded into $this->user
 	 *
+	 * @param $user UserAccount
 	 * @throw Exception PasswordChangeException
 	 */
-	protected function check_password_change(){
+	protected function check_password_change(UserAccount $user){
 		
-		if($this->user['passwordChange'] === 1){
+		if($user['passwordChange'] === 1){
 			throw new UserPasswordChangeException($this->lang['password_change_required']);
 		}
 		
 	}
 	
 	/**
-	 * Checks if a user is banned
+	 * Checks if a user is banned. This will log the user out if so before throwing an exception.
 	 *
+	 * @param $user UserAccount
 	 * @throw Exception UserBannedException
 	 */
-	protected function check_banned(){
+	protected function check_banned(UserAccount $user){
 	
-		if($this->user['banned'] === 1){
+		if($user['banned'] === 1){
+			$this->logout();
 			throw new UserBannedException($this->lang['user_banned']);
 		}
 	
 	}
 	
 	//LOGIN ATTEMPTS STUFF
+	
+	public function update_last_login(UserAccount $user){
+	
+	}
 	
 	public function is_max_login_attempts_exceeded(){
 	
