@@ -25,23 +25,20 @@ use PolyAuth\Accounts\AccountsManager;
 //for manipulating cookies
 use PolyAuth\Cookies;
 
-//for caching
-use PolyAuth\Caching\CacheInterface;
-
 //various exceptions
 use PolyAuth\Exceptions\UserExceptions\UserPasswordChangeException;
 use PolyAuth\Exceptions\UserExceptions\UserNotFoundException;
 use PolyAuth\Exceptions\UserExceptions\UserBannedException;
 use PolyAuth\Exceptions\ValidationExceptions\PasswordValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\DatabaseValidationException;
+use PolyAuth\Exceptions\ValidationExceptions\LoginValidationException;
 
 class UserSessionsManager{
 
-	protected $strategies;
+	protected $strategy;
 	protected $db;
 	protected $options;
 	protected $lang;
-	protected $cache;
 	protected $logger;
 	protected $encryption;
 	protected $accounts_manager;
@@ -51,28 +48,20 @@ class UserSessionsManager{
 	protected $user;
 
 	public function __construct(
-		array $strategies,
+		AuthStrategyInterface $strategy,
 		PDO $db, 
 		Options $options, 
 		Language $language, 
-		CacheInterface $cache = null
 		LoggerInterface $logger = null,
 		AccountsManager $accounts_manager = null,
 		SessionManager $session_manager = null,
 		Cookies $cookies = null,
 	){
 		
-		foreach($strategies as $strategy){
-			if(!$strategy instanceof AuthStrategyInterface){
-				throw new \InvalidArgumentException('Strategies must implement the AuthStrategyInterface');
-			}
-		}
-		
-		$this->strategies = $strategies;
+		$this->strategy = $strategy;
 		$this->db = $db;
 		$this->options = $options;
 		$this->lang = $language;
-		$this->cache = $cache;
 		$this->logger = $logger;
 		$this->accounts_manager = ($accounts_manager) ? $accounts_manager : new AccountsManager($db, $options, $language, $logger);
 		if($session_manager){
@@ -100,11 +89,9 @@ class UserSessionsManager{
 	}
 	
 	/**
-	 * Start the tracking sessions. It will assign anonymous users an anonymous session, attempt autologin, detect whether passwords need to change, and expire long lived sessions.
-	 * Wrap this call in a try catch block and redirect to change password page.
-	 * Then redirect to password change page and then call AccountsManager::forgotten_complete()
-	 *
-	 * @throw Exception PasswordChangeException
+	 * Start the tracking sessions.
+	 * It will assign anonymous users an anonymous session, attempt autologin, detect banned users, detect whether passwords need to change, and expire long lived sessions.
+	 * Wrap this call in a try catch block and handle any exceptions.
 	 */
 	public function start(){
 		
@@ -136,10 +123,6 @@ class UserSessionsManager{
 				$this->logout();
 			}
 		}
-		
-		//this calls session_write_close(), it will close the session lock
-		//it reduces the probability of concurrent ajax requests hanging
-		$this->session_manager->commit();
 	
 	}
 	
@@ -177,21 +160,9 @@ class UserSessionsManager{
 	 * @return boolean
 	 */
 	protected function autologin(){
-	
-		if(!$this->session_manager->isStarted()){
-			$this->session_manager->start();
-		}
 		
-		$user_id = false;
-		//cycle through the auth strategies and check that at least one of them works
-		foreach($this->auth_strategies as $strategy){
-			if($user_id = $strategy->autologin()){
-				//as soon as one of them works, break it
-				break;
-			}
-		}
+		$user_id = $this->strategy->autologin();
 		
-		//do note that if you are using OAuth or OpenId, this user_id may be created on the fly and immediately registered due to third party login
 		if($user_id){
 		
 			$this->user = $this->accounts_manager->get_user($user_id);
@@ -199,7 +170,8 @@ class UserSessionsManager{
 			$this->regenerate_session();
 			$this->set_default_session($user_id, false);
 			
-			//final checks before we proceed (banned would logout the user)
+			//final checks before we proceed (inactive or banned would logout the user)
+			$this->check_inactive($this->user);
 			$this->check_banned($this->user);
 			$this->check_password_change($this->user);
 			
@@ -213,45 +185,81 @@ class UserSessionsManager{
 	
 	}
 	
-	//THIS IS ALWAYS A MANUAL login (don't call this until you have the Oauth token)
-	//in the case of Oauth, first do the redirect stuff (probably using $this->social_login()), on the redirect page, $this->exchange token, then call $this->login();
+	/**
+	 * Manually logs in the user, given a $data array of input parameters.
+	 * The input parameter can be an array of ['identity'] AND ['password']
+	 * However it is also optional, if you are using Oauth or HTTP auth.
+	 * In that case, it will automatically extract the necessary tokens.
+	 *
+	 * @param $data array optional
+	 * @return boolean
+	 */
 	public function login(array $data = null){
 	
 		if(!$this->session_manager->isStarted()){
 			$this->session_manager->start();
 		}
-	
-	
-		//$data can be ['identity'] => 'username OR email',
-		//['password'] => 'password' //<- optional
 		
-		//MANUAL first
-		//then in the order of strategies (it will try each one of them until one of them works)
-		//call the login_hook to return the $data and any morphs
-		//then use the $data's identity and password to login
-		//if in the case of Oauth, the $data would be null, then we'd pass null in, but the login_hook, so extract the OAuth token
-		//then use the Oauth token to authenticate against the API and extract valuable data, fill the data with whatever and pass back
-		//We would check the data's identity and password to match, if we detect ['oauth'] true, then these are registered or inserted...
-	
-		//automatically logout first, then login
-		//if it detects that passwordChange is required (it will throw an exception)
-		//if it detects that there is forgottenCode and stuff, it will run $accounts_manager->forgotten_clear
+		//these are based on the current session or ip
+		$this->is_locked_out();
+		$this->check_login_attempts_exceeded();
+		$this->increment_login_attempts();
 		
-		//if this fails at any time, we'll do the whole login throttling.
+		//the login hook will manipulate the passed in $data and return at least 'identity' and 'password'
+		//in the case of Oauth, the identity and password may be created on the fly, as soon as the third party authenticates
+		$data = $this->strategy->login_hook($data);
 		
+		if(!is_array($data) OR (!isset($data['identity']) OR !isset($data['password']))){
+			throw new LoginValidationException($this->lang['login_unsuccessful']);
+		}
 		
-		//also regenerate user session (refresh the ID), but use the "same" session to store the user variable
-		//CREATE A SESSION! with the new user
+		$query = "SELECT id, password FROM {$this->options['table_users']} WHERE {$this->options['login_identity']} = :identity";
+		$sth = $this->db->prepare($query);
+		$sth->bindValue('identity', $data['identity'], PDO::PARAM_STR);
 		
-		//set the session segment timeout to time()
+		try{
+		
+			$sth->execute();
+			if($row = $sth->fetch(PDO::FETCH_OBJ)){
+			
+				if(password_verify($data['password'], $row->password)){
+				
+					//identity is valid, and password has been verified
+					$user_id = $row->id;
+					
+				}else{
+				
+					throw new LoginValidationException($this->lang['login_password']);
+				
+				}
+				
+			}else{
+			
+				throw new LoginValidationException($this->lang['login_identity']);
+				
+			}
+		
+		}catch(PDOException $db_err){
+		
+			if($this->logger){
+				$this->logger->error("Failed to execute query to login.", ['exception' => $db_err]);
+			}
+			throw $db_err;
+		
+		}
 		
 		$this->user = $this->accounts_manager->get_user($user_id);
-		$this->update_last_login($user);
+		$this->clear_login_attempts($this->user);
+		$this->update_last_login($this->user);
+		
 		$this->regenerate_session();
 		$this->set_default_session($user_id, false);
-		$this->check_banned($user);
-		$this->check_password_change($user);
 		
+		$this->check_inactive($this->user);
+		$this->check_banned($this->user);
+		$this->check_password_change($this->user);
+		
+		return true;
 	
 	}
 	
@@ -282,8 +290,6 @@ class UserSessionsManager{
 		$this->session_segment->clear();
 		//setup the the anonymous session
 		$this->set_default_session();
-		//close the handle
-		$this->session_manager->commit();
 	
 	}
 	
@@ -323,13 +329,61 @@ class UserSessionsManager{
 	}
 	
 	/**
+	 * Gets the currently logged in user's user account
+	 * The reason why it calls accounts manager rather than just returning the user here, is that the user here does not reflect any changes made the user in the accounts manager.
+	 * Which would make $this->user quite stale.
+	 */
+	public function get_user(){
+	
+		return $this->accounts_manager->get_user($this->user['id']);
+	
+	}
+	
+	/**
 	 * Gets the current user's session segment.
 	 * The segment can be used to store extra data, remove data, unset or clear data.
 	 */
 	public function get_session(){
 	
+		if(!$this->session_manager->isStarted()){
+			$this->session_manager->start();
+		}
+		
+		//can this work?
+		$this->session_manager->commit();
+		
+		//this will not be writable!
 		return $this->session_segment;
 	
+	}
+	
+	public function get_custom_session(){
+	
+		if(!$this->session_manager->isStarted()){
+			$this->session_manager->start();
+		}
+		
+		//can this work?
+		$this->session_manager->commit();
+		
+		return $this->session_segment->custom_data;
+	
+	}
+	
+	//this function should allow custom updating of the session
+	//perhaps $this->session_segment->data / merge array... but then they will need to be abl
+	public function update_custom_session($value){
+	
+		if(!$this->session_manager->isStarted()){
+			$this->session_manager->start();
+		}
+		
+		$this->session_segment->custom_data = $value;
+		
+		//can this work?
+		$this->session_manager->commit();
+		
+		return $this->session_segment;
 	}
 	
 	/**
@@ -344,7 +398,9 @@ class UserSessionsManager{
 		if(!$this->session_manager->isStarted()){
 			$this->session_manager->start();
 		}
+		
 		$this->session_manager->regenerateId();
+		$this->session_manager->commit();
 	
 	}
 	
@@ -357,9 +413,46 @@ class UserSessionsManager{
 	 */
 	protected function set_default_session($user_id = false, $anonymous = true){
 	
+		if(!$this->session_manager->isStarted()){
+			$this->session_manager->start();
+		}
+	
 		$this->session_segment->user_id = false;
 		$this->session_segment->anonymous = true;
 		$this->session_segment->timeout = time();
+		
+		//this calls session_write_close(), it will close the session lock
+		$this->session_manager->commit();
+	
+	}
+	
+	/**
+	 * Checks if a user is inactive. This will log the user out if so before throwing an exception.
+	 *
+	 * @param $user UserAccount
+	 * @throw Exception UserInactiveException
+	 */
+	protected check_inactive(UserAccount $user){
+	
+		if($user['active'] === 0){
+			$this->logout();
+			throw new UserInactivedException($this->lang['user_inactive']);
+		}
+	
+	}
+	
+	/**
+	 * Checks if a user is banned. This will log the user out if so before throwing an exception.
+	 *
+	 * @param $user UserAccount
+	 * @throw Exception UserBannedException
+	 */
+	protected function check_banned(UserAccount $user){
+	
+		if($user['banned'] === 1){
+			$this->logout();
+			throw new UserBannedException($this->lang['user_banned']);
+		}
 	
 	}
 	
@@ -378,43 +471,38 @@ class UserSessionsManager{
 	}
 	
 	/**
-	 * Checks if a user is banned. This will log the user out if so before throwing an exception.
-	 *
-	 * @param $user UserAccount
-	 * @throw Exception UserBannedException
+	 * Checks if the current session is locked out due to attempts exceeding
 	 */
-	protected function check_banned(UserAccount $user){
-	
-		if($user['banned'] === 1){
-			$this->logout();
-			throw new UserBannedException($this->lang['user_banned']);
-		}
+	protected function is_locked_out(){
 	
 	}
 	
-	//LOGIN ATTEMPTS STUFF
+	/**
+	 * Increment the number of login attempts, this could work via sessions, ip or username
+	 * Sessions are probably the least useful, but the other two can result in DOS or inconvenience
+	 */
+	protected function increment_login_attempts(){
 	
+	}
+	
+	/**
+	 * Check if the attempts have exceeded, if so set up a lock out time
+	 */
+	protected function check_login_attempts_exceeded(){
+	
+	}
+	
+	/**
+	 * Clear all the login attempts on successful login
+	 */
+	public function clear_login_attempts(UserAccount $user){
+	
+	}
+	
+	/**
+	 * Update the last login time
+	 */
 	public function update_last_login(UserAccount $user){
-	
-	}
-	
-	public function is_max_login_attempts_exceeded(){
-	
-	}
-	
-	public function get_last_attempt_time(){
-	
-	}
-	
-	public function get_attempts_num(){
-	
-	}
-	
-	public function is_time_locked_out(){
-	
-	}
-	
-	public function clear_login_attempts(){
 	
 	}
 	
