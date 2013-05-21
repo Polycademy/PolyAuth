@@ -37,10 +37,11 @@ class Language implements \ArrayAccess{
 		'user_permission_select_empty'			=> 'No users were found corresponding to the specified permissions.',
 		'user_permission_select_unsuccessful'	=> 'Could not select users based on permissions.',
 		'user_banned'							=> 'User has been banned.',
+		'user_inactive'							=> 'User is inactive.',
 		// Login / Logout
-		'login_successful'						=> 'Logged In Successfully',
-		'login_unsuccessful'					=> 'Incorrect Login',
-		'login_unsuccessful_not_active'			=> 'Account is inactive',
+		'login_unsuccessful'					=> 'Incorrect Login Details',
+		'login_identity'						=> 'Identity was not found.',
+		'login_password'						=> 'Password was incorrect.',
 		'login_timeout'							=> 'Temporarily Locked Out.  Try again later.',
 		'logout_successful'						=> 'Logged Out Successfully',
 		// Roles
