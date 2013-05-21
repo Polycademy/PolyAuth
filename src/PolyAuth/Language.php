@@ -36,6 +36,7 @@ class Language implements \ArrayAccess{
 		'user_role_select_unsuccessful'			=> 'Could not select users based on roles.',
 		'user_permission_select_empty'			=> 'No users were found corresponding to the specified permissions.',
 		'user_permission_select_unsuccessful'	=> 'Could not select users based on permissions.',
+		'user_banned'							=> 'User has been banned.',
 		// Login / Logout
 		'login_successful'						=> 'Logged In Successfully',
 		'login_unsuccessful'					=> 'Incorrect Login',

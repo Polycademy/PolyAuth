@@ -22,7 +22,7 @@ class APCCache implements CachingInterface{
 		$cache = ($cache) ? $cache : new Pool;
 		$cache->setDriver($driver);
 		$this->cache = $cache;
-		$this->namespace = 'PolyAuth';
+		$this->namespace = 'PolyAuth/';
 	
 	}
 	
@@ -71,16 +71,6 @@ class APCCache implements CachingInterface{
 	
 		$item = $this->cache->getItem($this->namespace . $key);
 		return $item->lock();
-	
-	}
-	
-	/**
-	 * Store the item, similar to set, but finishes any invalidation.
-	 */
-	public function store($key, $value){
-	
-		$item = $this->cache->getItem($this->namespace . $key);
-		return $item->store($value);
 	
 	}
 	

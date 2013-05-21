@@ -1,5 +1,5 @@
 <?php
 
-namespace PolyAuth\Exceptions;
+namespace PolyAuth\Exceptions\ValidationExceptions;
 
 class RegisterValidationException extends ValidationException {}

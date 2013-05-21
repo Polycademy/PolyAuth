@@ -1,5 +1,5 @@
 <?php
 
-namespace PolyAuth\Exceptions;
+namespace PolyAuth\Exceptions\ValidationExceptions;
 
 class DatabaseValidationException extends ValidationException {}

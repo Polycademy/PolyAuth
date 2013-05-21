@@ -88,7 +88,7 @@ class Migration_add_polyauth extends CI_Migration {
 				'type' => 'TINYINT',
 				'constraint' => '1',
 				'unsigned' => TRUE,
-				'null' => TRUE,
+				'default' => 0,
 			),
 			'email' => array(
 				'type' => 'VARCHAR',
@@ -127,7 +127,13 @@ class Migration_add_polyauth extends CI_Migration {
 				'type' => 'TINYINT',
 				'constraint' => '1',
 				'unsigned' => TRUE,
-				'null' => TRUE
+				'default' => 0,
+			),
+			'banned' => array(
+				'type' => 'TINYINT',
+				'constraint' => '1',
+				'unsigned' => TRUE,
+				'default' => 0,
 			),
 		));
 		

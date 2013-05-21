@@ -28,23 +28,27 @@ use RBAC\Manager\RoleManager;
 //for registration
 use PolyAuth\Emailer;
 
+//for caching
+use PolyAuth\Caching\CacheInterface;
+
 //for exceptions
-use PolyAuth\Exceptions\RegisterValidationException;
-use PolyAuth\Exceptions\PasswordValidationException;
-use PolyAuth\Exceptions\DatabaseValidationException;
-use PolyAuth\Exceptions\UserDuplicateException;
-use PolyAuth\Exceptions\UserNotFoundException;
-use PolyAuth\Exceptions\UserRoleAssignmentException;
-use PolyAuth\Exceptions\RoleNotFoundException;
-use PolyAuth\Exceptions\PermissionNotFoundException;
-use PolyAuth\Exceptions\RoleSaveException;
-use PolyAuth\Exceptions\PermissionSaveException;
+use PolyAuth\Exceptions\ValidationExceptions\RegisterValidationException;
+use PolyAuth\Exceptions\ValidationExceptions\PasswordValidationException;
+use PolyAuth\Exceptions\ValidationExceptions\DatabaseValidationException;
+use PolyAuth\Exceptions\UserExceptions\UserDuplicateException;
+use PolyAuth\Exceptions\UserExceptions\UserNotFoundException;
+use PolyAuth\Exceptions\UserExceptions\UserRoleAssignmentException;
+use PolyAuth\Exceptions\RoleExceptions\RoleNotFoundException;
+use PolyAuth\Exceptions\RoleExceptions\RoleSaveException;
+use PolyAuth\Exceptions\PermissionExceptions\PermissionNotFoundException;
+use PolyAuth\Exceptions\PermissionExceptions\PermissionSaveException;
 
 class AccountsManager{
 
 	protected $db;
 	protected $options;
 	protected $lang;
+	protected $cache;
 	protected $logger;
 	protected $role_manager;
 	protected $password_manager;
@@ -56,17 +60,18 @@ class AccountsManager{
 		PDO $db, 
 		Options $options, 
 		Language $language, 
-		LoggerInterface $logger = null,
+		CacheInterface $cache = null, 
+		LoggerInterface $logger = null, 
 		RoleManager $role_manager = null, 
-		PasswordComplexity $password_manager = null,
-		Random $random = null,
+		PasswordComplexity $password_manager = null, 
+		Random $random = null, 
 		Emailer $emailer = null
 	){
 	
+		$this->db = $db;
 		$this->options = $options;
 		$this->lang = $language;
-		
-		$this->db = $db;
+		$this->cache = $cache;
 		$this->logger = $logger;
 		$this->role_manager  = ($role_manager) ? $role_manager : new RoleManager($db, $logger);
 		$this->password_manager = ($password_manager) ? $password_manager : new PasswordComplexity($options, $language);
@@ -687,12 +692,18 @@ class AccountsManager{
 	
 	/**
 	 * Gets the user according to their id. The user is an augmented object of UserAccount including all the user's data (minus the password) and with any current permissions loaded in.
+	 * Results are cached at 'user/#id' (this will be changed when other functions reset the cache)
 	 *
 	 * @param $user_id int
 	 * @return $user object
 	 */
 	public function get_user($user_id){
 	
+		if($this->cache AND $this->cache->exists('user/' . $user_id)){
+			$user = $this->cache->get('user/' . $user_id);
+			return $user;
+		}
+		
 		$query = "SELECT * FROM {$this->options['table_users']} WHERE id = :user_id";
 		$sth = $this->db->prepare($query);
 		$sth->bindValue('user_id', $user_id, PDO::PARAM_INT);
@@ -721,6 +732,10 @@ class AccountsManager{
 		
 		//load in the roles and permissions of the user
 		$this->role_manager->loadSubjectRoles($user);
+		
+		if($this->cache){
+			$this->cache->set('user/' . $user_id, $user, $this->options['cache_expiration']);
+		}
 		
 		return $user;
 		
@@ -1312,6 +1327,73 @@ class AccountsManager{
 	
 	}
 	
+	/**
+	 * Bans a user account. This will prevent logging in and reregistering.
+	 * The record will still exist in the database, so you can keep a record of the user's information.
+	 * This does not set cookies or IP based blocks as those are ineffective, you can do that if you wish.
+	 * It will return false if the query did not update anything.
+	 *
+	 * @param $user object
+	 * @return $user object | boolean
+	 */
+	public function ban_user(UserAccount $user){
+	
+		$query = "UPDATE {$this->options['table_users']} SET banned = 1 WHERE id = :user_id";
+		$sth = $this->db->prepare($query);
+		$sth->bindValue('user_id', $user['id'], PDO::PARAM_INT);
+		
+		try{
+		
+			$sth->execute();
+			if($sth->rowCount() >= 1){
+				$user['banned'] = 1;
+				return $user;
+			}
+			return false;
+		
+		}catch(PDOException $db_err){
+		
+			if($this->logger){
+				$this->logger->error("Failed to execute query to ban user {$user['id']}.", ['exception' => $db_err]);
+			}
+			throw $db_err;
+		
+		}
+	
+	}
+	
+	/**
+	 * Unbans a user account.
+	 *
+	 * @param $user object
+	 * @return $user object | boolean
+	 */
+	public function unban_user(UserAccount $user){
+	
+		$query = "UPDATE {$this->options['table_users']} SET banned = 0 WHERE id = :user_id";
+		$sth = $this->db->prepare($query);
+		$sth->bindValue('user_id', $user['id'], PDO::PARAM_INT);
+		
+		try{
+		
+			$sth->execute();
+			if($sth->rowCount() >= 1){
+				$user['banned'] = 0;
+				return $user;
+			}
+			return false;
+		
+		}catch(PDOException $db_err){
+		
+			if($this->logger){
+				$this->logger->error("Failed to execute query to unban user {$user['id']}.", ['exception' => $db_err]);
+			}
+			throw $db_err;
+		
+		}
+	
+	}
+	
 	protected function validate_column($table, $column){
 	
 		$sth = $this->db->prepare("DESCRIBE $table");
@@ -1336,14 +1418,6 @@ class AccountsManager{
 		}
 		return false;
 	
-	}
-	
-	public function get_errors(){
-		if(!empty($this->errors)){
-			return $this->errors;
-		}else{
-			return false;
-		}
 	}
 
 }

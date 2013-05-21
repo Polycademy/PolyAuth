@@ -2,4 +2,4 @@
 
 namespace PolyAuth\Exceptions;
 
-class EmailException extends \RuntimeException {}
+class EmailException extends PolyAuthException {}

@@ -29,10 +29,11 @@ use PolyAuth\Cookies;
 use PolyAuth\Caching\CacheInterface;
 
 //various exceptions
-use PolyAuth\Exceptions\PasswordChangeException;
-use PolyAuth\Exceptions\PasswordValidationException;
-use PolyAuth\Exceptions\DatabaseValidationException;
-use PolyAuth\Exceptions\UserNotFoundException;
+use PolyAuth\Exceptions\UserExceptions\UserPasswordChangeException;
+use PolyAuth\Exceptions\UserExceptions\UserNotFoundException;
+use PolyAuth\Exceptions\UserExceptions\UserBannedException;
+use PolyAuth\Exceptions\ValidationExceptions\PasswordValidationException;
+use PolyAuth\Exceptions\ValidationExceptions\DatabaseValidationException;
 
 //this class handles all the login and logout functionality
 class UserSessionsManager{
@@ -48,6 +49,8 @@ class UserSessionsManager{
 	protected $session_manager;
 	protected $session_segment; //expect 3 properties: user_id int, anonymous boolean, timeout seconds
 	protected $cookies;
+	
+	protected $user;
 
 	public function __construct(
 		array $strategies,
@@ -112,38 +115,25 @@ class UserSessionsManager{
 			$this->session_manager->start();
 		}
 		
-		//check if the user is not logged in and hasn't been set an anonymous session
-		if(!$this->authenticated() AND !isset($this->session_segment->anonymous)){
+		//if the user is not logged in, we're going to reset an anonymous session and attempt autologin
+		if(!$this->authenticated()){
 		
-			//anonymous session user
-			$this->set_anonymous_session();
+			//beware that this means an anonymous session will never time out
+			$this->set_default_session();
 			
-			//attempt autologin
-			if($this->options['login_autologin'] AND $user_id = $this->autologin()){
-				//check password change
-				$this->check_password_change($user_id);
-			}
-		
-		//check if the user is not logged in and has been set an anonymous session
-		}elseif(!$this->authenticated() AND $this->session_segment->anonymous == true){
-		
-			//attempt autologin, otherwise leave it be
-			if($this->options['login_autologin'] AND $user_id = $this->autologin()){
-				//check password change
-				$this->check_password_change($user_id);
+			if($this->options['login_autologin']){
+				$this->autologin();
 			}
 		
 		//check if the user is logged in
 		}elseif($this->authenticated()){
 		
-			//autologin and login will add the user's id into session segment
-			$user_id = $this->session_segment->user_id;
-			//check password change
-			$this->check_password_change($user_id);
+			//setup the user variable
+			$this->user = $this->accounts_manager->get_user($this->session_segment->user_id);
 		
 		}
 		
-		//time out long lived sessions
+		//time out long lived logged in sessions
 		if($this->options['session_expiration'] !== 0 AND is_int($this->session_segment->timeout)){
 			$time_to_live = time() - $this->session_segment->timeout;
 			if($time_to_live > $this->options['session_expiration']){
@@ -185,8 +175,10 @@ class UserSessionsManager{
 	 * Autologin cycles through all of the authentication strategies to check if at least one of the autologins worked.
 	 * As soon as one of them works, it breaks the loop, and then updates the last login, and sets the session parameters.
 	 * The user_id gets set the passed back user id. The anonymous becomes false, and the timeout is refreshed.
+	 * This checks for password change and banned status and will throw appropriate exceptions.
+	 * It will assign the user account to the user variable.
 	 *
-	 * @return $user_id int | boolean
+	 * @return boolean
 	 */
 	protected function autologin(){
 	
@@ -206,11 +198,16 @@ class UserSessionsManager{
 		//do note that if you are using OAuth or OpenId, this user_id may be created on the fly and immediately registered due to third party login
 		if($user_id){
 		
-			$this->update_last_login($user_id);
-			$this->session_segment->user_id = $user_id;
-			$this->session_segment->anonymous = false;
-			$this->session_segment->timeout = time();
-			return $user_id
+			$this->user = $this->accounts_manager->get_user($user_id);
+			
+			//final checks before we proceed
+			$this->check_banned();
+			$this->check_password_change();
+			
+			$this->update_last_login($this->user);
+			$this->set_default_session($user_id, false);
+			
+			return true;
 		
 		}else{
 		
@@ -252,6 +249,9 @@ class UserSessionsManager{
 		
 		//set the session segment timeout to time()
 		
+			$this->check_banned();
+			$this->check_password_change();
+		
 	
 	}
 	
@@ -278,7 +278,7 @@ class UserSessionsManager{
 		//clear the segment
 		$this->session_segment->clear();
 		//setup the the anonymous session
-		$this->set_anonymous_session();
+		$this->set_default_session();
 		//close the handle
 		$this->session_manager->commit();
 	
@@ -335,9 +335,13 @@ class UserSessionsManager{
 	}
 	
 	/**
-	 * Sets up an anonymous session for the session segment.
+	 * Sets up an anonymous or non-anonymous session.
+	 * If no parameters are set it will set a anonymous session.
+	 *
+	 * @param $user_id integer | false
+	 * @param $anonymous boolean
 	 */
-	protected function set_anonymous_session(){
+	protected function set_default_session($user_id = false, $anonymous = true){
 	
 		$this->session_segment->user_id = false;
 		$this->session_segment->anonymous = true;
@@ -347,31 +351,29 @@ class UserSessionsManager{
 	
 	/**
 	 * Checks if a user needs to change his current password.
-	 * Results are cached at 'user/#id' (this will be changed when other functions reset the cache)
+	 * This expects that the user account has been loaded into $this->user
 	 *
 	 * @throw Exception PasswordChangeException
 	 */
-	protected function check_password_change($user_id){
+	protected function check_password_change(){
+		
+		if($this->user['passwordChange'] === 1){
+			throw new UserPasswordChangeException($this->lang['password_change_required']);
+		}
+		
+	}
 	
-		if($this->cache){
-		
-			if($this->cache->exists('user/' . $user_id){
-				$user = $this->cache->get('user/' . $user_id);
-			}else{
-				$user = $this->accounts_manager->get_user($user_id);
-				$this->cache->set('user/' . $user_id, $user, $this->options['cache_expiration']);
-			}
-		
-		}else{
-		
-			$user = $this->accounts_manager->get_user($user_id);
-		
+	/**
+	 * Checks if a user is banned
+	 *
+	 * @throw Exception UserBannedException
+	 */
+	protected function check_banned(){
+	
+		if($this->user['banned'] === 1){
+			throw new UserBannedException($this->lang['user_banned']);
 		}
-		
-		if($user['passwordChange'] === 1){
-			throw new PasswordChangeException($this->lang['password_change_required']);
-		}
-		
+	
 	}
 	
 	//LOGIN ATTEMPTS STUFF
