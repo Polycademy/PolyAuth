@@ -21,7 +21,7 @@ Features:
 - Password Encryption based on Bcrypt
 - Automatic Emailing for Activation and Forgotten Identity/Password (can be turned off and used manually (SMTP/mail support))
 - Utilisation of loggers that support the PSR log interface
-- Automatic Session Handling based on PHP sessions but extendable by Session Handler Interface
+- Automatic Session Handling (with optional encryption) based on PHP sessions. You can extend it from EncryptedSessionHandler or implement your own SessionHandlerInterface
 - PSR 1 Compatible and Framework Independent
 - PDO based Database Queries (only MySQL atm)
 - Logging in & Logging out

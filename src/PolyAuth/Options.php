@@ -2,6 +2,8 @@
 
 namespace PolyAuth;
 
+use PolyAuth\Sessions\EncryptedSessionHandler;
+
 //standard options object to be passed in
 class Options implements \ArrayAccess{
 
@@ -13,7 +15,7 @@ class Options implements \ArrayAccess{
 		'hash_method'						=> PASSWORD_DEFAULT, //PASSWORD_DEFAULT || PASSWORD_BCRYPT
 		'hash_rounds'						=> 10,
 		//session options
-		'session_handler'					=> null, //object that implements the SessionInterface
+		'session_handler'					=> new EncryptedSessionHandler('abc4345ncu'), //SessionHandlerInterface or null
 		'session_expiration'				=> 43200, //expiration of a single session (set to 0 for infinite)
 		//cookie options
 		'cookie_domain'						=> '',
