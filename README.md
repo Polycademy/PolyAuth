@@ -22,6 +22,8 @@ Features:
 - Automatic Emailing for Activation and Forgotten Identity/Password (can be turned off and used manually (SMTP/mail support))
 - Utilisation of loggers that support the PSR log interface
 - Automatic Session Handling (with optional encryption) based on PHP sessions. You can extend it from EncryptedSessionHandler or implement your own SessionHandlerInterface
+- Manipulation of the session object such as adding in a shopping cart.
+- File locks on the session file are automatically resolved by closing the handle immediately. This prevents AJAX race conditions.
 - PSR 1 Compatible and Framework Independent
 - PDO based Database Queries (only MySQL atm)
 - Logging in & Logging out

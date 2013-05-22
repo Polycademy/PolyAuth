@@ -61,6 +61,8 @@ class Language implements \ArrayAccess{
 		'email_activation_subject'				=> 'Account Activation PolyAuth',
 		'email_forgotten_identity_subject'		=> 'Forgotten Identity PolyAuth',
 		'email_forgotten_password_subject'		=> 'Forgotten Password PolyAuth',
+		// Session
+		'session_invalid_key'					=> 'You cannot manipulate properties on the session object that have reserved keys.',
 	);
 	
 	public function __construct(array $language = null){

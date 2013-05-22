@@ -2,14 +2,17 @@
 
 namespace PolyAuth;
 
+use RBAC\Manager\RoleManager;
 use RBAC\Subject\Subject;
 use RBAC\Role\RoleSet;
 
 class UserAccount extends Subject implements \ArrayAccess{
 
+	protected $role_manager;
 	protected $user_data = array();
 
-	public function __construct($subject_id = false, RoleSet $role_set = null){
+	public function __construct($subject_id = false, RoleSet $role_set = null, RoleManager $role_manager = null){
+		$this->role_manager = ($role_manager) ? $role_manager : new RoleManager;
 		if($subject_id){
 			$this->set_user($subject_id, $role_set);
 		}
@@ -49,11 +52,13 @@ class UserAccount extends Subject implements \ArrayAccess{
 	/**
 	 * Boolean on check on whether this particular user has a particular role.
 	 *
-	 * @param $role object
-	 * 
+	 * @param $role object | string
 	 * @return boolean
 	 */
 	public function has_role($role){
+		if(is_string($role)){
+			$role = $this->role_manager->roleFetchByName($role);
+		}
 		$roles = $this->getRoleset()->getRoles();
 		return in_array($role, $roles);
 	}
@@ -82,7 +87,6 @@ class UserAccount extends Subject implements \ArrayAccess{
 	 * Sets the user data for this user
 	 *
 	 * @param $data array
-	 * 
 	 * @return null
 	 */
 	public function set_user_data($data){

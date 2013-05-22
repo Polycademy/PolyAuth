@@ -33,6 +33,7 @@ use PolyAuth\Exceptions\UserExceptions\UserInactiveException;
 use PolyAuth\Exceptions\ValidationExceptions\PasswordValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\DatabaseValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\LoginValidationException;
+use PolyAuth\Exceptions\ValidationExceptions\SessionValidationException;
 
 class UserSessionsManager{
 
@@ -302,38 +303,91 @@ class UserSessionsManager{
 	
 	}
 	
-	//this will accept 3 optional parameters, if none are set, it simply checks if the person is logged in
-	//if any are set, it's all or nothing, it will make sure that they are all true
-	//to detect if one is logged in, one need to see if the UserAccount variable exists (can't rely on just sessions, possible sessionless)
-	public function authenticated(array $permissions = null, array $roles = null, array $users = null){
+	/**
+	 * Checks if the user is logged in and possesses all the passed in parameters.
+	 * The parameters operate on all or nothing except $identities. $identities operates like "has to be at least one of them".
+	 * This first checks if the session exists, and if not checks if the user exists in this script's memory.
+	 * 
+	 * @param $permissions array of permission names | null
+	 * @param $roles array of role names | null
+	 * @param $identities array of user identities | null (this must match your login_identity option)
+	 * @return boolean
+	 */
+	public function authenticated(array $permissions = null, array $roles = null, array $identities = null){
 	
-		//$this->user (represents the currently logged in user). This obviously kept in "memory". Perhaps it's better to use PHP sessions?
-		//OR you can use the Aura Sessions, which will be constructed for any particular user.
-		//it's better to use the session data which would be an encoded version of the UserAccount
-		//in fact we only need to check if session data exists (but serialisation and unserialisation works)
+		if(!$this->session_manager->isStarted()){
+			$this->session_manager->start();
+		}
 		
-		//actually don't use sessions for this, this is because sessions relies on a cookies
-		//instead simply check if $this->user is filled
-		//$this->user will be filled, everytime the person auto logs in, and manually logs in.
-		//For HTTP strategy, each request logs in. They constantly logs in.
-		//For cookie strategy, autologin will fill it, but otherwise if they don't autologin..?
+		//if the session and $this->user don't exist, then the user is not logged in
+		//if one of them exists, then there's a chance that the session is logged in does exist!
+		if(empty($this->session_segment->user_id) AND $this->session_segment->user_id !== 0){
+			if(!$this->user instanceof UserAccount OR empty($this->user['id'])){
+				return false;
+			}else{
+				$user_id = $this->user['id'];
+			}
+		}else{
+			$user_id = $this->session_segment->user_id;
+		}
 		
-		//No this should use sessions to test whether someone is logged in.
-		//If the client doesn't use cookies, sessions can be appended via the URL (most likely API usage)
-		//If the client doesn't respect the URL session id, or that is switched off, it doesn't matter, because they will constantly login
-		//on each request
-		//Even with OAuth, it'd be the same
+		//check if the user id actually exists (this may be redundant, but better safe than sorry)
+		$query = "SELECT id, {$this->options['login_identity']} FROM {$this->options['table_users']} WHERE id = :user_id";
+		$sth = $this->db->prepare($query);
+		$sth->bindValue('user_id', $user_id, PDO::PARAM_INT);
 		
-		//YOU HAVE TO BE WARY OF SESSION CONSIDERATIONS, FOR clients that dont' accept cookies
-		//you can't use your own sessions to know if someone is authenticated or not
-		//you'll have to authenticate each time, that is autologin needs to run, or login needs to run
-		//if they run through, then the user IS authenticated
-		//perhaps another hook is required...?
-		//the problem is if, even if I autologin, because this obviously returned false due to lack of sessions, then subsequent requests to "authenticated" would fail, as there's nothing anchoring the user to be authenticated.
-		//two solutions: use a $this->user memory variable that only exists for the script's session and assign it when autologgedin or loggedin and destroy on log out
-		//or a hook on each authentication strategy that asks if the user is logged in or not
-		//im choosing the first option, the latter results in too much code for the end user
-		//this will first check the sessions, then it will check the $this->user variable //<____ THIS WORKS
+		try{
+		
+			$sth->execute();
+			$row = $sth->fetch(PDO::FETCH_OBJ);
+			
+			//does the id exist?
+			if(!$row){
+				return false;
+			}
+			
+			//identity check
+			if($identities AND !in_array($row->identity, $identities)){
+				return false;
+			}
+		
+		}catch(PDOException $db_err){
+		
+			if($this->logger){
+				$this->logger->error("Failed to execute query to check if the user identity exists.", ['exception' => $db_err]);
+			}
+			throw $db_err;
+		
+		}
+		
+		//reset the user variable if it does not exist, this is possible if the developer not use $this->start()
+		if(!$this->user instanceof UserAccount OR empty($this->user['id'])){
+			$this->user = $this->accounts_manager->get_user($user_id);
+		}
+		
+		if($permissions){
+		
+			//check if the user has all the permissions
+			foreach($permissions as $permission_name){
+				if(!$this->user->has_permission($permission_name){
+					return false;
+				}
+			}
+		
+		}
+		
+		if($roles){
+		
+			//check if the user has all the roles
+			foreach($roles as $role_name){
+				if(!$this->user->has_role($role_name){
+					return false;
+				}
+			}
+		
+		}
+		
+		return true;
 	
 	}
 	
@@ -350,7 +404,9 @@ class UserSessionsManager{
 	
 	/**
 	 * Gets the current user's session segment.
-	 * The segment can be used to store extra data, remove data, unset or clear data.
+	 * The session segment will be read only. Use update_session to add extra properties to the session.
+	 *
+	 * @return $this->session_segment object
 	 */
 	public function get_session(){
 	
@@ -358,7 +414,6 @@ class UserSessionsManager{
 			$this->session_manager->start();
 		}
 		
-		//can this work?
 		$this->session_manager->commit();
 		
 		//this will not be writable!
@@ -366,33 +421,52 @@ class UserSessionsManager{
 	
 	}
 	
-	public function get_custom_session(){
-	
+	/**
+	 * Updates the session with custom properties.
+	 * You cannot use reserved keys such as 'user_id', 'anonymous' or 'timeout'
+	 *
+	 * @return $this->session_segment object
+	 */
+	public function update_session_property($key, $value){
+		
+		if($key == 'user_id' OR $key == 'anonymous' OR $key == 'timeout'){
+			throw new SessionValidationException($this->lang['session_invalid_key']);
+		}
+		
 		if(!$this->session_manager->isStarted()){
 			$this->session_manager->start();
 		}
 		
-		//can this work?
-		$this->session_manager->commit();
+		$this->session_segment->{$key} = $value;
 		
-		return $this->session_segment->custom_data;
-	
-	}
-	
-	//this function should allow custom updating of the session
-	//perhaps $this->session_segment->data / merge array... but then they will need to be abl
-	public function update_custom_session($value){
-	
-		if(!$this->session_manager->isStarted()){
-			$this->session_manager->start();
-		}
-		
-		$this->session_segment->custom_data = $value;
-		
-		//can this work?
 		$this->session_manager->commit();
 		
 		return $this->session_segment;
+	
+	}
+	
+	/**
+	 * Delete custom properties on the session.
+	 * You cannot use reserved keys such as 'user_id', 'anonymous' or 'timeout'
+	 *
+	 * @return $this->session_segment object
+	 */
+	public function delete_session_property($key){
+	
+		if($key == 'user_id' OR $key == 'anonymous' OR $key == 'timeout'){
+			throw new SessionValidationException($this->lang['session_invalid_key']);
+		}
+		
+		if(!$this->session_manager->isStarted()){
+			$this->session_manager->start();
+		}
+		
+		unset($this->session_segment->{$key});
+		
+		$this->session_manager->commit();
+		
+		return $this->session_segment;
+	
 	}
 	
 	/**
