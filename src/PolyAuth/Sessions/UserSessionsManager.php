@@ -29,6 +29,7 @@ use PolyAuth\Cookies;
 use PolyAuth\Exceptions\UserExceptions\UserPasswordChangeException;
 use PolyAuth\Exceptions\UserExceptions\UserNotFoundException;
 use PolyAuth\Exceptions\UserExceptions\UserBannedException;
+use PolyAuth\Exceptions\UserExceptions\UserInactiveException;
 use PolyAuth\Exceptions\ValidationExceptions\PasswordValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\DatabaseValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\LoginValidationException;
@@ -79,7 +80,7 @@ class UserSessionsManager{
 		}
 		$this->cookies = ($cookies) ? $cookies : new Cookies($options);
 		
-		//resolving session locking problems
+		//resolving session locking problems and other HTTP header problems
 		ob_start();
 		register_shutdown_function(self::finish);
 		
@@ -187,7 +188,7 @@ class UserSessionsManager{
 	
 	/**
 	 * Manually logs in the user, given a $data array of input parameters.
-	 * The input parameter can be an array of ['identity'] AND ['password']
+	 * The input parameter can be an array of ['identity'] (string) AND ['password'] (string) AND ['autologin'] (boolean)
 	 * However it is also optional, if you are using Oauth or HTTP auth.
 	 * In that case, it will automatically extract the necessary tokens.
 	 *
@@ -259,6 +260,11 @@ class UserSessionsManager{
 		$this->check_banned($this->user);
 		$this->check_password_change($this->user);
 		
+		//if it has passed everything, we're going to call set_autologin to setup persistent login if autologin is boolean true
+		if(!empty($data['autologin']) AND $this->options['login_autologin']){
+			$this->strategy->set_autologin($user_id);
+		}
+		
 		return true;
 	
 	}
@@ -274,6 +280,9 @@ class UserSessionsManager{
 		if(!$this->session_manager->isStarted()){
 			$this->session_manager->start();
 		}
+		
+		//perform any custom authentication functions
+		$this->strategy->logout_hook();
 		
 		//delete the php session cookie and autologin cookie
 		$this->cookies->delete_cookie($this->session_manager->getName());
@@ -324,7 +333,7 @@ class UserSessionsManager{
 		//two solutions: use a $this->user memory variable that only exists for the script's session and assign it when autologgedin or loggedin and destroy on log out
 		//or a hook on each authentication strategy that asks if the user is logged in or not
 		//im choosing the first option, the latter results in too much code for the end user
-		//this will first check the sessions, then it will check the $this->user variable
+		//this will first check the sessions, then it will check the $this->user variable //<____ THIS WORKS
 	
 	}
 	
@@ -436,7 +445,7 @@ class UserSessionsManager{
 	
 		if($user['active'] === 0){
 			$this->logout();
-			throw new UserInactivedException($this->lang['user_inactive']);
+			throw new UserInactiveException($this->lang['user_inactive']);
 		}
 	
 	}

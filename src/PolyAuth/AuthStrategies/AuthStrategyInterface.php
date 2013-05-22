@@ -11,11 +11,14 @@ interface AuthStrategyInterface{
 	public function autologin();
 	
 	/**
+	 * This should setup a persistent autologin method to go with the autologin function. It can be a stub.
+	 */
+	public function set_autologin($user_id);
+	
+	/**
 	 * Login hook is called just before the manual login. This modifies the $data variable must return the $data variable.
-	 * For example for OAuth2, you would extract the token to call the API, and use the API to extract the user identity data.
-	 * Modify the $data variable to fill the 'identity', 'password' = random and 'oauth' = true.
-	 * If the identity cannot be retrieved, generate a random unique identity for the user.
-	 * Create the cookie, if it's the cookie strategy.
+	 * Modify the $data variable to fill it with ['identity'] AND ['password'].
+	 * Certain strategies may use login hook to create the random account on the fly such as Oauth or OpenId.
 	 * PolyAuth will create any corresponding server session data.
 	 */
 	public function login_hook($data);

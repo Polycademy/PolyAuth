@@ -14,7 +14,6 @@ class CookieStrategy implements AuthStrategyInterface{
 
 	protected $db;
 	protected $options;
-	protected $lang;
 	protected $logger;
 	protected $cookies;
 	protected $random;
@@ -22,7 +21,6 @@ class CookieStrategy implements AuthStrategyInterface{
 	public function __construct(
 		PDO $db, 
 		Options $options, 
-		Language $language, 
 		LoggerInterface $logger = null,
 		Cookies $cookies = null, 
 		Random $random = null
@@ -30,7 +28,6 @@ class CookieStrategy implements AuthStrategyInterface{
 		
 		$this->db = $db;
 		$this->options = $options;
-		$this->language = $language;
 		$this->logger = $logger;
 		$this->cookies = ($cookies) ? $cookies : new Cookies($options);
 		$this->random = ($random) ? $random : new Random;
@@ -112,7 +109,7 @@ class CookieStrategy implements AuthStrategyInterface{
 	 * @param $id integer
 	 * @return boolean
 	 */
-	protected function set_autologin($id){
+	public function set_autologin($id){
 	
 		$autocode = $this->random->generate(20);
 		$autodate = date('Y-m-d H:i:s');
@@ -183,25 +180,28 @@ class CookieStrategy implements AuthStrategyInterface{
 	
 	}
 	
-	//this just returns the $data because the cookie based authentication doesn't do anything at this point
-	//but also assigns the cookies
-	//$data needs id!
-	//this $data requires the UserAccount??
-	//no it will first login, grab the details, then do anything it needs to do
+	/**
+	 * Login hook, this will manipulate the $data array passed in and return it.
+	 * The cookie strategy won't do anything in this case. It's a simple stub.
+	 *
+	 * @param $data array
+	 * @return $data array
+	 */
 	public function login_hook($data){
-		//assign $data to cookies (using encryption)
-		
-		//the thing to assign should just be the session id, and also any extra data to store
-		//does the session id need to be encrypted?
-		
-		//should create a session
-		
-		//call $this->set_autologin();
 		
 		return $data;
+		
 	}
 	
+	/**
+	 * Logout hook, will perform any necessary custom actions when logging out.
+	 * The cookie strategy won't do anything in this case.
+	 *
+	 * @return null
+	 */
 	public function logout_hook(){
+	
+		return;
 	
 	}
 

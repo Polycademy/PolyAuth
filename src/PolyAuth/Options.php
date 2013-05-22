@@ -63,6 +63,7 @@ class Options implements \ArrayAccess{
 		'login_attempts'					=> 0, //if 0, then it is disabled
 		'login_lockout'						=> 0, //lockout time in seconds
 		'login_forgot_expiration'			=> 0, //how long before the temporary password expires in seconds!
+		'login_realm'						=> 'Protected by PolyAuth Realm', //only relevant to HTTP auth
 		//registration options
 		'reg_activation'					=> false, //can be email, manual, or false
 		//cache options
