@@ -2,8 +2,6 @@
 
 namespace PolyAuth;
 
-use PolyAuth\Sessions\SessionInterface;
-
 //standard options object to be passed in
 class Options implements \ArrayAccess{
 
@@ -87,22 +85,13 @@ class Options implements \ArrayAccess{
 		$this->options = array_merge($this->options, $options);
 	}
 	
-	protected function set_session_handler(SessionInterface $session_handler = null){
+	protected function set_session_handler(\SessionHandlerInterface $session_handler = null){
 	
 		if($session_handler === null){
 			return;
 		}
 		
-		session_set_save_handler(
-			array($session_handler, 'open'),
-			array($session_handler, 'close'),
-			array($session_handler, 'read'),
-			array($session_handler, 'write'),
-			array($session_handler, 'destroy'),
-			array($session_handler, 'gc')
-		);
-		
-		register_shutdown_function('session_write_close');
+		session_set_save_handler($handler, true);		
 	
 	}
 	
