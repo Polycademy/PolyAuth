@@ -16,7 +16,7 @@ tedivm/stash
 
 Features:
 
-- User Account Management
+- User Account Management (includes account bans)
 - Role Based Access Control at NIST Level 1
 - Password Encryption based on Bcrypt
 - Automatic Emailing for Activation and Forgotten Identity/Password (can be turned off and used manually (SMTP/mail support))
@@ -26,8 +26,8 @@ Features:
 - File locks on the session file are automatically resolved by closing the handle immediately. This prevents AJAX race conditions.
 - PSR 1 Compatible and Framework Independent
 - PDO based Database Queries (only MySQL atm)
-- Logging in & Logging out
-- Autologin with Cookies
+- Logging in & Logging out (with optional timeout based login throttling based on cookies and/or ip address)
+- Autologin using a range of authentication strategies.
 - SQL and Codeigniter Migrations
 - Configurable Language for Returned Errors
 - Error handling through exceptions that extend from "PolyAuthException"
