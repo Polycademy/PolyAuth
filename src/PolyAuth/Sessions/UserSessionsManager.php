@@ -192,27 +192,37 @@ class UserSessionsManager{
 	 * The input parameter can be an array of ['identity'] (string) AND ['password'] (string) AND ['autologin'] (boolean)
 	 * However it is also optional, if you are using Oauth or HTTP auth.
 	 * In that case, it will automatically extract the necessary tokens.
+	 * If you wish to bypass the login throttling, just pass in $force_login as true.
+	 * You should use $force_login in conjunction with a captcha form to allow real users to bypass.
+	 * After all login throttling is meant to be used against bots. Not real users.
+	 * Beware of forgotten password or identity, when a user completes the cycle, they should still be able to login
 	 *
 	 * @param $data array optional
+	 * @param $force_login boolean
 	 * @return boolean
 	 */
-	public function login(array $data = null){
+	public function login(array $data = null, $force_login = false){
 	
 		if(!$this->session_manager->isStarted()){
 			$this->session_manager->start();
 		}
 		
-		//these are based on the current session or ip
-		$this->is_locked_out();
-		$this->check_login_attempts_exceeded();
-		$this->increment_login_attempts();
-		
 		//the login hook will manipulate the passed in $data and return at least 'identity' and 'password'
 		//in the case of Oauth, the identity and password may be created on the fly, as soon as the third party authenticates
 		$data = $this->strategy->login_hook($data);
 		
+		if(!$force_login){
+			//is the current login attempt locked out?
+			$lockout_time = $this->is_locked_out($data);
+			//if the lockout_time is not false or not 0, then we are locked out
+			if($lockout_time !== false OR $lockout_time !== 0){
+				//we don't want to increment the login attempts here because this is not a real "attempt"
+				$this->login_failure($data, sprintf($this->lang['login_lockout'], $lockout_time), false);
+			}
+		}
+		
 		if(!is_array($data) OR (!isset($data['identity']) OR !isset($data['password']))){
-			throw new LoginValidationException($this->lang['login_unsuccessful']);
+			$this->login_failure($data, $this->lang['login_unsuccessful']);
 		}
 		
 		$query = "SELECT id, password FROM {$this->options['table_users']} WHERE {$this->options['login_identity']} = :identity";
@@ -231,13 +241,13 @@ class UserSessionsManager{
 					
 				}else{
 				
-					throw new LoginValidationException($this->lang['login_password']);
+					$this->login_failure($data, $this->lang['login_password']);
 				
 				}
 				
 			}else{
 			
-				throw new LoginValidationException($this->lang['login_identity']);
+				$this->login_failure($data, $this->lang['login_identity']);
 				
 			}
 		
@@ -267,6 +277,40 @@ class UserSessionsManager{
 		}
 		
 		return true;
+	
+	}
+	
+	/**
+	 * Login failure should be called when the login did not succeed. This throws the LoginValidationException.
+	 * However it also increments the login attempts and calls the logout hook.
+	 * You can pass the third parameter to prevent it from incrementing the login attempts
+	 *
+	 * @param $data anything
+	 * @param $message string
+	 * @param $lockout boolean
+	 * @throw Exception LoginValidationException
+	 */
+	protected function login_failure($data, $message, $lockout = true){
+	
+		$exception = new LoginValidationException($message);
+		
+		//if the identity does not exist, there's no point throttling, even on ip addresses
+		//this would be the equivalent of an attacker trying to login with no username/email
+		//or it could just be a user that forgot to enter the username
+		//at any case, it's not a threat
+		if(!empty($data['identity']) AND $lockout){
+		
+			$ip = (!empty($_SERVER['REMOTE_ADDR'])) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1';
+			$identity = $data['identity'];
+			
+			$this->increment_login_attempts($ip, $identity);
+		
+		}
+		
+		//everytime the user fails to login, we log him out completely, this could have ramifications if users login after they are already logged in
+		$this->logout();
+		
+		throw $exception;
 	
 	}
 	
@@ -518,8 +562,8 @@ class UserSessionsManager{
 	protected check_inactive(UserAccount $user){
 	
 		if($user['active'] === 0){
-			$this->logout();
-			throw new UserInactiveException($this->lang['user_inactive']);
+			//we don't want to throttle, because we should show the real reason each time
+			$this->login_failure(false, $this->lang['user_inactive'], false);
 		}
 	
 	}
@@ -533,8 +577,8 @@ class UserSessionsManager{
 	protected function check_banned(UserAccount $user){
 	
 		if($user['banned'] === 1){
-			$this->logout();
-			throw new UserBannedException($this->lang['user_banned']);
+			//no throttling, the real reason will be shown each time
+			$this->login_failure(false, $this->lang['user_banned'], false);
 		}
 	
 	}
@@ -554,9 +598,24 @@ class UserSessionsManager{
 	}
 	
 	/**
-	 * Checks if the current session is locked out due to attempts exceeding
+	 * Checks if the current login attempt is locked according to an exponential timeout.
+	 * There is cap on the length of the timeout however. The timeout could grow to infinity without the cap.
+	 *
+	 * @return false | int
 	 */
-	protected function is_locked_out(){
+	protected function is_locked_out($data){
+	
+		
+	
+		//use options
+		//get number of login attempts using $data['identity'] and ip address (one or both depending on options)
+		//use the equation to get the lockout time
+		//cap it to the lockout cap (whichever is the minimum)
+		//add the lockout time to the last login attempt
+		//compare the last login attempt + (capped lockout time) > current time (if it was equal, then no, not locked out)
+		//then if it is greater, the current time hasn't exceeded the timeout, therefore true the user is locked out
+		//return the number of lockout second difference from the current time
+		//else return false
 	
 	}
 	
@@ -564,21 +623,25 @@ class UserSessionsManager{
 	 * Increment the number of login attempts, this could work via sessions, ip or username
 	 * Sessions are probably the least useful, but the other two can result in DOS or inconvenience
 	 */
-	protected function increment_login_attempts(){
+	protected function increment_login_attempts($ip, $identity){
 	
-	}
-	
-	/**
-	 * Check if the attempts have exceeded, if so set up a lock out time
-	 */
-	protected function check_login_attempts_exceeded(){
+		//first check if the identity matches an actual user
+		//that is not banned or inactive 
+		//if the identity is a real identity, add in the row
+		//put the row into the db
 	
 	}
 	
 	/**
 	 * Clear all the login attempts on successful login
+	 * Clears only where the identity and ipaddress match.
 	 */
 	public function clear_login_attempts(UserAccount $user){
+	
+		//clears only where the identity and ipaddress match
+		
+		//BTW, the forgotten cycle also needs to accompolish this, once forgotten is complete
+		//remove where the identity an ipaddress match
 	
 	}
 	

@@ -153,12 +153,11 @@ class Migration_add_polyauth extends CI_Migration {
 			),
 			'ipAddress' => array(
 				'type' => 'VARBINARY',
-				'constraint' => '16'
+				'constraint' => '16',
 			),
-			'login' => array(
+			'identity' => array(
 				'type' => 'VARCHAR',
 				'constraint' => '100',
-				'null', TRUE
 			),
 			'time' => array(
 				'type' => 'DATETIME',

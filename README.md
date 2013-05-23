@@ -26,7 +26,8 @@ Features:
 - File locks on the session file are automatically resolved by closing the handle immediately. This prevents AJAX race conditions.
 - PSR 1 Compatible and Framework Independent
 - PDO based Database Queries (only MySQL atm)
-- Logging in & Logging out (with optional timeout based login throttling based on cookies and/or ip address)
+- Logging in & Logging out
+- Optional login throttling based on exponential timeouts (timeout = 1.8^(number of attempts-1)), this can be set to ip address, login identity or both. There are advantages and disadvantages to using each.
 - Autologin using a range of authentication strategies.
 - SQL and Codeigniter Migrations
 - Configurable Language for Returned Errors

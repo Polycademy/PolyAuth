@@ -60,8 +60,8 @@ class Options implements \ArrayAccess{
 		'login_autologin'					=> true, //allowing remember me or not
 		'login_expiration'					=> 86500, // autologin expiration (seconds). Set to zero for no expiration
 		'login_expiration_extend'			=> true, //allowing whether autologin extends the login_expiration
-		'login_attempts'					=> 0, //if 0, then it is disabled
-		'login_lockout'						=> 0, //lockout time in seconds
+		'login_lockout'						=> array('ipaddress', 'identity'), //lockout tracking, can use both or one of them or false
+		'login_lockout_cap'					=> 172800, //cap on the lockout time in seconds (0 means no cap)
 		'login_forgot_expiration'			=> 0, //how long before the temporary password expires in seconds!
 		'login_realm'						=> 'Protected by PolyAuth Realm', //only relevant to HTTP auth
 		//registration options

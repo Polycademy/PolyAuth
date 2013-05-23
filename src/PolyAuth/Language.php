@@ -42,7 +42,7 @@ class Language implements \ArrayAccess{
 		'login_unsuccessful'					=> 'Incorrect Login Details',
 		'login_identity'						=> 'Identity was not found.',
 		'login_password'						=> 'Password was incorrect.',
-		'login_timeout'							=> 'Temporarily Locked Out.  Try again later.',
+		'login_lockout'							=> 'Temporarily locked out for %d seconds.',
 		'logout_successful'						=> 'Logged Out Successfully',
 		// Roles
 		'role_not_exists'						=> 'Specified role(s) don\'t exist.',
