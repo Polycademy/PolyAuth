@@ -598,6 +598,13 @@ class UserSessionsManager{
 	}
 	
 	/**
+	 * Update the last login time
+	 */
+	protected function update_last_login(UserAccount $user){
+	
+	}
+	
+	/**
 	 * Checks if the current login attempt is locked according to an exponential timeout.
 	 * There is cap on the length of the timeout however. The timeout could grow to infinity without the cap.
 	 *
@@ -642,13 +649,6 @@ class UserSessionsManager{
 		
 		//BTW, the forgotten cycle also needs to accompolish this, once forgotten is complete
 		//remove where the identity an ipaddress match
-	
-	}
-	
-	/**
-	 * Update the last login time
-	 */
-	public function update_last_login(UserAccount $user){
 	
 	}
 	
