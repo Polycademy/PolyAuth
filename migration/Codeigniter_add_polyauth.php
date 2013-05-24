@@ -159,7 +159,7 @@ class Migration_add_polyauth extends CI_Migration {
 				'type' => 'VARCHAR',
 				'constraint' => '100',
 			),
-			'time' => array(
+			'lastAttempt' => array(
 				'type' => 'DATETIME',
 			)
 		));

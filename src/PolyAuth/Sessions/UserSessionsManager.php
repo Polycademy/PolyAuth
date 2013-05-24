@@ -211,6 +211,10 @@ class UserSessionsManager{
 		//in the case of Oauth, the identity and password may be created on the fly, as soon as the third party authenticates
 		$data = $this->strategy->login_hook($data);
 		
+		if(!is_array($data) OR (!isset($data['identity']) OR !isset($data['password']))){
+			$this->login_failure($data, $this->lang['login_unsuccessful']);
+		}
+		
 		if(!$force_login){
 			//is the current login attempt locked out?
 			$lockout_time = $this->is_locked_out($data);
@@ -219,10 +223,6 @@ class UserSessionsManager{
 				//we don't want to increment the login attempts here because this is not a real "attempt"
 				$this->login_failure($data, sprintf($this->lang['login_lockout'], $lockout_time), false);
 			}
-		}
-		
-		if(!is_array($data) OR (!isset($data['identity']) OR !isset($data['password']))){
-			$this->login_failure($data, $this->lang['login_unsuccessful']);
 		}
 		
 		$query = "SELECT id, password FROM {$this->options['table_users']} WHERE {$this->options['login_identity']} = :identity";
@@ -300,7 +300,7 @@ class UserSessionsManager{
 		//at any case, it's not a threat
 		if(!empty($data['identity']) AND $lockout){
 		
-			$ip = (!empty($_SERVER['REMOTE_ADDR'])) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1';
+			$ip = $this->get_ip();
 			$identity = $data['identity'];
 			
 			$this->increment_login_attempts($ip, $identity);
@@ -598,9 +598,35 @@ class UserSessionsManager{
 	}
 	
 	/**
-	 * Update the last login time
+	 * Update the last login time given a particular user.
+	 *
+	 * @param $user UserAccount object
+	 * @return boolean
 	 */
 	protected function update_last_login(UserAccount $user){
+	
+		$query = "UPDATE {$this->options['table_users']} SET lastLogin = :last_login WHERE id = :user_id";
+		$sth = $this->db->prepare($query);
+		$sth->bindValue('last_login', date('Y-m-d H:i:s'), PDO::PARAM_STR);
+		$sth->bindValue('user_id', $user['id'], PDO::PARAM_INT);
+		
+		try{
+		
+			$sth->execute();
+			if($sth->fetch()){
+				return true;
+			}else{
+				return false;
+			}
+		
+		}catch(PDOException $db_err){
+		
+			if($this->logger){
+				$this->logger->error("Failed to execute query to update last login time for user {$user['id']}.", ['exception' => $db_err]);
+			}
+			throw $db_err;
+		
+		}
 	
 	}
 	
@@ -608,21 +634,99 @@ class UserSessionsManager{
 	 * Checks if the current login attempt is locked according to an exponential timeout.
 	 * There is cap on the length of the timeout however. The timeout could grow to infinity without the cap.
 	 *
+	 * @param $data array (it must have ['identity'])
 	 * @return false | int
 	 */
 	protected function is_locked_out($data){
 	
-		
+		$lockout_options = $this->options['login_lockout'];
 	
-		//use options
-		//get number of login attempts using $data['identity'] and ip address (one or both depending on options)
-		//use the equation to get the lockout time
-		//cap it to the lockout cap (whichever is the minimum)
-		//add the lockout time to the last login attempt
-		//compare the last login attempt + (capped lockout time) > current time (if it was equal, then no, not locked out)
-		//then if it is greater, the current time hasn't exceeded the timeout, therefore true the user is locked out
-		//return the number of lockout second difference from the current time
-		//else return false
+		//$data must have identity to check whether person is locked out or not
+		if(!empty($data['identity']) AND is_array($lockout_options)){
+		
+			//we have to get the last login attempt to check if the attempt is locked or not
+			$sub_query = "SELECT MAX(lastAttempt)";
+		
+			if(in_array('ipaddress', $lockout_options) AND in_array('identity', $lockout_options)){
+			
+				//this will automatically get the absolute maximum between the two columns
+				$query = "
+					SELECT 
+					($sub_query) as lastAttempt, 
+					COUNT(*) as attemptNum
+					FROM {$this->options['table_users']} 
+					WHERE ipAddress = :ip_address OR identity = :identity
+				";
+			
+			}elseif(in_array('ipaddress', $lockout_options)){
+			
+				$query = "
+					SELECT 
+					($sub_query) as lastAttempt, 
+					COUNT(*) as attemptNum 
+					FROM {$this->options['table_users']} 
+					WHERE ipAddress = :ip_address
+				";
+			
+			}elseif(in_array('identity', $lockout_options)){
+			
+				$query = "
+					SELECT 
+					($sub_query) as lastAttempt, 
+					COUNT(*) as attemptNum 
+					FROM {$this->options['table_users']} 
+					WHERE identity = :identity
+				";
+			
+			}else{
+			
+				return false;
+			
+			}
+			
+			$sth = $this->db->prepare($query);
+			$sth->bindValue('ip_address', $this->get_ip(), PDO::PARAM_STR);
+			$sth->bindValue('identity', $data['identity'], PDO::PARAM_STR);
+			
+			try{
+			
+				$sth->execute();
+				$row = $sth->fetch(PDO::FETCH_OBJ);
+				if(!$row->attemptNum){
+					return false;
+				}
+				$number_of_attempts = $row->attemptNum;
+				$last_attempt = $row->lastAttempt;
+			
+			}catch(PDOException db_err){
+			
+				if($this->logger){
+					$this->logger->error('Failed to execute query to check whether a login attempt was locked out.', ['exception' => $db_err]);
+				}
+				throw $db_err;
+			
+			}
+			
+			//y = 1.8^(n-1) where n is number of attempts, resulting in exponential timeouts, to prevent brute force attacks
+			$lockout_duration = round(pow(1.8, $number_of_attempts - 1));
+			
+			//capping the lockout time
+			if($this->options['login_lockout_cap']){
+				$lockout_duration = min($lockout_duration, $this->options['login_lockout_cap']);
+			}
+			
+			//adding the lockout time to the last attempt will create the overall timeout
+			$timeout = strtotime($last_attempt) + $lockout_duration;
+			
+			//if the current time is less than the timeout, then attempt is locked out
+			if(time() < $timeout){
+				//return the difference in seconds
+				return $timeout - time();
+			}
+			
+		}
+		
+		return false;
 	
 	}
 	
@@ -636,6 +740,7 @@ class UserSessionsManager{
 		//that is not banned or inactive 
 		//if the identity is a real identity, add in the row
 		//put the row into the db
+		//also set the time
 	
 	}
 	
@@ -650,6 +755,20 @@ class UserSessionsManager{
 		//BTW, the forgotten cycle also needs to accompolish this, once forgotten is complete
 		//remove where the identity an ipaddress match
 	
+	}
+	
+	protected function get_ip() {
+	
+		$ip_address = (!empty($_SERVER['REMOTE_ADDR'])) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1';
+	
+		$platform = $this->db->getAttribute(PDO::ATTR_DRIVER_NAME);
+		
+		if($platform == 'pgsql' || $platform == 'sqlsrv' || $platform == 'mssql'){
+			return $ip_address;
+		}else{
+			return inet_pton($ip_address);
+		}
+		
 	}
 	
 }
