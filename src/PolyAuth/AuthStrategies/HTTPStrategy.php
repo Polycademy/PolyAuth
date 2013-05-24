@@ -98,7 +98,7 @@ class HTTPStrategy implements AuthStrategyInterface{
 	
 		if(!empty($_SERVER['PHP_AUTH_USER'])){
 		
-			$data['username'] = $_SERVER['PHP_AUTH_USER'];
+			$data['identity'] = $_SERVER['PHP_AUTH_USER'];
 			$data['password'] = $_SERVER['PHP_AUTH_PW'];
 			
 			return $data;
