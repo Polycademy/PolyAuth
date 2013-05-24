@@ -637,47 +637,36 @@ class UserSessionsManager{
 	protected function is_locked_out($data){
 	
 		$lockout_options = $this->options['login_lockout'];
-	
-		//$data must have identity to check whether person is locked out or not
-		if(!empty($data['identity']) AND is_array($lockout_options)){
 		
-			//we have to get the last login attempt to check if the attempt is locked or not
-			$sub_query = "SELECT MAX(lastAttempt)";
+		if(
+			!empty($data['identity']) 
+			AND is_array($lockout_options)
+			AND (
+				in_array('ipaddress', $lockout_options) 
+				OR 
+				in_array('identity', $lockout_options)
+			)
+		){
 		
+			$query = "
+				SELECT 
+				MAX(lastAttempt) as lastAttempt, 
+				COUNT(*) as attemptNum
+				FROM {$this->options['table_login_attempts']} 
+			";
+			
+			//if we are tracking both, it's an OR, not an AND, because a single ip address may be attacking multiple identities and a single identity may be attacked from multiple ip addresses
 			if(in_array('ipaddress', $lockout_options) AND in_array('identity', $lockout_options)){
 			
-				//this will automatically get the absolute maximum between the two columns
-				$query = "
-					SELECT 
-					($sub_query) as lastAttempt, 
-					COUNT(*) as attemptNum
-					FROM {$this->options['table_login_attempts']} 
-					WHERE ipAddress = :ip_address OR identity = :identity
-				";
+				$query .= "WHERE ipAddress = :ip_address OR identity = :identity";
 			
 			}elseif(in_array('ipaddress', $lockout_options)){
 			
-				$query = "
-					SELECT 
-					($sub_query) as lastAttempt, 
-					COUNT(*) as attemptNum 
-					FROM {$this->options['table_login_attempts']} 
-					WHERE ipAddress = :ip_address
-				";
+				$query .= "WHERE ipAddress = :ip_address";
 			
 			}elseif(in_array('identity', $lockout_options)){
 			
-				$query = "
-					SELECT 
-					($sub_query) as lastAttempt, 
-					COUNT(*) as attemptNum 
-					FROM {$this->options['table_login_attempts']} 
-					WHERE identity = :identity
-				";
-			
-			}else{
-			
-				return false;
+				$query .= "WHERE identity = :identity";
 			
 			}
 			
