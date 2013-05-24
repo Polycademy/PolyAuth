@@ -79,9 +79,10 @@ class AccountsManager{
 	 * Validation of the $data array is the end user's responsibility. We don't know what custom data fields the end user may want.
 	 *
 	 * @param $data array - $data parameter corresponds to user columns or properties. Make sure the identity and password and any other insertable properties are part of it.
+	 * @param $force_active boolean - Used to force a registered active user regardless of reg activation options. Can be used to create admin accounts or social sign in accounts.
 	 * @return $registered_user object | false - This is a fully loaded user object containing its roles and user data.
 	 */
-	public function register(array $data){
+	public function register(array $data, $force_active = false){
 		
 		//login_data should have username, password or email
 		if(empty($data[$this->options['login_identity']]) OR empty($data['password'])){
@@ -104,14 +105,21 @@ class AccountsManager{
 			throw new PasswordValidationException($this->password_manager->get_error());
 		}
 		
+		//constructing the payload now
 		$ip = (!empty($_SERVER['REMOTE_ADDR'])) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1';
 		$data['ipAddress'] = $this->prepare_ip($ip);
 		$data['password'] = password_hash($data['password'], $this->options['hash_method'], ['cost' => $this->options['hash_rounds']]);
 		
+		if($force_active){
+			$activated = 1;
+		}else{
+			$activated = ($this->options['reg_activation'] === false) ? 1 : 0;
+		}
+		
 		$data += array(
 		    'createdOn'	=> date('Y-m-d H:i:s'),
 		    'lastLogin'	=> date('Y-m-d H:i:s'),
-		    'active'	=> ($this->options['reg_activation'] === false ? 1 : 0),
+		    'active'	=> $activated,
 		);
 		
 		//inserting activation code into the users table, if the reg_activation is by email
