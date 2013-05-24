@@ -16,7 +16,7 @@ tedivm/stash
 
 Features:
 
-- User Account Management (includes account bans)
+- User Account Management (includes account bans) - Make sure your identity is unique, if you're using the identity as the display name, don't allow duplicate display names. Of course you can always add an extra field called "displayName" to allow duplicate display names.
 - Role Based Access Control at NIST Level 1
 - Password Encryption based on Bcrypt
 - Automatic Emailing for Activation and Forgotten Identity/Password (can be turned off and used manually (SMTP/mail support))

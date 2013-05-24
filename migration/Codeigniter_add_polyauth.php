@@ -13,10 +13,11 @@ use RBAC\Manager\RoleManager;
  * You will need to modify the configuration array to setup the default permissions and the default user.
  * You can also add to the columns of the user_accounts table, or even change the name, just make sure to configure the name properly.
  * Any added columns will simply be extra data that you can submit when registering or getting a user.
+ * If table names are changed, make sure to change them in the options too.
  *
  * Of course you can edit the roles and permissions later by constructing your own back end interface, or you can programmatically do it
  *
- * It is currently at NIST Level 1, so the user and role land is flat, no hierarchy yet.
+ * The RBAC is at NIST Level 1, so the user and role land is flat, no hierarchy yet.
  */
 class Migration_add_polyauth extends CI_Migration {
 
