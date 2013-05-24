@@ -220,8 +220,7 @@ class UserSessionsManager{
 			$lockout_time = $this->is_locked_out($data);
 			//if the lockout_time is not false or not 0, then we are locked out
 			if($lockout_time !== false OR $lockout_time !== 0){
-				//we don't want to increment the login attempts here because this is not a real "attempt"
-				$this->login_failure($data, sprintf($this->lang['login_lockout'], $lockout_time), false);
+				$this->login_failure($data, sprintf($this->lang['login_lockout'], $lockout_time));
 			}
 		}
 		
@@ -241,7 +240,9 @@ class UserSessionsManager{
 					
 				}else{
 				
-					$this->login_failure($data, $this->lang['login_password']);
+					//this is only attempt that is considered a real failed login attempt
+					//the third parameter is true in order to implement login throttling
+					$this->login_failure($data, $this->lang['login_password'], true);
 				
 				}
 				
@@ -261,7 +262,7 @@ class UserSessionsManager{
 		}
 		
 		$this->user = $this->accounts_manager->get_user($user_id);
-		$this->clear_login_attempts($this->user);
+		$this->clear_login_attempts($this->user[$this->options['login_identity']]);
 		$this->update_last_login($this->user);
 		
 		$this->regenerate_session();
@@ -283,14 +284,17 @@ class UserSessionsManager{
 	/**
 	 * Login failure should be called when the login did not succeed. This throws the LoginValidationException.
 	 * However it also increments the login attempts and calls the logout hook.
-	 * You can pass the third parameter to prevent it from incrementing the login attempts
+	 * You can pass the third parameter to prevent it from incrementing the login attempts.
+	 * The third parameter should be true when the attempt is a real login attempt.
+	 * The only attempt that should be throttled is ones where the attempt
+	 * was one with a real identity but the wrong password. Other attempts will not be considered.
 	 *
 	 * @param $data anything
 	 * @param $message string
-	 * @param $lockout boolean
+	 * @param $throttle boolean
 	 * @throw Exception LoginValidationException
 	 */
-	protected function login_failure($data, $message, $lockout = true){
+	protected function login_failure($data, $message, $throttle = false){
 	
 		$exception = new LoginValidationException($message);
 		
@@ -298,13 +302,8 @@ class UserSessionsManager{
 		//this would be the equivalent of an attacker trying to login with no username/email
 		//or it could just be a user that forgot to enter the username
 		//at any case, it's not a threat
-		if(!empty($data['identity']) AND $lockout){
-		
-			$ip = $this->get_ip();
-			$identity = $data['identity'];
-			
-			$this->increment_login_attempts($ip, $identity);
-		
+		if(!empty($data['identity']) AND $throttle){
+			$this->increment_login_attempts($data['identity']);
 		}
 		
 		//everytime the user fails to login, we log him out completely, this could have ramifications if users login after they are already logged in
@@ -562,8 +561,7 @@ class UserSessionsManager{
 	protected check_inactive(UserAccount $user){
 	
 		if($user['active'] === 0){
-			//we don't want to throttle, because we should show the real reason each time
-			$this->login_failure(false, $this->lang['user_inactive'], false);
+			$this->login_failure(false, $this->lang['user_inactive']);
 		}
 	
 	}
@@ -577,8 +575,7 @@ class UserSessionsManager{
 	protected function check_banned(UserAccount $user){
 	
 		if($user['banned'] === 1){
-			//no throttling, the real reason will be shown each time
-			$this->login_failure(false, $this->lang['user_banned'], false);
+			$this->login_failure(false, $this->lang['user_banned']);
 		}
 	
 	}
@@ -654,7 +651,7 @@ class UserSessionsManager{
 					SELECT 
 					($sub_query) as lastAttempt, 
 					COUNT(*) as attemptNum
-					FROM {$this->options['table_users']} 
+					FROM {$this->options['table_login_attempts']} 
 					WHERE ipAddress = :ip_address OR identity = :identity
 				";
 			
@@ -664,7 +661,7 @@ class UserSessionsManager{
 					SELECT 
 					($sub_query) as lastAttempt, 
 					COUNT(*) as attemptNum 
-					FROM {$this->options['table_users']} 
+					FROM {$this->options['table_login_attempts']} 
 					WHERE ipAddress = :ip_address
 				";
 			
@@ -674,7 +671,7 @@ class UserSessionsManager{
 					SELECT 
 					($sub_query) as lastAttempt, 
 					COUNT(*) as attemptNum 
-					FROM {$this->options['table_users']} 
+					FROM {$this->options['table_login_attempts']} 
 					WHERE identity = :identity
 				";
 			
@@ -731,29 +728,67 @@ class UserSessionsManager{
 	}
 	
 	/**
-	 * Increment the number of login attempts, this could work via sessions, ip or username
-	 * Sessions are probably the least useful, but the other two can result in DOS or inconvenience
+	 * Increment the number of login attempts.
+	 * This will track both the ip address and the identity used to login.
+	 * It will only increment for the current session's ip.
+	 *
+	 * @param $identity string
+	 * @return true
 	 */
-	protected function increment_login_attempts($ip, $identity){
+	protected function increment_login_attempts($identity){
 	
-		//first check if the identity matches an actual user
-		//that is not banned or inactive 
-		//if the identity is a real identity, add in the row
-		//put the row into the db
-		//also set the time
+		$query = "INSERT {$this->options['table_login_attempts']} (ipAddress, identity, lastAttempt) VALUES (:ip, :identity, :date)";
+		$sth = $this->db->prepare($query);
+		$sth->bindValue('ip', $this->get_ip(), PDO::PARAM_STR);
+		$sth->bindValue('identity', $identity, PDO::PARAM_STR);
+		$sth->bindValue('date', date('Y-m-d H:i:s'), PDO::PARAM_STR);
+		
+		try{
+		
+			$sth->execute();
+			return true;
+		
+		}catch(PDOException $db_err){
+		
+			if($this->logger){
+				$this->logger->error('Failed to execute query to insert a login attempt.', ['exception' => $db_err]);
+			}
+			throw $db_err;
+		
+		}
 	
 	}
 	
 	/**
 	 * Clear all the login attempts on successful login
-	 * Clears only where the identity and ipaddress match.
+	 * Clears only where the identity and the current session's ip match.
+	 * 
+	 * @param $identity string
+	 * @return true | false
 	 */
-	public function clear_login_attempts(UserAccount $user){
+	public function clear_login_attempts($identity){
 	
-		//clears only where the identity and ipaddress match
+		$query = "DELETE FROM {$this->options['table_login_attempts']} WHERE ipAddress = :ip AND identity = :identity";
+		$sth = $this->db->prepare($query);
+		$sth->bindValue('ip', $this->get_ip(), PDO::PARAM_STR);
+		$sth->bindValue('identity', $identity, PDO::PARAM_STR);
 		
-		//BTW, the forgotten cycle also needs to accompolish this, once forgotten is complete
-		//remove where the identity an ipaddress match
+		try{
+		
+			$sth->execute();
+			if($sth->rowCount() >= 1){
+				return true;
+			}
+			return false;
+		
+		}catch(PDOException $db_err){
+			
+			if($this->logger){
+				$this->logger->error('Failed to execute query to clear old login attempts.', ['exception' => $db_err]);
+			}
+			throw $db_err;
+			
+		}
 	
 	}
 	
