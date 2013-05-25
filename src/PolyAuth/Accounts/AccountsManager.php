@@ -28,6 +28,9 @@ use RBAC\Manager\RoleManager;
 //for registration
 use PolyAuth\Emailer;
 
+//for clearing the login attempts when someone has forgotten their password
+use PolyAuth\Sessions\LoginAttemptsTracker;
+
 //for exceptions
 use PolyAuth\Exceptions\ValidationExceptions\RegisterValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\PasswordValidationException;
@@ -50,6 +53,7 @@ class AccountsManager{
 	protected $password_manager;
 	protected $random;
 	protected $emailer;
+	protected $login_attempts;
 	
 	//expects PDO connection (potentially using $this->db->conn_id)
 	public function __construct(
@@ -60,7 +64,8 @@ class AccountsManager{
 		RoleManager $role_manager = null, 
 		PasswordComplexity $password_manager = null, 
 		Random $random = null, 
-		Emailer $emailer = null
+		Emailer $emailer = null,
+		LoginAttemptsTracker $login_attempts = null
 	){
 	
 		$this->db = $db;
@@ -71,6 +76,7 @@ class AccountsManager{
 		$this->password_manager = ($password_manager) ? $password_manager : new PasswordComplexity($options, $language);
 		$this->random = ($random) ? $random : new Random;
 		$this->emailer = ($emailer) ? $emailer : new Emailer($options, $language, $logger);
+		$this->login_attempts = ($login_attempts) ? $login_attempts : new LoginAttemptsTracker($db, $options, $logger);
 		
 	}
 	
@@ -480,19 +486,26 @@ class AccountsManager{
 	
 	/**
 	 * Finishes the forgotten cycle, clears the forgotten code and updates the user with the new password
-	 * You would call this once the user passes the forgotten check, and automatically changes to the new password.
-	 * If you do not call this, the user should be prompted to change on the next login. Use LoginLogout for that.
+	 * You would call this once the user passes the forgotten check, and enters a new password.
+	 * If you do not call this, the user will not be allowed the login on the next login or autologin attempt.
+	 * Furthermore if the password is not changed, the forgotten code will not be cleared.
+	 * It also clears any login attempts for this user, so that if the user had failed attempts, then changed
+	 * their password, then they should be allowed to login without the throttling hindering their way.
 	 *
 	 * @param $user object
-	 * @param $forgotten_code string
+	 * @param $new_password string
 	 * @return boolean
 	 */
 	public function forgotten_complete(UserAccount $user, $new_password){
 	
-		$this->forgotten_clear($user);
-		
-		//clear the forgotten first and update with new password
+		//removes the change password flag, and then removes the forgotten codes
 		if($this->change_password($user, $new_password)){
+			$this->forgotten_clear($user);
+			//clear any login attempts to allow bypass
+			if(!empty($this->options['login_lockout'])){
+				//we need to clear both the ipaddress or the identity simultaneously
+				$this->login_attempts->clear($user[$this->options['login_identity']], true);
+			}
 			return true;
 		}
 		

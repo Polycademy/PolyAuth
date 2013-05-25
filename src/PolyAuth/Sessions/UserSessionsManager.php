@@ -25,6 +25,9 @@ use PolyAuth\Accounts\AccountsManager;
 //for manipulating cookies
 use PolyAuth\Cookies;
 
+//for login attempts tracking
+use PolyAuth\Sessions\LoginAttemptsTracker;
+
 //various exceptions
 use PolyAuth\Exceptions\UserExceptions\UserPasswordChangeException;
 use PolyAuth\Exceptions\UserExceptions\UserNotFoundException;
@@ -47,17 +50,19 @@ class UserSessionsManager{
 	protected $session_manager;
 	protected $session_segment;
 	protected $cookies;
+	protected $login_attempts;
 	protected $user;
 
 	public function __construct(
-		AuthStrategyInterface $strategy,
+		AuthStrategyInterface $strategy, 
 		PDO $db, 
 		Options $options, 
 		Language $language, 
-		LoggerInterface $logger = null,
-		AccountsManager $accounts_manager = null,
-		SessionManager $session_manager = null,
+		LoggerInterface $logger = null, 
+		AccountsManager $accounts_manager = null, 
+		SessionManager $session_manager = null, 
 		Cookies $cookies = null,
+		LoginAttemptsTracker $login_attempts = null
 	){
 		
 		$this->strategy = $strategy;
@@ -80,6 +85,7 @@ class UserSessionsManager{
 			);
 		}
 		$this->cookies = ($cookies) ? $cookies : new Cookies($options);
+		$this->login_attempts = ($login_attempts) ? $login_attempts : new LoginAttemptsTracker($db, $options, $logger);
 		
 		//resolving session locking problems and other HTTP header problems
 		ob_start();
@@ -168,7 +174,7 @@ class UserSessionsManager{
 		if($user_id){
 		
 			$this->user = $this->accounts_manager->get_user($user_id);
-			$this->update_last_login($this->user);
+			$this->update_last_login($this->user['id']);
 			$this->regenerate_session();
 			$this->set_default_session($user_id, false);
 			
@@ -211,13 +217,13 @@ class UserSessionsManager{
 		//in the case of Oauth, the identity and password may be created on the fly, as soon as the third party authenticates
 		$data = $this->strategy->login_hook($data);
 		
-		if(!is_array($data) OR (!isset($data['identity']) OR !isset($data['password']))){
+		if(!is_array($data) OR !isset($data['identity']) OR !isset($data['password'])){
 			$this->login_failure($data, $this->lang['login_unsuccessful']);
 		}
 		
-		if(!$force_login){
+		if(!$force_login AND !empty($this->options['login_lockout'])){
 			//is the current login attempt locked out?
-			$lockout_time = $this->is_locked_out($data);
+			$lockout_time = $this->login_attempts->locked_out($data['identity']);
 			//if the lockout_time is not false or not 0, then we are locked out
 			if($lockout_time !== false OR $lockout_time !== 0){
 				$this->login_failure($data, sprintf($this->lang['login_lockout'], $lockout_time));
@@ -262,8 +268,10 @@ class UserSessionsManager{
 		}
 		
 		$this->user = $this->accounts_manager->get_user($user_id);
-		$this->clear_login_attempts($this->user[$this->options['login_identity']]);
-		$this->update_last_login($this->user);
+		if(!empty($this->options['login_lockout'])){
+			$this->login_attempts->clear($this->user[$this->options['login_identity']]);
+		}
+		$this->update_last_login($this->user['id']);
 		
 		$this->regenerate_session();
 		$this->set_default_session($user_id, false);
@@ -302,8 +310,8 @@ class UserSessionsManager{
 		//this would be the equivalent of an attacker trying to login with no username/email
 		//or it could just be a user that forgot to enter the username
 		//at any case, it's not a threat
-		if(!empty($data['identity']) AND $throttle){
-			$this->increment_login_attempts($data['identity']);
+		if(!empty($data['identity']) AND $throttle AND !empty($this->options['login_lockout'])){
+			$this->login_attempts->increment($data['identity']);
 		}
 		
 		//everytime the user fails to login, we log him out completely, this could have ramifications if users login after they are already logged in
@@ -465,12 +473,12 @@ class UserSessionsManager{
 	}
 	
 	/**
-	 * Updates the session with custom properties.
+	 * Updates/inserts the session with custom properties.
 	 * You cannot use reserved keys such as 'user_id', 'anonymous' or 'timeout'
 	 *
 	 * @return $this->session_segment object
 	 */
-	public function update_session_property($key, $value){
+	public function make_session_property($key, $value){
 		
 		if($key == 'user_id' OR $key == 'anonymous' OR $key == 'timeout'){
 			throw new SessionValidationException($this->lang['session_invalid_key']);
@@ -595,17 +603,17 @@ class UserSessionsManager{
 	}
 	
 	/**
-	 * Update the last login time given a particular user.
+	 * Update the last login time given a particular user id.
 	 *
-	 * @param $user UserAccount object
+	 * @param $user_id integer
 	 * @return boolean
 	 */
-	protected function update_last_login(UserAccount $user){
+	protected function update_last_login($user_id){
 	
 		$query = "UPDATE {$this->options['table_users']} SET lastLogin = :last_login WHERE id = :user_id";
 		$sth = $this->db->prepare($query);
 		$sth->bindValue('last_login', date('Y-m-d H:i:s'), PDO::PARAM_STR);
-		$sth->bindValue('user_id', $user['id'], PDO::PARAM_INT);
+		$sth->bindValue('user_id', $user_id, PDO::PARAM_INT);
 		
 		try{
 		
@@ -619,180 +627,12 @@ class UserSessionsManager{
 		}catch(PDOException $db_err){
 		
 			if($this->logger){
-				$this->logger->error("Failed to execute query to update last login time for user {$user['id']}.", ['exception' => $db_err]);
+				$this->logger->error("Failed to execute query to update last login time for user {$user_id}.", ['exception' => $db_err]);
 			}
 			throw $db_err;
 		
 		}
 	
-	}
-	
-	/**
-	 * Checks if the current login attempt is locked according to an exponential timeout.
-	 * There is cap on the length of the timeout however. The timeout could grow to infinity without the cap.
-	 *
-	 * @param $data array (it must have ['identity'])
-	 * @return false | int
-	 */
-	protected function is_locked_out($data){
-	
-		$lockout_options = $this->options['login_lockout'];
-		
-		if(
-			!empty($data['identity']) 
-			AND is_array($lockout_options)
-			AND (
-				in_array('ipaddress', $lockout_options) 
-				OR 
-				in_array('identity', $lockout_options)
-			)
-		){
-		
-			$query = "
-				SELECT 
-				MAX(lastAttempt) as lastAttempt, 
-				COUNT(*) as attemptNum
-				FROM {$this->options['table_login_attempts']} 
-			";
-			
-			//if we are tracking both, it's an OR, not an AND, because a single ip address may be attacking multiple identities and a single identity may be attacked from multiple ip addresses
-			if(in_array('ipaddress', $lockout_options) AND in_array('identity', $lockout_options)){
-			
-				$query .= "WHERE ipAddress = :ip_address OR identity = :identity";
-			
-			}elseif(in_array('ipaddress', $lockout_options)){
-			
-				$query .= "WHERE ipAddress = :ip_address";
-			
-			}elseif(in_array('identity', $lockout_options)){
-			
-				$query .= "WHERE identity = :identity";
-			
-			}
-			
-			$sth = $this->db->prepare($query);
-			$sth->bindValue('ip_address', $this->get_ip(), PDO::PARAM_STR);
-			$sth->bindValue('identity', $data['identity'], PDO::PARAM_STR);
-			
-			try{
-			
-				$sth->execute();
-				$row = $sth->fetch(PDO::FETCH_OBJ);
-				if(!$row->attemptNum){
-					return false;
-				}
-				$number_of_attempts = $row->attemptNum;
-				$last_attempt = $row->lastAttempt;
-			
-			}catch(PDOException db_err){
-			
-				if($this->logger){
-					$this->logger->error('Failed to execute query to check whether a login attempt was locked out.', ['exception' => $db_err]);
-				}
-				throw $db_err;
-			
-			}
-			
-			//y = 1.8^(n-1) where n is number of attempts, resulting in exponential timeouts, to prevent brute force attacks
-			$lockout_duration = round(pow(1.8, $number_of_attempts - 1));
-			
-			//capping the lockout time
-			if($this->options['login_lockout_cap']){
-				$lockout_duration = min($lockout_duration, $this->options['login_lockout_cap']);
-			}
-			
-			//adding the lockout time to the last attempt will create the overall timeout
-			$timeout = strtotime($last_attempt) + $lockout_duration;
-			
-			//if the current time is less than the timeout, then attempt is locked out
-			if(time() < $timeout){
-				//return the difference in seconds
-				return $timeout - time();
-			}
-			
-		}
-		
-		return false;
-	
-	}
-	
-	/**
-	 * Increment the number of login attempts.
-	 * This will track both the ip address and the identity used to login.
-	 * It will only increment for the current session's ip.
-	 *
-	 * @param $identity string
-	 * @return true
-	 */
-	protected function increment_login_attempts($identity){
-	
-		$query = "INSERT {$this->options['table_login_attempts']} (ipAddress, identity, lastAttempt) VALUES (:ip, :identity, :date)";
-		$sth = $this->db->prepare($query);
-		$sth->bindValue('ip', $this->get_ip(), PDO::PARAM_STR);
-		$sth->bindValue('identity', $identity, PDO::PARAM_STR);
-		$sth->bindValue('date', date('Y-m-d H:i:s'), PDO::PARAM_STR);
-		
-		try{
-		
-			$sth->execute();
-			return true;
-		
-		}catch(PDOException $db_err){
-		
-			if($this->logger){
-				$this->logger->error('Failed to execute query to insert a login attempt.', ['exception' => $db_err]);
-			}
-			throw $db_err;
-		
-		}
-	
-	}
-	
-	/**
-	 * Clear all the login attempts on successful login
-	 * Clears only where the identity and the current session's ip match.
-	 * 
-	 * @param $identity string
-	 * @return true | false
-	 */
-	public function clear_login_attempts($identity){
-	
-		$query = "DELETE FROM {$this->options['table_login_attempts']} WHERE ipAddress = :ip AND identity = :identity";
-		$sth = $this->db->prepare($query);
-		$sth->bindValue('ip', $this->get_ip(), PDO::PARAM_STR);
-		$sth->bindValue('identity', $identity, PDO::PARAM_STR);
-		
-		try{
-		
-			$sth->execute();
-			if($sth->rowCount() >= 1){
-				return true;
-			}
-			return false;
-		
-		}catch(PDOException $db_err){
-			
-			if($this->logger){
-				$this->logger->error('Failed to execute query to clear old login attempts.', ['exception' => $db_err]);
-			}
-			throw $db_err;
-			
-		}
-	
-	}
-	
-	protected function get_ip() {
-	
-		$ip_address = (!empty($_SERVER['REMOTE_ADDR'])) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1';
-	
-		$platform = $this->db->getAttribute(PDO::ATTR_DRIVER_NAME);
-		
-		if($platform == 'pgsql' || $platform == 'sqlsrv' || $platform == 'mssql'){
-			return $ip_address;
-		}else{
-			return inet_pton($ip_address);
-		}
-		
 	}
 	
 }
