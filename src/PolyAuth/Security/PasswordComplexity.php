@@ -1,6 +1,6 @@
 <?php
 
-namespace PolyAuth\Accounts;
+namespace PolyAuth\Security;
 
 use PolyAuth\Options;
 use PolyAuth\Language;

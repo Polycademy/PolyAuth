@@ -16,7 +16,7 @@ use PolyAuth\Options;
 use PolyAuth\Language;
 
 //for security
-use PolyAuth\Accounts\PasswordComplexity;
+use PolyAuth\Security\PasswordComplexity;
 use PolyAuth\Security\Random;
 
 //for RBAC (to CRUD roles and permissions)
