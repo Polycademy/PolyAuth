@@ -17,7 +17,7 @@ use PolyAuth\Security\PasswordComplexity;
 use PolyAuth\Security\Random;
 
 use PolyAuth\Emailer;
-use PolyAuth\Sessions\LoginAttemptsTracker;
+use PolyAuth\Sessions\LoginAttempts;
 
 use PolyAuth\Exceptions\ValidationExceptions\RegisterValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\PasswordValidationException;
@@ -46,7 +46,7 @@ class AccountsManager implements LoggerAwareInterface{
 		PasswordComplexity $password_complexity = null, 
 		Random $random = null, 
 		Emailer $emailer = null,
-		LoginAttemptsTracker $login_attempts = null
+		LoginAttempts $login_attempts = null
 	){
 	
 		$this->db = $db;
@@ -57,7 +57,7 @@ class AccountsManager implements LoggerAwareInterface{
 		$this->password_complexity = ($password_complexity) ? $password_complexity : new PasswordComplexity($options, $language);
 		$this->random = ($random) ? $random : new Random;
 		$this->emailer = ($emailer) ? $emailer : new Emailer($options, $language, $logger);
-		$this->login_attempts = ($login_attempts) ? $login_attempts : new LoginAttemptsTracker($db, $options, $logger);
+		$this->login_attempts = ($login_attempts) ? $login_attempts : new LoginAttempts($db, $options, $logger);
 		
 	}
 	
@@ -400,7 +400,7 @@ class AccountsManager implements LoggerAwareInterface{
 			if($sth->rowCount() < 1){
 				return false;
 			}
-			return $this->emailer->send_forgot_password($user);
+			return $this->emailer->send_forgotten_password($user);
 		
 		}catch(PDOException $db_err){
 		

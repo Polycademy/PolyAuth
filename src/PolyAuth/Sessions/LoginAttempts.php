@@ -8,7 +8,7 @@ use Psr\Log\LoggerInterface;
 
 use PolyAuth\Options;
 
-class LoginAttemptsTracker{
+class LoginAttempts{
 
 	protected $db;
 	protected $options;

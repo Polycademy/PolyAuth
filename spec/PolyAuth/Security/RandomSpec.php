@@ -8,7 +8,7 @@ class RandomSpec extends ObjectBehavior{
 
 	function it_is_initializable(){
 	
-		$this->shouldHaveType('PolyAuth\Accounts\Random');
+		$this->shouldHaveType('PolyAuth\Security\Random');
 		
 	}
 	

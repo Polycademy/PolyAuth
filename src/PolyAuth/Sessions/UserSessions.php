@@ -22,7 +22,7 @@ use PolyAuth\UserAccount;
 use PolyAuth\Accounts\AccountsManager;
 
 use PolyAuth\Cookies;
-use PolyAuth\Sessions\LoginAttemptsTracker;
+use PolyAuth\Sessions\LoginAttempts;
 
 use PolyAuth\Exceptions\UserExceptions\UserPasswordChangeException;
 use PolyAuth\Exceptions\UserExceptions\UserNotFoundException;
@@ -57,7 +57,7 @@ class UserSessions implements LoggerAwareInterface{
 		AccountsManager $accounts_manager = null, 
 		SessionManager $session_manager = null, 
 		Cookies $cookies = null,
-		LoginAttemptsTracker $login_attempts = null
+		LoginAttempts $login_attempts = null
 	){
 		
 		$this->strategy = $strategy;
@@ -80,7 +80,7 @@ class UserSessions implements LoggerAwareInterface{
 			);
 		}
 		$this->cookies = ($cookies) ? $cookies : new Cookies($options);
-		$this->login_attempts = ($login_attempts) ? $login_attempts : new LoginAttemptsTracker($db, $options, $logger);
+		$this->login_attempts = ($login_attempts) ? $login_attempts : new LoginAttempts($db, $options, $logger);
 		
 		//resolving session locking problems and other HTTP header problems
 		ob_start();
