@@ -12,12 +12,19 @@ use PDOStatement;
 use PolyAuth\Options;
 use PolyAuth\Language;
 
+use PolyAuth\Exceptions\ValidationExceptions\RegisterValidationException;
+use PolyAuth\Exceptions\ValidationExceptions\PasswordValidationException;
+use PolyAuth\Exceptions\ValidationExceptions\DatabaseValidationException;
+use PolyAuth\Exceptions\UserExceptions\UserDuplicateException;
+use PolyAuth\Exceptions\UserExceptions\UserNotFoundException;
+
 class AccountsManagerSpec extends ObjectBehavior{
 
 	public $prophet;
 	public $user;
 
 	function let(
+		PDO $db,
 		PDOStatement $sth, 
 		Options $options_object, 
 		Language $language_object
@@ -31,7 +38,7 @@ class AccountsManagerSpec extends ObjectBehavior{
 		
 		//setting up mocks, some of them will be from prophecy, others will be depedency injected
 		$mocks = array();
-		$mocks += $this->setup_db_mocks($sth);
+		$mocks += $this->setup_db_mocks($db, $sth);
 		$mocks += $this->setup_options_language_mocks($options_object, $language_object);
 		$mocks += $this->setup_logger_mocks();
 		$mocks += $this->setup_rbac_mocks();
@@ -41,7 +48,7 @@ class AccountsManagerSpec extends ObjectBehavior{
 		$mocks += $this->setup_login_attempts_mocks();
 		
 		$this->beConstructedWith(
-			$mocks['db'],
+			$db,
 			$mocks['options'], 
 			$mocks['language'], 
 			$mocks['logger'], 
@@ -103,13 +110,13 @@ class AccountsManagerSpec extends ObjectBehavior{
 	
 	}
 	
-	function setup_db_mocks(PDOStatement $sth){
-		
-		//STH is not a prophecy object because it must be able to be overwritten
+	function setup_db_mocks(PDO $db, PDOStatement $sth){
+	
+		//STH
 		$sth->bindParam(Argument::cetera())->willReturn(true);
 		$sth->bindValue(Argument::cetera())->willReturn(true);
 		$sth->execute(Argument::any())->willReturn(true);
-		$sth->fetch()->willReturn(false);
+		$sth->fetch()->willReturn(true);
 		$sth->fetchAll(PDO::FETCH_COLUMN, 0)->willReturn(array(
 			'id',
 			'ipAddress',
@@ -129,14 +136,12 @@ class AccountsManagerSpec extends ObjectBehavior{
 		));
 		
 		//PDO
-		$db = $this->prophet->prophesize('PDO');
 		$db->prepare(Argument::any())->willReturn($sth);
 		$db->lastInsertId()->willReturn(1);
 		$db->getAttribute(PDO::ATTR_DRIVER_NAME)->willReturn('mysql');
 		
 		return [
 			'db'	=> $db, 
-			'sth'	=> $sth,
 		];
 	
 	}
@@ -148,13 +153,13 @@ class AccountsManagerSpec extends ObjectBehavior{
 		$options_array = $options_object->options;
 		$options->offsetGet(Argument::any())->will(function($args) use (&$options_array){
 			$key = $args[0];
-			return $options[$key];
+			return $options_array[$key];
 		});
 		$options->offsetSet(Argument::cetera())->will(function($args) use (&$options_array){
 			if(is_null($args[0])){
-				$options[] = $args[1];
+				$options_array[] = $args[1];
 			} else {
-				$options[$args[0]] = $args[1];
+				$options_array[$args[0]] = $args[1];
 			}
 		});
 		
@@ -215,7 +220,14 @@ class AccountsManagerSpec extends ObjectBehavior{
 	function setup_password_complexity_mocks(){
 	
 		$password_complexity = $this->prophet->prophesize('PolyAuth\Security\PasswordComplexity');
-		$password_complexity->complex_enough(Argument::type('string'))->willReturn(true);
+		
+		//just good
+		$password_complexity->complex_enough('P@szw0rd')->willReturn(true);
+		//too short
+		$password_complexity->complex_enough('a')->willReturn(false);
+		//error message
+		$password_complexity->get_error()->willReturn('Password is not long enough.');
+		
 		return [
 			'password_complexity'	=> $password_complexity->reveal(),
 		];
@@ -264,6 +276,36 @@ class AccountsManagerSpec extends ObjectBehavior{
 	function it_implements_logger_interface(){
 	
 		$this->shouldImplement('Psr\Log\LoggerAwareInterface');
+	
+	}
+	
+	function it_checks_for_duplicate_identity_when_registering(){
+		
+		//this input data has the same username identity as the user fixture!
+		$input_data = array(
+			'username'			=> 'CMCDragonkai',
+			'password'			=> 'P@szw0rd',
+			'email'				=> 'example@example.com',
+			'extraRandomField'	=> 'Hoopla!',
+		);
+		
+		$this->shouldThrow(new UserDuplicateException('Username already used or invalid.'))->duringRegister($input_data);
+	
+	}
+	
+	function it_checks_for_password_complexity_when_registering(PDOStatement $sth){
+	
+		//to counteract the duplicate identity check
+		$sth->fetch()->willReturn(false);
+	
+		$input_data = array(
+			'username'			=> 'Deltakai',
+			'password'			=> 'a', //<- this is too low for the minimum which is  by default 8
+			'email'				=> 'example@example.com',
+			'extraRandomField'	=> 'Hoopla!',
+		);
+		
+		$this->shouldThrow(new PasswordValidationException('Password is not long enough.'))->duringRegister($input_data);
 	
 	}
 	

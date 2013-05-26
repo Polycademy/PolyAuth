@@ -93,7 +93,7 @@ class AccountsManager implements LoggerAwareInterface{
 		}
 		
 		//check for duplicates based on identity
-		if(!$this->duplicate_identity_check($data[$this->options['login_identity']])){
+		if($this->duplicate_identity_check($data[$this->options['login_identity']])){
 			throw new UserDuplicateException($this->lang["account_creation_duplicate_{$this->options['login_identity']}"]);
 		}
 		
@@ -204,10 +204,10 @@ class AccountsManager implements LoggerAwareInterface{
 	}
 	
 	/**
-	 * Checks for duplicate identity, returns false if the identity already exists, returns true if identity doesn't exist
+	 * Checks for duplicate identity, returns true if the identity exists, false if the identity already exist
 	 *
-	 * @param $identity string - depends on the options
-	 * @return boolean
+	 * @param $identity string
+	 * @return boolean - true if duplicate, false if no duplicate
 	 */
 	public function duplicate_identity_check($identity){
 		
@@ -217,12 +217,11 @@ class AccountsManager implements LoggerAwareInterface{
 		
 		try {
 		
-			//there basically should be nothing returned, if something is returned then identity check fails
 			$sth->execute();
 			if($sth->fetch()){
-				return false;
+				return true;
 			}
-			return true;
+			return false;
 			
 		}catch(PDOException $db_err){
 
