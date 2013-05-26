@@ -5,10 +5,10 @@ namespace spec\PolyAuth\Accounts;
 use PhpSpec\ObjectBehavior;
 use Prophecy\Argument;
 
-class AccountsManagerSpec extends ObjectBehavior
+class RbacSpec extends ObjectBehavior
 {
     function it_is_initializable()
     {
-        $this->shouldHaveType('PolyAuth\Accounts\AccountsManager');
+        $this->shouldHaveType('PolyAuth\Accounts\Rbac');
     }
 }

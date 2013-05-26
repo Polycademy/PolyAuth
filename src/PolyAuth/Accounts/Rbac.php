@@ -33,7 +33,7 @@ class Rbac implements LoggerAwareInterface{
 		PDO $db, 
 		Language $language, 
 		LoggerInterface $logger = null, 
-		RoleManager $role_manager = null, 
+		RoleManager $role_manager = null
 	){
 	
 		$this->db = $db;
@@ -149,7 +149,7 @@ class Rbac implements LoggerAwareInterface{
 			
 				$sth->execute($requested_permissions);
 				//this fetches the row into an instantiated object of an existing class, which is the Permission class
-				$permissions = $sth->fetchAll(PDO::FETCH_CLASS, $this->role_manager::CLASS_PERMISSION);
+				$permissions = $sth->fetchAll(PDO::FETCH_CLASS, RoleManager::CLASS_PERMISSION);
 			
 			}catch(PDOException $db_err){
 			
