@@ -80,7 +80,7 @@ class LoginAttemptsTracker{
 				$number_of_attempts = $row->attemptNum;
 				$last_attempt = $row->lastAttempt;
 			
-			}catch(PDOException db_err){
+			}catch(PDOException $db_err){
 			
 				if($this->logger){
 					$this->logger->error('Failed to execute query to check whether a login attempt was locked out.', ['exception' => $db_err]);

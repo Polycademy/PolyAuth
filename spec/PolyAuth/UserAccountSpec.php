@@ -4,9 +4,9 @@ namespace spec\PolyAuth;
 
 use PhpSpec\ObjectBehavior;
 
-use RBAC\Role\Role;
+use RBAC\Subject\Subject;
 use RBAC\Role\RoleSet;
-use RBAC\Permission;
+use RBAC\Role\Role;
 
 class UserAccountSpec extends ObjectBehavior{
 

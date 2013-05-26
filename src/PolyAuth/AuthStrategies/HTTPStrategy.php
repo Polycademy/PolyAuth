@@ -6,7 +6,6 @@ use PDO;
 use PDOException;
 use Psr\Log\LoggerInterface;
 use PolyAuth\Options;
-use PolyAuth\Language;
 use PolyAuth\Security\Random;
 
 /**
@@ -25,14 +24,24 @@ class HTTPStrategy implements AuthStrategyInterface{
 		PDO $db, 
 		Options $options, 
 		LoggerInterface $logger = null,
-		$realm = false;
+		$realm = false
 	){
 		
 		$this->db = $db;
 		$this->options = $options;
 		$this->logger = $logger;
-		$this->realm = ($realm) $realm : $options['login_realm'];
+		$this->realm = ($realm) ? $realm : $options['login_realm'];
 		
+	}
+	
+	/**
+	 * Sets a logger instance on the object
+	 *
+	 * @param LoggerInterface $logger
+	 * @return null
+	 */
+	public function setLogger(LoggerInterface $logger){
+		$this->logger = $logger;
 	}
 	
 	/**

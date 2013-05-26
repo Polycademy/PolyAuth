@@ -2,7 +2,10 @@
 
 namespace PolyAuth\AuthStrategies;
 
-interface AuthStrategyInterface{
+use Psr\Log\LoggerInterface;
+use Psr\Log\LoggerAwareInterface;
+
+interface AuthStrategyInterface extends LoggerAwareInterface{
 
 	/**
 	 * Autologin method. Use this to determine how to log the user in automatically.
@@ -27,5 +30,10 @@ interface AuthStrategyInterface{
 	 * Destroy any client session data. PolyAuth will destroy the corresponding server session data.
 	 */
 	public function logout_hook();
+	
+	/**
+	 * Sets a logger instance on the object
+	 */
+	public function setLogger(LoggerInterface $logger);
 
 }

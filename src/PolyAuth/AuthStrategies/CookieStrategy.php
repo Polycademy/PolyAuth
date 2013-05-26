@@ -6,7 +6,6 @@ use PDO;
 use PDOException;
 use Psr\Log\LoggerInterface;
 use PolyAuth\Options;
-use PolyAuth\Language;
 use PolyAuth\Cookies;
 use PolyAuth\Security\Random;
 
@@ -32,6 +31,16 @@ class CookieStrategy implements AuthStrategyInterface{
 		$this->cookies = ($cookies) ? $cookies : new Cookies($options);
 		$this->random = ($random) ? $random : new Random;
 		
+	}
+	
+	/**
+	 * Sets a logger instance on the object
+	 *
+	 * @param LoggerInterface $logger
+	 * @return null
+	 */
+	public function setLogger(LoggerInterface $logger){
+		$this->logger = $logger;
 	}
 	
 	/**

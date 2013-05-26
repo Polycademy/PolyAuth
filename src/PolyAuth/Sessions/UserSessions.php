@@ -5,6 +5,7 @@ namespace PolyAuth\Sessions;
 use PDO;
 use PDOException;
 use Psr\Log\LoggerInterface;
+use Psr\Log\LoggerAwareInterface;
 
 use Aura\Session\Manager as SessionManager;
 use Aura\Session\SegmentFactory;
@@ -15,20 +16,14 @@ use Aura\Session\Phpfunc;
 use PolyAuth\Options;
 use PolyAuth\Language;
 
-//for making sure auth strategies are real strategies
 use PolyAuth\AuthStrategies\AuthStrategyInterface;
 
-//for manipulating the user
 use PolyAuth\UserAccount;
 use PolyAuth\Accounts\AccountsManager;
 
-//for manipulating cookies
 use PolyAuth\Cookies;
-
-//for login attempts tracking
 use PolyAuth\Sessions\LoginAttemptsTracker;
 
-//various exceptions
 use PolyAuth\Exceptions\UserExceptions\UserPasswordChangeException;
 use PolyAuth\Exceptions\UserExceptions\UserNotFoundException;
 use PolyAuth\Exceptions\UserExceptions\UserBannedException;
@@ -38,7 +33,7 @@ use PolyAuth\Exceptions\ValidationExceptions\DatabaseValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\LoginValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\SessionValidationException;
 
-class UserSessionsManager{
+class UserSessions implements LoggerAwareInterface{
 
 	protected $strategy;
 	protected $db;
@@ -94,6 +89,16 @@ class UserSessionsManager{
 		//establishing namespaced segment (this will be our session data
 		$this->session_segment = $this->session_manager->newSegment('PolyAuth\UserSession');
 	
+	}
+	
+	/**
+	 * Sets a logger instance on the object
+	 *
+	 * @param LoggerInterface $logger
+	 * @return null
+	 */
+	public function setLogger(LoggerInterface $logger){
+		$this->logger = $logger;
 	}
 	
 	/**
@@ -429,8 +434,9 @@ class UserSessionsManager{
 		
 		if($roles){
 		
-			//check if the user has all the roles
-			foreach($roles as $role_name){
+			//we need to acquire role objects first because has_role only accepts objects, not strings
+			$role_objects = $this->accounts_manager->get_roles($roles);
+			foreach($role_objects as $role_object){
 				if(!$this->user->has_role($role_name){
 					return false;
 				}

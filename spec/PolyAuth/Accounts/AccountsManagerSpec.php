@@ -8,7 +8,7 @@ use Prophecy\Prophet;
 
 use PDO;
 use PDOException;
-use PDOStatement;
+use Psr\Log\LoggerInterface;
 
 use PolyAuth\Options;
 use PolyAuth\Language;
@@ -17,20 +17,20 @@ use PolyAuth\Security\Random;
 use PolyAuth\UserAccount;
 use RBAC\Permission;
 use RBAC\Role\Role;
-use RBAC\Role\RoleSet;
 use RBAC\Manager\RoleManager;
 use PolyAuth\Emailer;
+use PolyAuth\Sessions\LoginAttemptsTracker;
 
-use PolyAuth\Exceptions\RegisterValidationException;
-use PolyAuth\Exceptions\PasswordValidationException;
-use PolyAuth\Exceptions\DatabaseValidationException;
-use PolyAuth\Exceptions\UserDuplicateException;
-use PolyAuth\Exceptions\UserNotFoundException;
-use PolyAuth\Exceptions\UserRoleAssignmentException;
-use PolyAuth\Exceptions\RoleNotFoundException;
-use PolyAuth\Exceptions\PermissionNotFoundException;
-use PolyAuth\Exceptions\RoleSaveException;
-use PolyAuth\Exceptions\PermissionSaveException;
+use PolyAuth\Exceptions\ValidationExceptions\RegisterValidationException;
+use PolyAuth\Exceptions\ValidationExceptions\PasswordValidationException;
+use PolyAuth\Exceptions\ValidationExceptions\DatabaseValidationException;
+use PolyAuth\Exceptions\UserExceptions\UserDuplicateException;
+use PolyAuth\Exceptions\UserExceptions\UserNotFoundException;
+use PolyAuth\Exceptions\UserExceptions\UserRoleAssignmentException;
+use PolyAuth\Exceptions\RoleExceptions\RoleNotFoundException;
+use PolyAuth\Exceptions\RoleExceptions\RoleSaveException;
+use PolyAuth\Exceptions\PermissionExceptions\PermissionNotFoundException;
+use PolyAuth\Exceptions\PermissionExceptions\PermissionSaveException;
 
 class AccountsManagerSpec extends ObjectBehavior{
 
@@ -43,6 +43,10 @@ class AccountsManagerSpec extends ObjectBehavior{
 		Options $options, 
 		Language $language, 
 		RoleManager $role_manager,
+		PasswordComplexity $password_manager,
+		Random $random,
+		Emailer $emailer,
+		LoginAttemptsTracker $login_attempts,
 		Role $role,
 		RoleSet $role_set,
 		Permission $permission,

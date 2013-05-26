@@ -15,7 +15,7 @@ class Options implements \ArrayAccess{
 		'hash_method'						=> PASSWORD_DEFAULT, //PASSWORD_DEFAULT || PASSWORD_BCRYPT
 		'hash_rounds'						=> 10,
 		//session options
-		'session_handler'					=> new EncryptedSessionHandler('abc4345ncu'), //SessionHandlerInterface or null
+		'session_handler'					=> null, //SessionHandlerInterface or null (can use EncryptedSessionHandler('abc4345ncu'))
 		'session_expiration'				=> 43200, //expiration of a single session (set to 0 for infinite)
 		//cookie options
 		'cookie_domain'						=> '',
@@ -78,7 +78,9 @@ class Options implements \ArrayAccess{
 		}
 		
 		//this should only run once at startup (should create this as a singleton)
-		$this->set_session_handler($this->options['session_handler']);
+		if($this->options['session_handler'] !== null){
+			$this->set_session_handler($this->options['session_handler']);
+		}
 		$this->set_cookie_settings();
 		
 	}
@@ -88,10 +90,6 @@ class Options implements \ArrayAccess{
 	}
 	
 	protected function set_session_handler(\SessionHandlerInterface $session_handler = null){
-	
-		if($session_handler === null){
-			return;
-		}
 		
 		session_set_save_handler($handler, true);		
 	

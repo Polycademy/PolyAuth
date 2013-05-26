@@ -6,7 +6,7 @@ use Stash\Driver\Apc;
 use Stash\Pool;
 use PolyAuth\Options;
 
-class APCCache implements CachingInterface{
+class APCCache{
 
 	protected $cache;
 	protected $namespace;

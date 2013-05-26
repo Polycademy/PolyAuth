@@ -25,7 +25,7 @@ Features:
 - Manipulation of the session object such as adding in a shopping cart.
 - File locks on the session file are automatically resolved by closing the handle immediately. This prevents AJAX race conditions.
 - PSR 1 Compatible and Framework Independent
-- PDO based Database Queries (only MySQL atm)
+- PDO based Database Queries (only MySQL atm) (if using Codeigniter use $this->db->conn_id)
 - Logging in & Logging out
 - Optional login throttling based on exponential timeouts (timeout = 1.8^(number of attempts-1)), this can be set to ip address, login identity or both. There are advantages and disadvantages to using each.
 - Autologin using a range of authentication strategies.
@@ -35,15 +35,14 @@ Features:
 - Highly Configurable User Data/Profile
 - Password Complexity Checks
 - Excellent Random Token Generator
-- Authentication Strategy Interface Server Side Implementation - Can be used for HTTP Basic, Cookie, OAuth 1 & 2 Consumer Access Delegation, OAuth 2 Provider, OpenID, Hawk and Oz. (HTTP Digest is not supported due to its crytographic constraints)
+- Authentication Strategy Interface Server Side Implementation - Can be used for HTTP Basic, Cookie, OAuth 1 & 2 Consumer Access Delegation, OAuth 2 Provider, and OpenID. (HTTP Digest is not supported due to its crytographic constraints)
 - SpecBDD tested with Continuous Integration at Travis so you can trust that it works!
 - Optional caching library involving APC or Filesystem. It's also extendable with the caching interface.
 
 To Do:
 
-- Complete Authentication Strategies
+- Complete Authentication Strategies (OAuth consumption, OpenID consumption, Hawk and Oz)
 - Complete SQL Migration
-- User Access Logs (just use Monolog)
 - Storage Interface for Database Independent Functionality, will need to abstract PHPRBAC
 
 Note that this does not do filtering or validation of data input. You still need to do this to prevent any problems. This does not do CSRF checks. I do not consider that to be part of a user authentication system.

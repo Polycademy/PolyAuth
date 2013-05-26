@@ -6,7 +6,7 @@ use Stash\Driver\FileSystem;
 use Stash\Pool;
 use PolyAuth\Options;
 
-class FileSystemCache implements CachingInterface{
+class FileSystemCache{
 
 	protected $cache;
 	protected $namespace;
