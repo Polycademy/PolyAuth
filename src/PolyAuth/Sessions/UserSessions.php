@@ -20,6 +20,7 @@ use PolyAuth\AuthStrategies\AuthStrategyInterface;
 
 use PolyAuth\UserAccount;
 use PolyAuth\Accounts\AccountsManager;
+use PolyAuth\Accounts\Rbac;
 
 use PolyAuth\Cookies;
 use PolyAuth\Sessions\LoginAttempts;
@@ -42,6 +43,7 @@ class UserSessions implements LoggerAwareInterface{
 	protected $logger;
 	protected $encryption;
 	protected $accounts_manager;
+	protected $rbac;
 	protected $session_manager;
 	protected $session_segment;
 	protected $cookies;
@@ -55,6 +57,7 @@ class UserSessions implements LoggerAwareInterface{
 		Language $language, 
 		LoggerInterface $logger = null, 
 		AccountsManager $accounts_manager = null, 
+		Rbac $rbac = null,
 		SessionManager $session_manager = null, 
 		Cookies $cookies = null,
 		LoginAttempts $login_attempts = null
@@ -66,6 +69,7 @@ class UserSessions implements LoggerAwareInterface{
 		$this->lang = $language;
 		$this->logger = $logger;
 		$this->accounts_manager = ($accounts_manager) ? $accounts_manager : new AccountsManager($db, $options, $language, $logger);
+		$this->rbac = ($rbac) ? $rbac : new Rbac($db, $language, $logger);
 		if($session_manager){
 			$this->session_manager = $session_manager;
 		}else{
@@ -435,7 +439,7 @@ class UserSessions implements LoggerAwareInterface{
 		if($roles){
 		
 			//we need to acquire role objects first because has_role only accepts objects, not strings
-			$role_objects = $this->accounts_manager->get_roles($roles);
+			$role_objects = $this->rbac->get_roles($roles);
 			foreach($role_objects as $role_object){
 				if(!$this->user->has_role($role_name){
 					return false;
