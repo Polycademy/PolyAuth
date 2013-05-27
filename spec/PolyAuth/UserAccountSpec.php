@@ -4,6 +4,7 @@ namespace spec\PolyAuth;
 
 use PhpSpec\ObjectBehavior;
 
+use RBAC\Permission;
 use RBAC\Subject\Subject;
 use RBAC\Role\RoleSet;
 use RBAC\Role\Role;
