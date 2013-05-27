@@ -604,4 +604,19 @@ class AccountsManagerSpec extends ObjectBehavior{
 	
 	}
 	
+	function it_should_ban_and_unban_users(PDOStatement $sth){
+	
+		//update query
+		$sth->rowCount()->willReturn(1);
+		
+		$user_account = $this->ban_user($this->user);
+		$user_account->shouldBeAnInstanceOf('PolyAuth\UserAccount');
+		$user_account['banned']->shouldReturn(1);
+		
+		$user_account = $this->unban_user($user_account);
+		$user_account->shouldBeAnInstanceOf('PolyAuth\UserAccount');
+		$user_account['banned']->shouldReturn(0);
+	
+	}
+	
 }
