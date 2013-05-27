@@ -158,7 +158,7 @@ class AccountsManager implements LoggerAwareInterface{
 		$registered_user = $this->get_user($last_insert_id);
 		
 		//now we've got to add the default roles and permissions
-		$registered_user = $this->register_user_roles($registered_user, array($this->options['role_default']));
+		$registered_user = $this->rbac->register_user_roles($registered_user, array($this->options['role_default']));
 		
 		//automatically send the activation email
 		if($this->options['reg_activation'] == 'email' AND $this->options['email'] AND $registered_user['email']){
@@ -625,7 +625,7 @@ class AccountsManager implements LoggerAwareInterface{
 	
 		//find the max of the min or max
 		$min = (!empty($this->options['login_password_complexity']['min'])) ? $this->options['login_password_complexity']['min'] : 0;
-		$max = (!empty($this->options['login_password_complexity']['max'])) ? $this->options['login_password_complexity']['min'] : 32;
+		$max = (!empty($this->options['login_password_complexity']['max'])) ? $this->options['login_password_complexity']['max'] : 32;
 		
 		$length = max($min, $max);
 		$new_password = $this->random->generate($length, true);
