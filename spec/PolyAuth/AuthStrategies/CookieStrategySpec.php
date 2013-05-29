@@ -79,6 +79,9 @@ class CookieStrategySpec extends ObjectBehavior{
 				$options_array[$args[0]] = $args[1];
 			}
 		});
+		$options->offsetExists(Argument::any())->will(function($args) use (&$options_array){
+			return isset($options_array[$args[0]]);
+		});
 		$options = $options->reveal();
 		
 		$this->options = $options;

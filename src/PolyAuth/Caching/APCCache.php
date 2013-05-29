@@ -60,7 +60,8 @@ class APCCache{
 	public function exists($key){
 	
 		$item = $this->cache->getItem($this->namespace . $key);
-		return $item->isMiss();
+		//opposite return
+		return !$item->isMiss();
 	
 	}
 	
