@@ -8,7 +8,6 @@ use Prophecy\Prophet;
 
 use PDO;
 use PDOStatement;
-use Psr\Log\LoggerInterface;
 use PolyAuth\Options;
 
 class HTTPStrategySpec extends ObjectBehavior{

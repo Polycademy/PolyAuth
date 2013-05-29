@@ -5,7 +5,6 @@ namespace PolyAuth\Sessions;
 use PDO;
 use PDOException;
 use Psr\Log\LoggerInterface;
-
 use PolyAuth\Options;
 
 class LoginAttempts{
@@ -74,7 +73,7 @@ class LoginAttempts{
 			
 				$sth->execute();
 				$row = $sth->fetch(PDO::FETCH_OBJ);
-				if(!$row->attemptNum){
+				if(!$row){
 					return false;
 				}
 				$number_of_attempts = $row->attemptNum;
@@ -103,7 +102,7 @@ class LoginAttempts{
 			//if the current time is less than the timeout, then attempt is locked out
 			if(time() < $timeout){
 				//return the difference in seconds
-				return $timeout - time();
+				return (integer) $timeout - time();
 			}
 			
 		}
