@@ -88,7 +88,7 @@ class UserSessions implements LoggerAwareInterface{
 		
 		//resolving session locking problems and other HTTP header problems
 		ob_start();
-		register_shutdown_function(self::finish);
+		register_shutdown_function(array(&$this, 'finish'));
 		
 		//establishing namespaced segment (this will be our session data
 		$this->session_segment = $this->session_manager->newSegment('PolyAuth\UserSession');
@@ -148,7 +148,7 @@ class UserSessions implements LoggerAwareInterface{
 	 * It will make sure that only one SID cookie is sent.
 	 * It will also preserve any cookie headers prior to this library being used.
 	 */
-	protected function finish(){
+	public function finish(){
 	
 		if(SID){
 			$headers =  array_unique(headers_list());   

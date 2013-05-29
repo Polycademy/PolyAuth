@@ -10,17 +10,11 @@ use PDO;
 use PDOStatement;
 
 use Aura\Session\Manager as SessionManager;
-use Aura\Session\SegmentFactory;
-use Aura\Session\CsrfTokenFactory;
-use Aura\Session\Randval;
-use Aura\Session\Phpfunc;
+use Aura\Session\Segment as SessionSegment;
 
 use PolyAuth\Options;
 use PolyAuth\Language;
 
-use PolyAuth\AuthStrategies\AuthStrategyInterface;
-
-use PolyAuth\UserAccount;
 use PolyAuth\Accounts\AccountsManager;
 use PolyAuth\Accounts\Rbac;
 
@@ -41,7 +35,6 @@ class UserSessionsSpec extends ObjectBehavior{
 	public $prophet;
 
 	function let(
-		AuthStrategyInterface $strategy, 
 		PDO $db, 
 		PDOStatement $sth,
 		Options $options, 
@@ -49,14 +42,17 @@ class UserSessionsSpec extends ObjectBehavior{
 		AccountsManager $accounts_manager, 
 		Rbac $rbac,
 		SessionManager $session_manager, 
+		SessionSegment $session_segment,
 		Cookies $cookies,
 		LoginAttempts $login_attempts
 	){
 	
 		$this->prophet = new Prophet;
 		
+		define('SID', 'abcd1234');
+		
 		$mocks = [];
-		$mocks += $this->setup_auth_strategy_mocks($strategy);
+		$mocks += $this->setup_auth_strategy_mocks();
 		$mocks += $this->setup_db_mocks($db, $sth);
 		$mocks += $this->setup_options_and_language_mocks($options, $language);
 		$mocks += $this->setup_logger_mocks();
@@ -71,6 +67,7 @@ class UserSessionsSpec extends ObjectBehavior{
 			$mocks['db'],
 			$mocks['options'],
 			$mocks['language'],
+			$mocks['logger'],
 			$mocks['accounts_manager'],
 			$mocks['rbac'],
 			$mocks['session_manager'],
@@ -80,9 +77,26 @@ class UserSessionsSpec extends ObjectBehavior{
 	
 	}
 	
-	function setup_auth_strategy_mocks(AuthStrategyInterface $strategy){
+	function setup_auth_strategy_mocks(){
 	
-		//continue...
+		$auth_strategy = $this->prophet->prophesize();
+		$auth_strategy->willExtend('stdClass');
+		$auth_strategy->willImplement('PolyAuth\AuthStrategies\AuthStrategyInterface');
+		
+		$auth_strategy->autologin()->willReturn(1);
+		$auth_strategy->set_autologin(Argument::any())->willReturn(true);
+		$auth_strategy->login_hook(Argument::any())->will(
+			function($args){ 
+				return $args[0];
+			}
+		);
+		$auth_strategy->logout_hook()->willReturn(true);
+		
+		$auth_strategy = $auth_strategy->reveal();
+		
+		return [
+			'auth' => $auth_strategy,
+		];
 	
 	}
 	
@@ -164,7 +178,58 @@ class UserSessionsSpec extends ObjectBehavior{
 	
 	function setup_accounts_manager_mocks(AccountsManager $accounts_manager){
 	
-		//continue...
+		$user_data = [
+			'id'				=> 1,
+			'username'			=> 'CMCDragonkai',
+			'email'				=> 'example@example.com',
+			'activationCode'	=> 'abcd1234',
+			'forgottenCode'		=> '1234567',
+			'active'			=> 0,
+			'passwordChange'	=> 0,
+			'banned'			=> 0,
+		];
+		
+		$user = $this->prophet->prophesize('PolyAuth\UserAccount');
+		$user->set_user_data(Argument::any())->will(function($args) use (&$user_data){
+			$data = $args[0];
+			$type = gettype($data);
+			if($type != 'object' AND $type != 'array'){
+				return false;
+			}
+			if($type == 'object'){
+				$data = get_object_vars($data);
+			}
+			$user_data = array_merge($user_data, $data);
+		});
+		$user->get_user_data()->will(function() use (&$user_data){
+			return $user_data;
+		});
+		$user->offsetGet(Argument::any())->will(function($args) use (&$user_data){
+			$key = $args[0];
+			return $user_data[$key];
+		});
+		$user->offsetSet(Argument::cetera())->will(function($args) use (&$user_data){
+			if(is_null($args[0])){
+				$user_data[] = $args[1];
+			} else {
+				$user_data[$args[0]] = $args[1];
+			}
+		});
+		$user->offsetExists(Argument::any())->will(function($args) use (&$user_data){
+			return isset($user_data[$args[0]]);
+		});
+		$user->offsetUnset(Argument::any())->will(function($args) use (&$user_data){
+			$key = $args[0];
+			unset($user_data[$key]);
+		});
+		
+		$user = $user->reveal();
+	
+		$accounts_manager->get_user(Argument::any())->willReturn($user);
+		
+		return [
+			'accounts_manager' => $accounts_manager,
+		];
 	
 	}
 	
@@ -187,29 +252,8 @@ class UserSessionsSpec extends ObjectBehavior{
 		$role->addPermission(Argument::any())->willReturn(true);
 		$role = $role->reveal();
 		
-		$role_set = $this->prophet->prophesize('RBAC\Role\RoleSet');
-		$role_set->addRole(Argument::type('RBAC\Role\Role'))->willReturn(true);
-		$role_set->has_permission('Permission Name')->willReturn(true);
-		$role_set = $role_set->reveal();
-		
-		$rbac->load_subject_roles(Argument::type('PolyAuth\UserAccount'))->will(
-			function($args) use ($role_set){
-				$user = $args[0];
-				$user->loadRoleSet($role_set);
-				return $user;
-			}
-		);
-		$rbac->register_user_roles(Argument::type('PolyAuth\UserAccount'), array('members'))->will(
-			function($args) use ($role){
-				$user = $args[0];
-				//take the dummy role and add it to the rolset
-				$role = $role;
-				$role_set = $user->getRoleSet();
-				$role_set->addRole($role);
-				$user->loadRoleSet($role_set);
-				return $user;
-			}
-		);
+		//will return an array of roles, in this it will just eb one role
+		$rbac->get_roles(Argument::type('array'))->willReturn(array($role));
 		
 		return [
 			'rbac'	=> $rbac,
@@ -219,20 +263,29 @@ class UserSessionsSpec extends ObjectBehavior{
 	
 	function setup_session_manager_mocks(SessionManager $session_manager){
 	
-		//continue...
+		$session_segment = $this->prophet->prophesize('stdClass');
+		$session_segment->user_id = 1;
+		$session_segment->anonymous = false;
+		$session_segment->timeout = time();
+		$session_segment = $session_segment->reveal();
+	
+		$session_manager->newSegment(Argument::any())->willReturn($session_segment);
+		$session_manager->isStarted()->willReturn(false);
+		$session_manager->commit()->willReturn(true);
+		$session_manager->start()->willReturn(true);
+		$session_manager->getName()->willReturn('PHPSESSID');
+		$session_manager->destroy()->willReturn(true);
+		$session_manager->clear()->willReturn(true);
+		$session_manager->regenerateId()->willReturn(true);
+		
+		return [
+			'session_manager' => $session_manager,
+		];
 	
 	}
 	
 	function setup_cookies_mocks(Cookies $cookies){
 	
-		$id = '1';
-		$autoCode = '1234dsf4846dcvx4v459';
-		
-		$cookies->get_cookie(Argument::any())->willReturn(serialize(['id' => (integer) $id, 'autoCode' => $autoCode]));
-		
-		//set cookie should be set in this way!
-		$cookies->set_cookie('autologin', serialize(['id' => (integer) $id, 'autoCode' => $autoCode]), $this->options['login_expiration'])->willReturn(true);
-		
 		$cookies->delete_cookie(Argument::any())->willReturn(true);
 		
 		return [
@@ -243,16 +296,21 @@ class UserSessionsSpec extends ObjectBehavior{
 	
 	function setup_login_attempts_mocks(LoginAttempts $login_attempts){
 	
-		//needs more work
+		
+		$login_attempts->locked_out(Argument::any())->willReturn(false);
 		$login_attempts->clear(Argument::cetera())->willReturn(true);
+		$login_attempts->increment(Argument::any())->willReturn(true);
+		
 		return [
-			'login_attempts'	=> $login_attempts->reveal(),
+			'login_attempts'	=> $login_attempts,
 		];
 		
 	}
 
 	function it_is_initializable(){
+	
 		$this->shouldHaveType('PolyAuth\Sessions\UserSessions');
+		
 	}
 	
 	// function it_should_autologin_on_cookie_strategy(){}
