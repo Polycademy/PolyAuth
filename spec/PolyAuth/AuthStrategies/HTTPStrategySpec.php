@@ -142,7 +142,7 @@ class HTTPStrategySpec extends ObjectBehavior{
 	
 	function it_should_send_HTTP_challenge_during_logout_hook(){
 	
-		$this->logout_hook()->shouldReturn(null);
+		$this->logout_hook()->shouldReturn(null);	
 	
 	}
 	
