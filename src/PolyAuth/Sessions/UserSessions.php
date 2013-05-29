@@ -118,7 +118,7 @@ class UserSessions implements LoggerAwareInterface{
 		}
 		
 		//if the user is not logged in, we're going to reset an anonymous session and attempt autologin
-		if(!$this->authenticated()){
+		if(!$this->authorized()){
 		
 			//beware that this means an anonymous session will never time out
 			$this->set_default_session();
@@ -373,7 +373,7 @@ class UserSessions implements LoggerAwareInterface{
 	 * @param $identities array of user identities | null (this must match your login_identity option)
 	 * @return boolean
 	 */
-	public function authenticated(array $permissions = null, array $roles = null, array $identities = null){
+	public function authorized(array $permissions = null, array $roles = null, array $identities = null){
 	
 		if(!$this->session_manager->isStarted()){
 			$this->session_manager->start();
