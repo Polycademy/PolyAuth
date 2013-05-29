@@ -61,11 +61,11 @@ class CookieStrategy implements AuthStrategyInterface{
 			$autologin = unserialize($autologin);
 			$id = $autologin['id'];
 			$autocode = $autologin['autoCode'];
+			//current time minus duration less/equal autoDate
+			$valid_date = date('Y-m-d H:i:s', time() - $this->options['login_expiration']);
 			
 			// check for expiration
 			if($this->options['login_expiration'] !== 0){
-				//current time minus duration less/equal autoDate
-				$valid_date = date('Y-m-d H:i:s', time() - $this->options['login_expiration']);
 				$query = "SELECT id FROM {$this->options['table_users']} WHERE id = :id AND autoCode = :autoCode AND autoDate >= :valid_date";
 			}else{
 				$query = "SELECT id FROM {$this->options['table_users']} WHERE id = :id AND autoCode = :autoCode";
@@ -74,9 +74,7 @@ class CookieStrategy implements AuthStrategyInterface{
 			$sth = $this->db->prepare($query);
 			$sth->bindValue('id', $id, PDO::PARAM_INT);
 			$sth->bindValue('autoCode', $autocode, PDO::PARAM_STR);
-			if($this->options['login_expiration'] !== 0){
-				$sth->bindValue('valid_date', $valid_date, PDO::PARAM_STR);
-			}
+			$sth->bindValue('valid_date', $valid_date, PDO::PARAM_STR);
 			
 			try{
 			
@@ -126,7 +124,7 @@ class CookieStrategy implements AuthStrategyInterface{
 		$query = "UPDATE {$this->options['table_users']} SET autoCode = :autoCode, autoDate = :autoDate WHERE id = :id";
 		$sth = $this->db->prepare($query);
 		$sth->bindValue('autoCode', $autocode, PDO::PARAM_STR);
-		$sth->bindValue('autoDate', $autoDate, PDO::PARAM_STR);
+		$sth->bindValue('autoDate', $autodate, PDO::PARAM_STR);
 		
 		try{
 		
@@ -134,7 +132,7 @@ class CookieStrategy implements AuthStrategyInterface{
 			if($sth->rowCount() >= 1){
 				$autologin = serialize(array(
 					'id'		=> $id,
-					'autoCode'	=> $autoCode,
+					'autoCode'	=> $autocode,
 				));
 				$expiration = ($this->options['login_expiration'] !== 0) ? $this->options['login_expiration'] : (60*60*24*365*2);
 				$this->cookies->set_cookie('autologin', $autologin, $expiration);
@@ -160,7 +158,7 @@ class CookieStrategy implements AuthStrategyInterface{
 	 * @param $id integer
 	 * @return boolean
 	 */
-	protected function clear_autologin($id){
+	public function clear_autologin($id){
 	
 		//clear the cookie to prevent multiple attempts
 		$this->cookies->delete_cookie('autologin');
