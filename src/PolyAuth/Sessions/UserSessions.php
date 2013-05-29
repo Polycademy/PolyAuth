@@ -429,7 +429,7 @@ class UserSessions implements LoggerAwareInterface{
 		
 			//check if the user has all the permissions
 			foreach($permissions as $permission_name){
-				if(!$this->user->has_permission($permission_name){
+				if(!$this->user->has_permission($permission_name)){
 					return false;
 				}
 			}
@@ -441,7 +441,7 @@ class UserSessions implements LoggerAwareInterface{
 			//we need to acquire role objects first because has_role only accepts objects, not strings
 			$role_objects = $this->rbac->get_roles($roles);
 			foreach($role_objects as $role_object){
-				if(!$this->user->has_role($role_name){
+				if(!$this->user->has_role($role_name)){
 					return false;
 				}
 			}
@@ -576,7 +576,7 @@ class UserSessions implements LoggerAwareInterface{
 	 * @param $user UserAccount
 	 * @throw Exception UserInactiveException
 	 */
-	protected check_inactive(UserAccount $user){
+	protected function check_inactive(UserAccount $user){
 	
 		if($user['active'] === 0){
 			$this->login_failure(false, $this->lang['user_inactive']);
