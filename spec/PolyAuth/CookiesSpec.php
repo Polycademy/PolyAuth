@@ -10,7 +10,7 @@ use PolyAuth\Options;
 
 ob_start();
 
-class CookieManagerSpec extends ObjectBehavior{
+class CookiesSpec extends ObjectBehavior{
 
 	function let(Options $options){
 	
@@ -39,7 +39,7 @@ class CookieManagerSpec extends ObjectBehavior{
 
 	function it_is_initializable(){
 	
-		$this->shouldHaveType('PolyAuth\CookieManager');
+		$this->shouldHaveType('PolyAuth\Cookies');
 		
 	}
 	
