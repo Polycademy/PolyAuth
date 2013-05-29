@@ -122,16 +122,23 @@ class LoginAttemptsSpec extends ObjectBehavior{
 	
 		$sth->fetch(PDO::FETCH_OBJ)->willReturn($row);
 		
-		//time in seconds
 		$this->locked_out('CMCDragonkai')->shouldReturn(false);
 	
 	}
 	
 	function it_should_increment_login_attempts(){
 	
+		$this->increment('CMCDragonkai')->shouldReturn(true);
+	
 	}
 	
-	function it_should_clear_login_attempts(){
+	function it_should_clear_login_attempts(PDOStatement $sth){
+	
+		$sth->rowCount()->willReturn(1);
+	
+		$this->clear('CMCDragonkai')->shouldReturn(true);
+		
+		$this->clear('CMCDragonkai', true)->shouldReturn(true);
 	
 	}
 	
