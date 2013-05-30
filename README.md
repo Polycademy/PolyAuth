@@ -46,8 +46,8 @@ Features
 To Do
 ------
 
-- Complete Authentication Strategies (OAuth consumption, OpenID consumption, Hawk and Oz)
-- Complete SQL Migration
+- Add OAuth consumption, OpenID consumption, Hawk and Oz authenticaion strategies
+- SQL Migration
 - Storage Interface for Database Independent Functionality, will need to abstract PHPRBAC
 
 Install with Composer
