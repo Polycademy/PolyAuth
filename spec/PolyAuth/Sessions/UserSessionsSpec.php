@@ -21,18 +21,15 @@ use PolyAuth\Accounts\Rbac;
 use PolyAuth\Cookies;
 use PolyAuth\Sessions\LoginAttempts;
 
-use PolyAuth\Exceptions\UserExceptions\UserPasswordChangeException;
-use PolyAuth\Exceptions\UserExceptions\UserNotFoundException;
-use PolyAuth\Exceptions\UserExceptions\UserBannedException;
-use PolyAuth\Exceptions\UserExceptions\UserInactiveException;
-use PolyAuth\Exceptions\ValidationExceptions\PasswordValidationException;
-use PolyAuth\Exceptions\ValidationExceptions\DatabaseValidationException;
-use PolyAuth\Exceptions\ValidationExceptions\LoginValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\SessionValidationException;
+
+define('SID', 'abcd1234');
 
 class UserSessionsSpec extends ObjectBehavior{
 
 	public $prophet;
+	public $user;
+	public $session;
 
 	function let(
 		PDO $db, 
@@ -48,8 +45,6 @@ class UserSessionsSpec extends ObjectBehavior{
 	){
 	
 		$this->prophet = new Prophet;
-		
-		define('SID', 'abcd1234');
 		
 		$mocks = [];
 		$mocks += $this->setup_auth_strategy_mocks();
@@ -184,10 +179,17 @@ class UserSessionsSpec extends ObjectBehavior{
 			'email'				=> 'example@example.com',
 			'activationCode'	=> 'abcd1234',
 			'forgottenCode'		=> '1234567',
-			'active'			=> 0,
+			'active'			=> 1,
 			'passwordChange'	=> 0,
 			'banned'			=> 0,
 		];
+		
+		//dummy permission
+		$permission = $this->prophet->prophesize('RBAC\Permission');
+		$permission->permission_id = 1;
+		$permission->name = 'Permission Name';
+		$permission->description = 'A dummy permission';
+		$permission = $permission->reveal();
 		
 		$user = $this->prophet->prophesize('PolyAuth\UserAccount');
 		$user->set_user_data(Argument::any())->will(function($args) use (&$user_data){
@@ -223,7 +225,12 @@ class UserSessionsSpec extends ObjectBehavior{
 			unset($user_data[$key]);
 		});
 		
+		$user->has_permission('Permission Name')->willReturn(true);
+		$user->has_role(Argument::type('object'))->willReturn(true);
+		
 		$user = $user->reveal();
+		
+		$this->user = $user;
 	
 		$accounts_manager->get_user(Argument::any())->willReturn($user);
 		
@@ -263,11 +270,13 @@ class UserSessionsSpec extends ObjectBehavior{
 	
 	function setup_session_manager_mocks(SessionManager $session_manager){
 	
-		$session_segment = $this->prophet->prophesize('stdClass');
+		$session_segment = $this->prophet->prophesize();
 		$session_segment->user_id = 1;
 		$session_segment->anonymous = false;
 		$session_segment->timeout = time();
 		$session_segment = $session_segment->reveal();
+		
+		$this->session = $session_segment;
 	
 		$session_manager->newSegment(Argument::any())->willReturn($session_segment);
 		$session_manager->isStarted()->willReturn(false);
@@ -313,16 +322,90 @@ class UserSessionsSpec extends ObjectBehavior{
 		
 	}
 	
-	// function it_should_autologin_on_cookie_strategy(){}
+	function it_implements_logger_interface(){
 	
-	// function it_should_login_on_cookie_strategy(){}
+		$this->shouldImplement('Psr\Log\LoggerAwareInterface');
 	
-	// function it_should_autologin_on_http_strategy(){}
+	}
 	
-	// function it_should_login_on_http_strategy(){}
+	function it_should_start_tracking_sessions_and_attempt_autologin(PDOStatement $sth){
+	
+		$row = new \stdClass;
+		$row->id = 1;
+		$row->identity = 'CMCDragonkai';
+		$sth->fetch(PDO::FETCH_OBJ)->willReturn($row);
 		
-	// function it_should_increment_login_attempts_at_each_login(){}
+		//our fixtures determine that this person is authorised, so the session will continue
+		$this->start();
+		
+		$session = $this->get_session();
+		$session->anonymous->shouldReturn(false);
+		$session->user_id->shouldReturn(1);
 	
-	// function it_should_be_able_to_modify_client_session_data(){}
+	}
+	
+	function it_should_login(PDOStatement $sth){
+	
+		$row = new \stdClass;
+		$row->id = 1;
+		$row->password = password_hash('blahblah1234', PASSWORD_BCRYPT);
+		$sth->fetch(PDO::FETCH_OBJ)->willReturn($row);
+		
+		$this->login(['identity' => 'CMCDragonkai', 'password' => 'blahblah1234'])->shouldReturn(true);
+	
+	}
+	
+	function it_should_determine_if_user_is_authorized(PDOStatement $sth){
+	
+		$row = new \stdClass;
+		$row->id = 1;
+		$row->identity = 'CMCDragonkai';
+		$sth->fetch(PDO::FETCH_OBJ)->willReturn($row);
+		
+		//determine if the user is logged in
+		$this->authorized()->shouldReturn(true);
+		
+		//determine permissions
+		$this->authorized(array('Permission Name'))->shouldReturn(true);
+		
+		//determine roles
+		$this->authorized(false, array('members'))->shouldReturn(true);
+		
+		//determine identity
+		$this->authorized(false, false, array('CMCDragonkai'))->shouldReturn(true);
+		$this->authorized(false, false, array('CMCDragonkai', 'EitherOrIdentity'))->shouldReturn(true);
+		
+		//this should fail
+		$this->authorized(array('some other permission'), array('not members'), array('Blah'))->shouldReturn(false);
+		
+		//of course this should also work
+		$this->authorized('Permission Name', 'members', 'CMCDragonkai')->shouldReturn(true);
+	
+	}
+	
+	function it_should_get_the_currently_logged_in_user_account_and_session(){
+	
+		$this->get_user()->shouldReturn($this->user);
+		$this->get_session()->shouldReturn($this->session);
+	
+	}
+	
+	function it_should_manipulate_session_properties(){
+	
+		//add some data
+		$session = $this->set_property('newKey', 'SomeData');
+		$session->newKey->shouldReturn('SomeData');
+		//revert back to the old session!
+		$session = $this->delete_property('newKey')->shouldReturn($this->session);
+		//add invalid data
+		$session = $this->shouldThrow(new SessionValidationException('You cannot manipulate properties on the session object that have reserved keys.'))->during('set_property', ['user_id', 'invalid']);
+	
+	}
+	
+	function it_should_regenerate_sessions(){
+	
+		$this->regenerate_session()->shouldReturn(null);
+	
+	}
 
 }

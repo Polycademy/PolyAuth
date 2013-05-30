@@ -134,7 +134,7 @@ class UserSessions implements LoggerAwareInterface{
 		}
 		
 		//time out long lived logged in sessions
-		if($this->options['session_expiration'] !== 0 AND is_int($this->session_segment->timeout)){
+		if($this->options['session_expiration'] AND is_numeric($this->session_segment->timeout)){
 			$time_to_live = time() - $this->session_segment->timeout;
 			if($time_to_live > $this->options['session_expiration']){
 				$this->logout();
@@ -233,8 +233,8 @@ class UserSessions implements LoggerAwareInterface{
 		if(!$force_login AND !empty($this->options['login_lockout'])){
 			//is the current login attempt locked out?
 			$lockout_time = $this->login_attempts->locked_out($data['identity']);
-			//if the lockout_time is not false or not 0, then we are locked out
-			if($lockout_time !== false OR $lockout_time !== 0){
+			//if the lockout_time is true, non-zero integer
+			if($lockout_time){
 				$this->login_failure($data, sprintf($this->lang['login_lockout'], $lockout_time));
 			}
 		}
@@ -368,16 +368,20 @@ class UserSessions implements LoggerAwareInterface{
 	 * The parameters operate on all or nothing except $identities. $identities operates like "has to be at least one of them".
 	 * This first checks if the session exists, and if not checks if the user exists in this script's memory.
 	 * 
-	 * @param $permissions array of permission names | null
-	 * @param $roles array of role names | null
-	 * @param $identities array of user identities | null (this must match your login_identity option)
+	 * @param $permissions array of permission names | string | false
+	 * @param $roles array of role names | string | false
+	 * @param $identities array of user identities | string | false (this must match your login_identity option)
 	 * @return boolean
 	 */
-	public function authorized(array $permissions = null, array $roles = null, array $identities = null){
+	public function authorized($permissions = false, $roles = false, $identities = false){
 	
 		if(!$this->session_manager->isStarted()){
 			$this->session_manager->start();
 		}
+		
+		$permissions = ($permissions) ? (array) $permissions : false;
+		$roles = ($roles) ? (array) $roles : false;
+		$identities = ($identities) ? (array) $identities : false;
 		
 		//if the session and $this->user don't exist, then the user is not logged in
 		//if one of them exists, then there's a chance that the session is logged in does exist!
@@ -441,7 +445,7 @@ class UserSessions implements LoggerAwareInterface{
 			//we need to acquire role objects first because has_role only accepts objects, not strings
 			$role_objects = $this->rbac->get_roles($roles);
 			foreach($role_objects as $role_object){
-				if(!$this->user->has_role($role_name)){
+				if(!$this->user->has_role($role_object)){
 					return false;
 				}
 			}
@@ -488,7 +492,7 @@ class UserSessions implements LoggerAwareInterface{
 	 *
 	 * @return $this->session_segment object
 	 */
-	public function make_session_property($key, $value){
+	public function set_property($key, $value){
 		
 		if($key == 'user_id' OR $key == 'anonymous' OR $key == 'timeout'){
 			throw new SessionValidationException($this->lang['session_invalid_key']);
@@ -512,7 +516,7 @@ class UserSessions implements LoggerAwareInterface{
 	 *
 	 * @return $this->session_segment object
 	 */
-	public function delete_session_property($key){
+	public function delete_property($key){
 	
 		if($key == 'user_id' OR $key == 'anonymous' OR $key == 'timeout'){
 			throw new SessionValidationException($this->lang['session_invalid_key']);
@@ -561,8 +565,8 @@ class UserSessions implements LoggerAwareInterface{
 			$this->session_manager->start();
 		}
 	
-		$this->session_segment->user_id = false;
-		$this->session_segment->anonymous = true;
+		$this->session_segment->user_id = $user_id;
+		$this->session_segment->anonymous = $anonymous;
 		$this->session_segment->timeout = time();
 		
 		//this calls session_write_close(), it will close the session lock

@@ -94,7 +94,15 @@ class LoginAttemptsSpec extends ObjectBehavior{
 	}
 
 	function it_is_initializable(){
+	
 		$this->shouldHaveType('PolyAuth\Sessions\LoginAttempts');
+		
+	}
+	
+	function it_implements_logger_interface(){
+	
+		$this->shouldImplement('Psr\Log\LoggerAwareInterface');
+	
 	}
 	
 	function it_should_return_the_lockout_time_in_seconds_if_locked_out(PDOStatement $sth){

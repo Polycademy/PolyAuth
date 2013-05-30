@@ -5,9 +5,10 @@ namespace PolyAuth\Sessions;
 use PDO;
 use PDOException;
 use Psr\Log\LoggerInterface;
+use Psr\Log\LoggerAwareInterface;
 use PolyAuth\Options;
 
-class LoginAttempts{
+class LoginAttempts implements LoggerAwareInterface{
 
 	protected $db;
 	protected $options;
@@ -19,6 +20,16 @@ class LoginAttempts{
 		$this->options = $options;
 		$this->logger = $logger;
 	
+	}
+	
+	/**
+	 * Sets a logger instance on the object
+	 *
+	 * @param LoggerInterface $logger
+	 * @return null
+	 */
+	public function setLogger(LoggerInterface $logger){
+		$this->logger = $logger;
 	}
 	
 	/**
