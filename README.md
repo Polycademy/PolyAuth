@@ -50,8 +50,8 @@ To Do
 - Complete SQL Migration
 - Storage Interface for Database Independent Functionality, will need to abstract PHPRBAC
 
-Install with Composer:
-----------------------
+Install with Composer
+---------------------
 
 ```
 "polycademy/polyauth": "*"
