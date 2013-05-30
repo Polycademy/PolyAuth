@@ -7,3 +7,7 @@ before_script:
   - php composer.phar install --dev
 
 script: bin/phpspec
+
+branches:
+  only:
+    - master
