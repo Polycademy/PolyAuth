@@ -1,4 +1,15 @@
 {
+	"name": "polycademy/polyauth",
+	"description": "Authentication & Authorisation Library",
+	"keywords": ["authentication", "authorisation", "sessions", "user accounts", "rbac", "access control", "oauth"],
+	"homepage": "https://github.com/Polycademy/PolyAuth",
+	"license": "WTFPL",
+	"authors": [{
+		"name": "Roger Qiu",
+		"email": "roger.qiu@polycademy.com",
+		"homepage": "http://polycademy.com",
+		"role": "Founder and Developer"
+	}],
 	"require": {
 		"php": ">=5.4.0",
 		"aura/session": "dev-master",
