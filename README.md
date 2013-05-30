@@ -1,6 +1,8 @@
 PolyAuth
 =========
 
+[![Build Status](https://travis-ci.org/Polycademy/PolyAuth.png?branch=master)](https://travis-ci.org/Polycademy/PolyAuth)
+
 PolyAuth is a PHP authentication and authorisation library that is framework independent.
 
 It relies on this current stack:
