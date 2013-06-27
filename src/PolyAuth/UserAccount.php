@@ -94,6 +94,11 @@ class UserAccount extends Subject implements \ArrayAccess{
 		if($type == 'object'){
 			$data = get_object_vars($data);
 		}
+
+		//convert ipaddresses back to human readable form!
+		if(isset($data['ipAddress'])){
+			$data['ipAddress'] = inet_ntop($data['ipAddress']);
+		}
 		
 		$this->user_data = array_merge($this->user_data, $data);
 		

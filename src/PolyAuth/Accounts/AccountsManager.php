@@ -104,7 +104,7 @@ class AccountsManager implements LoggerAwareInterface{
 		
 		//constructing the payload now
 		$ip = (!empty($_SERVER['REMOTE_ADDR'])) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1';
-		$data['ipAddress'] = $this->prepare_ip($ip);
+		$data['ipAddress'] = inet_pton($ip);
 		$data['password'] = password_hash($data['password'], $this->options['hash_method'], ['cost' => $this->options['hash_rounds']]);
 		
 		if($force_active){
@@ -233,18 +233,6 @@ class AccountsManager implements LoggerAwareInterface{
 			
 		}
 	
-	}
-	
-	protected function prepare_ip($ip_address) {
-	
-		$platform = $this->db->getAttribute(PDO::ATTR_DRIVER_NAME);
-		
-		if($platform == 'pgsql' || $platform == 'sqlsrv' || $platform == 'mssql'){
-			return $ip_address;
-		}else{
-			return inet_pton($ip_address);
-		}
-		
 	}
 	
 	/**

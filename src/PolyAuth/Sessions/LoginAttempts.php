@@ -236,14 +236,7 @@ class LoginAttempts implements LoggerAwareInterface{
 	protected function get_ip() {
 	
 		$ip_address = (!empty($_SERVER['REMOTE_ADDR'])) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1';
-	
-		$platform = $this->db->getAttribute(PDO::ATTR_DRIVER_NAME);
-		
-		if($platform == 'pgsql' || $platform == 'sqlsrv' || $platform == 'mssql'){
-			return $ip_address;
-		}else{
-			return inet_pton($ip_address);
-		}
+		return inet_pton($ip_address);
 		
 	}
 
