@@ -490,9 +490,10 @@ class UserSessions implements LoggerAwareInterface{
 	 * Updates/inserts the session with custom properties.
 	 * You cannot use reserved keys such as 'user_id', 'anonymous' or 'timeout'
 	 *
+	 * @param boolean $flash sets a read-once value
 	 * @return $this->session_segment object
 	 */
-	public function set_property($key, $value){
+	public function set_property($key, $value, $flash = false){
 		
 		if($key == 'user_id' OR $key == 'anonymous' OR $key == 'timeout'){
 			throw new SessionValidationException($this->lang['session_invalid_key']);
@@ -502,7 +503,11 @@ class UserSessions implements LoggerAwareInterface{
 			$this->session_manager->start();
 		}
 		
-		$this->session_segment->{$key} = $value;
+		if($flash){
+			$this->session_segment->setFlash($key, $value);
+		}else{
+			$this->session_segment->{$key} = $value;
+		}
 		
 		$this->session_manager->commit();
 		
@@ -514,9 +519,10 @@ class UserSessions implements LoggerAwareInterface{
 	 * Delete custom properties on the session.
 	 * You cannot use reserved keys such as 'user_id', 'anonymous' or 'timeout'
 	 *
+	 * @param boolean $flash deletes a read-once value
 	 * @return $this->session_segment object
 	 */
-	public function delete_property($key){
+	public function delete_property($key, $flash = false){
 	
 		if($key == 'user_id' OR $key == 'anonymous' OR $key == 'timeout'){
 			throw new SessionValidationException($this->lang['session_invalid_key']);
@@ -526,12 +532,32 @@ class UserSessions implements LoggerAwareInterface{
 			$this->session_manager->start();
 		}
 		
-		unset($this->session_segment->{$key});
+		if($flash){
+			$this->session_segment->getFlash($key);
+		}else{
+			unset($this->session_segment->{$key});
+		}
 		
 		$this->session_manager->commit();
 		
 		return $this->session_segment;
 	
+	}
+
+	/**
+	 * Does the session have a particular property? Useful mainly for flash values so you don't lose it.
+	 * @param  string  $key   Name of the value
+	 * @param  boolean $flash Is it detecting a flash value?
+	 * @return boolean
+	 */
+	public function has_property($key, $flash = false){
+
+		if($flash){
+			return isset($this->session_sgement->{$key});
+		}else{
+			return $this->session_segment->hasFlash($key);
+		}
+
 	}
 	
 	/**
