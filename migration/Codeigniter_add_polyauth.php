@@ -279,4 +279,5 @@ class Migration_add_polyauth extends CI_Migration {
 		$this->db->query('SET foreign_key_checks = 1;');
 	
 	}
+	
 }
