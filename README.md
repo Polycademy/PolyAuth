@@ -46,7 +46,7 @@ Features
 To Do
 ------
 
-- Add OAuth consumption, OpenID consumption, Hawk and Oz authenticaion strategies
+- Add OAuth consumption, OpenID consumption, Hawk and Oz authentication strategies
 - SQL Migration
 - Storage Interface for Database Independent Functionality, will need to abstract PHPRBAC
 

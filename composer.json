@@ -12,7 +12,7 @@
 	}],
 	"require": {
 		"php": ">=5.4.0",
-		"aura/session": "dev-master",
+		"aura/session": "1.0",
 		"leighmacdonald/php_rbac": "<=1.0",
 		"ircmaxell/password-compat": "*",
 		"phpmailer/phpmailer": "5.2.*",
