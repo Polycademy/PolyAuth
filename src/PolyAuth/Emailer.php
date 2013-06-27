@@ -16,7 +16,7 @@ class Emailer{
 	protected $logger;
 	protected $mailer;
 	
-	public function __construct(Options $options, Language $language, \PHPMailer $mailer = null, LoggerInterface $logger = null){
+	public function __construct(Options $options, Language $language, LoggerInterface $logger = null, \PHPMailer $mailer = null){
 	
 		$this->options = $options;
 		$this->lang = $language;

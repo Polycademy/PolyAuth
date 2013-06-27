@@ -18,12 +18,6 @@ class EmailerSpec extends ObjectBehavior{
 	
 		$prophet = new Prophet;
 		
-		//MAILER MOCKING
-		$mailer->AddAddress(Argument::any())->willReturn(true);
-		$mailer->Send()->willReturn(true);
-		$mailer->__destruct()->willReturn(true);
-		$mailer->IsHTML(Argument::any())->willReturn(true);
-		
 		//OPTIONS MOCKING
 		$options = $options->options;
 		$options_object = $prophet->prophesize('PolyAuth\Options');
@@ -39,8 +33,21 @@ class EmailerSpec extends ObjectBehavior{
 			}
 		});
 		$options_object = $options_object->reveal();
+
+		//LOGGER MOCKING
+		$logger = $prophet->prophesize();
+		$logger->willExtend('stdClass');
+		$logger->willImplement('Psr\Log\LoggerInterface');
+		$logger->error(Argument::type('string'), Argument::type('array'))->willReturn(true);
+		$logger = $logger->reveal();
+
+		//MAILER MOCKING
+		$mailer->AddAddress(Argument::any())->willReturn(true);
+		$mailer->Send()->willReturn(true);
+		$mailer->__destruct()->willReturn(true);
+		$mailer->IsHTML(Argument::any())->willReturn(true);
 		
-		$this->beConstructedWith($options_object, $language, $mailer);
+		$this->beConstructedWith($options_object, $language, $logger, $mailer);
 		
 		//USER MOCKING
 		$user_data = array(

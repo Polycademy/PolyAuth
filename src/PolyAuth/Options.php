@@ -81,6 +81,7 @@ class Options implements \ArrayAccess{
 		if($this->options['session_handler'] !== null){
 			$this->set_session_handler($this->options['session_handler']);
 		}
+		
 		$this->set_cookie_settings();
 		
 	}
