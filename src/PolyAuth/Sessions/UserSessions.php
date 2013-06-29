@@ -489,6 +489,8 @@ class UserSessions implements LoggerAwareInterface{
 	/**
 	 * Updates/inserts the session with custom properties.
 	 * You cannot use reserved keys such as 'user_id', 'anonymous' or 'timeout'
+	 * You cannot use custom session data unless you are using cookie based authentication.
+	 * Otherwise each request is unique and stateless.
 	 *
 	 * @param boolean $flash sets a read-once value
 	 * @return $this->session_segment object
