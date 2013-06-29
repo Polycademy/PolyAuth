@@ -149,8 +149,8 @@ class UserSessions implements LoggerAwareInterface{
 	 * It will also preserve any cookie headers prior to this library being used.
 	 */
 	public function finish(){
-		
-		if(defined(SID)){
+
+		if(defined('SID')){
 			$headers =  array_unique(headers_list());   
 			$cookie_strings = array();
 			foreach($headers as $header){
