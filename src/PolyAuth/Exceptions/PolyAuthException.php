@@ -20,7 +20,9 @@ class PolyAuthException extends \Exception {
 	 * @return array array of errors
 	 */
 	public function get_errors() {
-		$this->append_error($this->message);
+		if(!empty($this->message)){
+			$this->append_error($this->message);
+		}
 		return $this->errors_array;
 	}
 
