@@ -5,6 +5,8 @@ PolyAuth
 
 PolyAuth is a PHP authentication and authorisation library that is independent from any frameworks.
 
+NOTE: This library is not yet ready for prime time! Still need to fix some bugs. If you find any, make sure to tell me on the issues. But it's being actively worked on.
+
 Dependencies
 ------------
 
