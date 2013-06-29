@@ -60,6 +60,7 @@ class HTTPStrategy implements AuthStrategyInterface{
 			
 			$query = "SELECT id, password FROM {$this->options['table_users']} WHERE username = :username";
 			$sth = $this->db->prepare($query);
+			$sth->bindValue('username', $username, PDO::PARAM_STR);
 			
 			try{
 			

@@ -20,7 +20,7 @@ class Options implements \ArrayAccess{
 		//cookie options
 		'cookie_domain'						=> '',
 		'cookie_path'						=> '/',
-		'cookie_prefix'						=> 'polyauth',
+		'cookie_prefix'						=> 'polyauth_',
 		'cookie_secure'						=> false,
 		'cookie_httponly'					=> false,
 		'cookie_lifetime'					=> 0, //for when the browser is closed (how long should the cookies be remembered for) (0 means the cookie dies as soon as the browser closes)

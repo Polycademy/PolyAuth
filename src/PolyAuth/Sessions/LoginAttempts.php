@@ -203,7 +203,7 @@ class LoginAttempts implements LoggerAwareInterface{
 			}
 			
 			$sth = $this->db->prepare($query);
-			$sth->bindValue('ip', $this->get_ip(), PDO::PARAM_STR);
+			$sth->bindValue('ip_address', $this->get_ip(), PDO::PARAM_STR);
 			$sth->bindValue('identity', $identity, PDO::PARAM_STR);
 			
 			try{
