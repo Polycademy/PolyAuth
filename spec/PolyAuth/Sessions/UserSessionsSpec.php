@@ -359,7 +359,7 @@ class UserSessionsSpec extends ObjectBehavior{
 	
 		$row = new \stdClass;
 		$row->id = 1;
-		$row->identity = 'CMCDragonkai';
+		$row->username = 'CMCDragonkai';
 		$sth->fetch(PDO::FETCH_OBJ)->willReturn($row);
 		
 		//determine if the user is logged in
