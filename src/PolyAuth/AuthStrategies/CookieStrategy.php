@@ -106,6 +106,8 @@ class CookieStrategy implements AuthStrategyInterface{
 			}
 		
 		}
+
+		return false;
 	
 	}
 	
