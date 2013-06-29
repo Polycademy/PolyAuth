@@ -411,7 +411,7 @@ class UserSessions implements LoggerAwareInterface{
 			}
 			
 			//identity check
-			if($identities AND !in_array($row->identity, $identities)){
+			if($identities AND !in_array($row->{$this->options['login_identity']}, $identities)){
 				return false;
 			}
 		
