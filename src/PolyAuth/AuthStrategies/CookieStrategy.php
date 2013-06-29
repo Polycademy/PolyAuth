@@ -125,6 +125,7 @@ class CookieStrategy implements AuthStrategyInterface{
 		$sth = $this->db->prepare($query);
 		$sth->bindValue('autoCode', $autocode, PDO::PARAM_STR);
 		$sth->bindValue('autoDate', $autodate, PDO::PARAM_STR);
+		$sth->bindValue('id', $id, PDO::PARAM_INT);
 		
 		try{
 		

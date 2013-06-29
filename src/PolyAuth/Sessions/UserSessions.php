@@ -458,11 +458,17 @@ class UserSessions implements LoggerAwareInterface{
 	
 	/**
 	 * Gets the currently logged in user's user account
-	 * The reason why it calls accounts manager rather than just returning the user here, is that the user here does not reflect any changes made the user in the accounts manager.
-	 * Which would make $this->user quite stale.
+	 * It calls accounts manager rather than just returning the user here because
+	 * the user here is not as up to date as the one from the database.
+	 * @return object|null gives back null if anonymous, otherwise an UserAccount object
 	 */
 	public function get_user(){
 	
+		//if the user is not filled, this means it's an anonymous user (thus a "null" user)
+		if(empty($this->user)){
+			return null;
+		}
+
 		return $this->accounts_manager->get_user($this->user['id']);
 	
 	}

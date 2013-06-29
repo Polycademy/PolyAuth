@@ -383,7 +383,13 @@ class UserSessionsSpec extends ObjectBehavior{
 	
 	}
 	
-	function it_should_get_the_currently_logged_in_user_account_and_session(){
+	function it_should_get_the_currently_logged_in_user_account_and_session(PDOStatement $sth){
+
+		$row = new \stdClass;
+		$row->id = 1;
+		$row->password = password_hash('blahblah1234', PASSWORD_BCRYPT);
+		$sth->fetch(PDO::FETCH_OBJ)->willReturn($row);
+		$this->login(['identity' => 'CMCDragonkai', 'password' => 'blahblah1234']);
 	
 		$this->get_user()->shouldReturn($this->user);
 		$this->get_session()->shouldReturn($this->session);

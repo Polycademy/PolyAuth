@@ -683,7 +683,7 @@ class AccountsManager implements LoggerAwareInterface{
 			$sth->execute();
 			$row = $sth->fetch(PDO::FETCH_OBJ);
 			if(!$row){
-				throw new UserNotFoundException($this->lang('user_select_unsuccessful'));
+				throw new UserNotFoundException($this->lang['user_select_unsuccessful']);
 			}
 		
 		}catch(PDOException $db_err){
@@ -725,7 +725,7 @@ class AccountsManager implements LoggerAwareInterface{
 			$sth->execute($user_ids);
             $result = $sth->fetchAll(PDO::FETCH_OBJ);
 			if(!$result){
-				throw new UserNotFoundException($this->lang('user_select_unsuccessful'));
+				throw new UserNotFoundException($this->lang['user_select_unsuccessful']);
 			}
 			
 		}catch(PDOException $db_err){
