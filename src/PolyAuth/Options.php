@@ -99,7 +99,7 @@ class Options implements \ArrayAccess{
 	
 	protected function set_session_handler(\SessionHandlerInterface $session_handler = null){
 		
-		session_set_save_handler($handler, true);		
+		session_set_save_handler($session_handler, true);		
 	
 	}
 	

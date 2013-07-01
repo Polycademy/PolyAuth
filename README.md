@@ -10,9 +10,8 @@ NOTE: This library is not yet ready for prime time! Still need to fix some bugs.
 Dependencies
 ------------
 
-- PHP >= 5.4.0
+- PHP >= 5.4.12
 - PDO + MySQL
-- Aura/Session
 - leighmacdonald/php_rbac
 - ircmaxell/password-compat
 - PHPMailer/PHPMailer

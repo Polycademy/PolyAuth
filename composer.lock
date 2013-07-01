@@ -3,100 +3,8 @@
         "This file locks the dependencies of your project to a known state",
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
-    "hash": "7f477c78e0f73893b3b2fe195f7d501d",
+    "hash": "e7da61e5329af95b2cf801765fabe225",
     "packages": [
-        {
-            "name": "aura/installer-default",
-            "version": "1.0.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/auraphp/installer-default",
-                "reference": "1.0.0"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://github.com/auraphp/installer-default/archive/1.0.0.zip",
-                "reference": "1.0.0",
-                "shasum": ""
-            },
-            "type": "composer-installer",
-            "extra": {
-                "class": "Aura\\Composer\\DefaultInstaller"
-            },
-            "autoload": {
-                "psr-0": {
-                    "Aura\\Composer\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "BSD-2-Clause"
-            ],
-            "authors": [
-                {
-                    "name": "Paul M. Jones",
-                    "email": "pmjones88@gmail.com",
-                    "homepage": "http://paul-m-jones.com"
-                }
-            ],
-            "description": "Installs Aura packages using the Composer defaults.",
-            "keywords": [
-                "aura",
-                "installer"
-            ],
-            "time": "2012-11-26 21:35:57"
-        },
-        {
-            "name": "aura/session",
-            "version": "1.0.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/auraphp/Aura.Session.git",
-                "reference": "1.0.0"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/auraphp/Aura.Session/zipball/1.0.0",
-                "reference": "1.0.0",
-                "shasum": ""
-            },
-            "require": {
-                "aura/installer-default": ">=1.0.0",
-                "php": ">=5.4.0"
-            },
-            "type": "aura-package",
-            "autoload": {
-                "psr-0": {
-                    "Aura\\Session": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "BSD-2-Clause"
-            ],
-            "authors": [
-                {
-                    "name": "Paul M. Jones",
-                    "email": "pmjones88@gmail.com",
-                    "homepage": "http://paul-m-jones.com"
-                },
-                {
-                    "name": "Akihito Koriyama",
-                    "email": "akihito.koriyama@gmail.com"
-                },
-                {
-                    "name": "Aura.Session Contributors",
-                    "homepage": "https://github.com/auraphp/Aura.Session/contributors"
-                }
-            ],
-            "description": "The Aura Session provides session management functionality, including session\nsegments, read-once (\"flash\") values, CSRF tools, and lazy session starting.",
-            "homepage": "http://auraphp.github.com/Aura.Session",
-            "keywords": [
-                "session",
-                "sessions"
-            ],
-            "time": "2013-05-09 00:00:00"
-        },
         {
             "name": "ircmaxell/password-compat",
             "version": "1.0.3",
@@ -693,7 +601,7 @@
         "phpspec/phpspec": 20
     },
     "platform": {
-        "php": ">=5.4.0"
+        "php": ">=5.4.12"
     },
     "platform-dev": [
 

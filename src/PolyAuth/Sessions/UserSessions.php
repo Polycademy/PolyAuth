@@ -7,12 +7,6 @@ use PDOException;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LoggerAwareInterface;
 
-use Aura\Session\Manager as SessionManager;
-use Aura\Session\SegmentFactory;
-use Aura\Session\CsrfTokenFactory;
-use Aura\Session\Randval;
-use Aura\Session\Phpfunc;
-
 use PolyAuth\Options;
 use PolyAuth\Language;
 
@@ -23,6 +17,7 @@ use PolyAuth\Accounts\AccountsManager;
 use PolyAuth\Accounts\Rbac;
 
 use PolyAuth\Cookies;
+use PolyAuth\Sessions\SessionZone;
 use PolyAuth\Sessions\LoginAttempts;
 
 use PolyAuth\Exceptions\UserExceptions\UserPasswordChangeException;
@@ -44,8 +39,7 @@ class UserSessions implements LoggerAwareInterface{
 	protected $encryption;
 	protected $accounts_manager;
 	protected $rbac;
-	protected $session_manager;
-	protected $session_segment;
+	protected $session_zone;
 	protected $cookies;
 	protected $login_attempts;
 	protected $user;
@@ -58,7 +52,7 @@ class UserSessions implements LoggerAwareInterface{
 		LoggerInterface $logger = null, 
 		AccountsManager $accounts_manager = null, 
 		Rbac $rbac = null,
-		SessionManager $session_manager = null, 
+		SessionZone $session_zone = null, 
 		Cookies $cookies = null,
 		LoginAttempts $login_attempts = null
 	){
@@ -70,28 +64,9 @@ class UserSessions implements LoggerAwareInterface{
 		$this->logger = $logger;
 		$this->accounts_manager = ($accounts_manager) ? $accounts_manager : new AccountsManager($db, $options, $language, $logger);
 		$this->rbac = ($rbac) ? $rbac : new Rbac($db, $language, $logger);
-		if($session_manager){
-			$this->session_manager = $session_manager;
-		}else{
-			$this->session_manager = new SessionManager(
-				new SegmentFactory,
-				new CsrfTokenFactory(
-					new Randval(
-						new Phpfunc
-					)
-				),
-				$_COOKIE
-			);
-		}
+		$this->session_zone = ($session_zone) ? $session_zone : new SessionZone($options);
 		$this->cookies = ($cookies) ? $cookies : new Cookies($options);
 		$this->login_attempts = ($login_attempts) ? $login_attempts : new LoginAttempts($db, $options, $logger);
-		
-		//resolving session locking problems and other HTTP header problems
-		ob_start();
-		register_shutdown_function(array(&$this, 'finish'));
-		
-		//establishing namespaced segment (this will be our session data
-		$this->session_segment = $this->session_manager->newSegment('PolyAuth\UserSession');
 	
 	}
 	
@@ -107,15 +82,20 @@ class UserSessions implements LoggerAwareInterface{
 	
 	/**
 	 * Start the tracking sessions.
-	 * It will assign anonymous users an anonymous session, attempt autologin, detect banned users, detect whether passwords need to change, and expire long lived sessions.
+	 * It will:
+	 * 		assign anonymous users an anonymous session, 
+	 *   	attempt autologin, 
+	 *    	detect inactive users, -> exception and logged out
+	 *     	detect banned users, -> exception and logged out
+	 *      detect whether passwords need to change, -> exception 
+	 *      and expire long lived sessions. -> logged out
 	 * Wrap this call in a try catch block and handle any exceptions.
+	 * The exceptions stem from autologin conditions, such as banned.
 	 */
 	public function start(){
-		
-		//starting the session if it hasn't been started yet
-		if(!$this->session_manager->isStarted()){
-			$this->session_manager->start();
-		}
+
+		//this starts the session to allow variables to be read from the session
+		$this->session_zone->start_session();
 		
 		//if the user is not logged in, we're going to reset an anonymous session and attempt autologin
 		if(!$this->authorized()){
@@ -129,42 +109,20 @@ class UserSessions implements LoggerAwareInterface{
 		
 		}else{
 		
-			$this->user = $this->accounts_manager->get_user($this->session_segment->user_id);
+			$this->user = $this->accounts_manager->get_user($this->session_zone['user_id']);
 		
 		}
-		
+
 		//time out long lived logged in sessions
-		if($this->options['session_expiration'] AND is_numeric($this->session_segment->timeout)){
-			$time_to_live = time() - $this->session_segment->timeout;
+		if($this->options['session_expiration'] AND is_numeric($this->session_zone['timeout'])){
+			$time_to_live = time() - $this->session_zone['timeout'];
 			if($time_to_live > $this->options['session_expiration']){
 				$this->logout();
 			}
 		}
-	
-	}
-	
-	/**
-	 * Finish will intercept the cookies in the headers before they are sent out.
-	 * It will make sure that only one SID cookie is sent.
-	 * It will also preserve any cookie headers prior to this library being used.
-	 */
-	public function finish(){
 
-		if(defined('SID')){
-			$headers =  array_unique(headers_list());   
-			$cookie_strings = array();
-			foreach($headers as $header){
-				if(preg_match('/^Set-Cookie: (.+)/', $header, $matches)){
-					$cookie_strings[] = $matches[1];
-				}
-			}
-			header_remove('Set-Cookie');
-			foreach($cookie_strings as $cookie){
-				header('Set-Cookie: ' . $cookie, false);
-			}
-		}
-		ob_flush();
-		
+		$this->session_zone->commit_session();
+	
 	}
 	
 	/**
@@ -184,7 +142,7 @@ class UserSessions implements LoggerAwareInterface{
 		
 			$this->user = $this->accounts_manager->get_user($user_id);
 			$this->update_last_login($this->user['id']);
-			$this->regenerate_session();
+			$this->session_zone->regenerate();
 			$this->set_default_session($user_id, false);
 			
 			//final checks before we proceed (inactive or banned would logout the user)
@@ -217,10 +175,6 @@ class UserSessions implements LoggerAwareInterface{
 	 * @return boolean
 	 */
 	public function login(array $data = null, $force_login = false){
-	
-		if(!$this->session_manager->isStarted()){
-			$this->session_manager->start();
-		}
 		
 		//the login hook will manipulate the passed in $data and return at least 'identity' and 'password'
 		//in the case of Oauth, the identity and password may be created on the fly, as soon as the third party authenticates
@@ -282,7 +236,7 @@ class UserSessions implements LoggerAwareInterface{
 		}
 		$this->update_last_login($this->user['id']);
 		
-		$this->regenerate_session();
+		$this->session_zone->regenerate();
 		$this->set_default_session($user_id, false);
 		
 		$this->check_inactive($this->user);
@@ -338,27 +292,19 @@ class UserSessions implements LoggerAwareInterface{
 	 */
 	public function logout(){
 		
-		if(!$this->session_manager->isStarted()){
-			$this->session_manager->start();
-		}
-		
 		//perform any custom authentication functions
 		$this->strategy->logout_hook();
 		
 		//delete the php session cookie and autologin cookie
-		$this->cookies->delete_cookie($this->session_manager->getName());
+		$this->cookies->delete_cookie($this->session_zone->get_name());
 		$this->cookies->delete_cookie('autologin');
 		
 		//this calls session_destroy() and session_unset()
-		$this->session_manager->destroy();
+		$this->session_zone->destroy();
 		//clears the current user
 		$this->user = null;
 		
-		//start a new session
-		$this->session_manager->start();
-		//clear the segment
-		$this->session_segment->clear();
-		//setup the the anonymous session
+		//start a new session anonymous session
 		$this->set_default_session();
 	
 	}
@@ -375,25 +321,27 @@ class UserSessions implements LoggerAwareInterface{
 	 */
 	public function authorized($permissions = false, $roles = false, $identities = false){
 	
-		if(!$this->session_manager->isStarted()){
-			$this->session_manager->start();
-		}
+		$this->session_zone->start_session();
 		
 		$permissions = ($permissions) ? (array) $permissions : false;
 		$roles = ($roles) ? (array) $roles : false;
 		$identities = ($identities) ? (array) $identities : false;
-		
+
 		//if the session and $this->user don't exist, then the user is not logged in
-		//if one of them exists, then there's a chance that the session is logged in does exist!
-		if(empty($this->session_segment->user_id) AND $this->session_segment->user_id !== 0){
+		//if one of them exists, then there's a chance that the session data got lost in a single instance of the script
+		//also compensates for if the user id is actually a zero
+		if(empty($this->session_zone['user_id']) AND $this->session_zone['user_id'] !== 0){
 			if(!$this->user instanceof UserAccount OR empty($this->user['id'])){
 				return false;
 			}else{
 				$user_id = $this->user['id'];
 			}
 		}else{
-			$user_id = $this->session_segment->user_id;
+			$user_id = $this->session_zone['user_id'];
 		}
+
+		//we finished reading from the session, commit it!
+		$this->session_zone->commit_session();
 		
 		//check if the user id actually exists (this may be redundant, but better safe than sorry)
 		$query = "SELECT id, {$this->options['login_identity']} FROM {$this->options['table_users']} WHERE id = :user_id";
@@ -474,22 +422,59 @@ class UserSessions implements LoggerAwareInterface{
 	}
 	
 	/**
-	 * Gets the current user's session segment.
-	 * The session segment will be read only. Use update_session to add extra properties to the session.
-	 *
-	 * @return $this->session_segment object
+	 * Gets the current session manager if you want granular control.
+	 * @return $this->session_zone object
 	 */
-	public function get_session(){
+	public function get_session_zone(){
+		
+		return $this->session_zone;
 	
-		if(!$this->session_manager->isStarted()){
-			$this->session_manager->start();
+	}
+
+	/**
+	 * Gets all the properties that are in the session
+	 * @return mixed
+	 */
+	public function get_properties(){
+
+		$this->session_zone->start_session();
+		$value = $this->session_zone->get_all();
+		$this->session_zone->commit_session();
+		return $value;
+
+	}
+
+	/**
+	 * Clears all the properties except the reserved ones
+	 */
+	public function clear_properties(){
+
+		$this->session_zone->start_session();
+		$this->session_zone->clear_all(array('user_id', 'anonymous', 'timeout'));
+		$this->session_zone->commit_session();
+
+	}
+
+	/**
+	 * Gets a session property. Flash data is deleted after it is read once.
+	 * @param  string  $key		identifier of the session data
+	 * @param  boolean $flash	whether it's a flash data or not
+	 * @return mixed			session data
+	 */
+	public function get_property($key, $flash = false){
+
+		$this->session_zone->start_session();
+
+		if($flash){
+			$value = $this->session_zone->get_flash($key);
+		}else{
+			$value = $this->session_zone[$key];
 		}
-		
-		$this->session_manager->commit();
-		
-		//this will not be writable!
-		return $this->session_segment;
-	
+
+		$this->session_zone->commit_session();
+
+		return $value;
+
 	}
 	
 	/**
@@ -499,56 +484,40 @@ class UserSessions implements LoggerAwareInterface{
 	 * Otherwise each request is unique and stateless.
 	 *
 	 * @param boolean $flash sets a read-once value
-	 * @return $this->session_segment object
 	 */
 	public function set_property($key, $value, $flash = false){
 		
 		if($key == 'user_id' OR $key == 'anonymous' OR $key == 'timeout'){
 			throw new SessionValidationException($this->lang['session_invalid_key']);
 		}
-		
-		if(!$this->session_manager->isStarted()){
-			$this->session_manager->start();
-		}
-		
+
+		$this->session_zone->start_session();
+
 		if($flash){
-			$this->session_segment->setFlash($key, $value);
+			$this->session_zone->set_flash($key, $value);
 		}else{
-			$this->session_segment->{$key} = $value;
+			$this->session_zone[$key] = $value;
 		}
 		
-		$this->session_manager->commit();
-		
-		return $this->session_segment;
+		$this->session_zone->commit_session();
 	
 	}
 	
 	/**
 	 * Delete custom properties on the session.
 	 * You cannot use reserved keys such as 'user_id', 'anonymous' or 'timeout'
-	 *
-	 * @param boolean $flash deletes a read-once value
-	 * @return $this->session_segment object
 	 */
-	public function delete_property($key, $flash = false){
+	public function delete_property($key){
 	
 		if($key == 'user_id' OR $key == 'anonymous' OR $key == 'timeout'){
 			throw new SessionValidationException($this->lang['session_invalid_key']);
 		}
 		
-		if(!$this->session_manager->isStarted()){
-			$this->session_manager->start();
-		}
+		$this->session_zone->start_session();
 		
-		if($flash){
-			$this->session_segment->getFlash($key);
-		}else{
-			unset($this->session_segment->{$key});
-		}
+		unset($this->session_zone[$key]);
 		
-		$this->session_manager->commit();
-		
-		return $this->session_segment;
+		$this->session_zone->commit_session();
 	
 	}
 
@@ -560,30 +529,18 @@ class UserSessions implements LoggerAwareInterface{
 	 */
 	public function has_property($key, $flash = false){
 
+		$this->session_zone->start_session();
+
 		if($flash){
-			return isset($this->session_sgement->{$key});
+			$value = $this->session_zone->has_flash($key);
 		}else{
-			return $this->session_segment->hasFlash($key);
+			$value = isset($this->session_zone[$key]);
 		}
 
-	}
-	
-	/**
-	 * Regenerate the user's session id. Can be used without calling $this->start()
-	 * Use this when:
-	 * 1. the role or permissions of the current user was changed programmatically.
-	 * 2. the user updates their profile
-	 * 3. the user logs in or logs out (to prevent session fixation) -> (done automatically)
-	 */
-	public function regenerate_session(){
-	
-		if(!$this->session_manager->isStarted()){
-			$this->session_manager->start();
-		}
-		
-		$this->session_manager->regenerateId();
-		$this->session_manager->commit();
-	
+		$this->session_zone->commit_session();
+
+		return $value;
+
 	}
 	
 	/**
@@ -595,16 +552,11 @@ class UserSessions implements LoggerAwareInterface{
 	 */
 	protected function set_default_session($user_id = false, $anonymous = true){
 	
-		if(!$this->session_manager->isStarted()){
-			$this->session_manager->start();
-		}
-	
-		$this->session_segment->user_id = $user_id;
-		$this->session_segment->anonymous = $anonymous;
-		$this->session_segment->timeout = time();
-		
-		//this calls session_write_close(), it will close the session lock
-		$this->session_manager->commit();
+		$this->session_zone->start_session();
+		$this->session_zone['user_id'] = $user_id;
+		$this->session_zone['anonymous'] = $anonymous;
+		$this->session_zone['timeout'] = time();
+		$this->session_zone->commit_session();
 	
 	}
 	

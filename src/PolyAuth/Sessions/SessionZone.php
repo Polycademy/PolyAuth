@@ -4,14 +4,14 @@ namespace PolyAuth\Sessions;
 
 use PolyAuth\Options;
 
-class SessionManager implements \ArrayAccess{
+class SessionZone implements \ArrayAccess{
 
 	protected $options;
-	protected $session_zone;
 	
 	public function __construct(Options $options){
 
 		$this->options = $options;
+		
 		ob_start();
 		register_shutdown_function(array(&$this, 'resolve_multiple_session_cookies'));
 
@@ -51,21 +51,6 @@ class SessionManager implements \ArrayAccess{
 	}
 
 	/**
-	 * Creates a new namespaced session zone. 
-	 * This utilises the same "session", but allows different zones inside that session.
-	 * Call this at startup
-	 * @param  string $namespace Namespace of the session zone
-	 */
-	public function create_zone($namespace){
-
-		$this->start_session();
-		$_SESSION[$namespace] = [];
-		$this->session_zone = &$_SESSION[$namespace];
-		$this->commit_session();
-
-	}
-
-	/**
 	 * Detects whether the session currently enabled and active.
 	 * @return boolean
 	 */
@@ -100,8 +85,11 @@ class SessionManager implements \ArrayAccess{
 
 	/**
 	 * Regenerates the session id, and removes the previous session file on the disk.
-	 * Use this when elevating or demoting permissions. Such as logging in or out.
 	 * Remember session data is preserved, so you can carry on through a shopping cart for example.
+	 * Use this when:
+	 * 1. the role or permissions of the current user was changed programmatically.
+	 * 2. the user logs in or logs out (to prevent session fixation) -> (done automatically)
+	 * This may cause warning errors in 5.4.X where X is lower than 11. Make sure to update your PHP.
 	 */
 	public function regenerate(){
 
@@ -126,13 +114,23 @@ class SessionManager implements \ArrayAccess{
 	}
 
 	/**
-	 * Clears all the data in the session zone
+	 * Gets all the data in the session zone
+	 * @return array Session zone data
 	 */
-	public function clear_data(){
+	public function get_all(){
 
-		$this->start_session();
-		$this->session_zone = [];
-		$this->commit_session();
+		return $_SESSION;
+
+	}
+
+	/**
+	 * Clears all the data in the session zone.
+	 * @param  array $except Array of keys to except from deletion
+	 */
+	public function clear_all(array $except){
+
+		$filtered = array_intersect_key($_SESSION, array_flip($except));
+		$_SESSION = $filtered;
 	
 	}
 
@@ -140,11 +138,11 @@ class SessionManager implements \ArrayAccess{
 	 * Gets a flash "read once" value. It will destroy the value once it has been read.
 	 * @return mixed Value of the flash data
 	 */
-	public function get_flash(){
+	public function get_flash($key){
 
-		if(isset($this->session_zone['__flash'][$key])){
-			$value = $this->session_zone['__flash'][$key];
-			unset($this->session_zone['__flash'][$key]);
+		if(isset($_SESSION['__flash'][$key])){
+			$value = $_SESSION['__flash'][$key];
+			unset($_SESSION['__flash'][$key]);
 			return $value;
 		}
 		return null;
@@ -158,7 +156,7 @@ class SessionManager implements \ArrayAccess{
 	 */
 	public function set_flash($key, $value){
 
-		$this->session_zone['__flash'][$key] = $value;
+		$_SESSION['__flash'][$key] = $value;
 
 	}
 
@@ -169,7 +167,7 @@ class SessionManager implements \ArrayAccess{
 	 */
 	public function has_flash($key){
 
-		return isset($this->session_zone['__flash'][$key]);
+		return isset($_SESSION['__flash'][$key]);
 
 	}
 
@@ -178,7 +176,7 @@ class SessionManager implements \ArrayAccess{
 	 */
 	public function clear_flash(){
 
-		unset($this->session_zone['__flash']);
+		unset($_SESSION['__flash']);
 
 	}
 
@@ -189,7 +187,7 @@ class SessionManager implements \ArrayAccess{
 	 */
 	public function offsetGet($offset) {
 
-		return isset($this->session_zone[$offset]) ? $this->session_zone[$offset] : null;
+		return isset($_SESSION[$offset]) ? $_SESSION[$offset] : null;
 
 	}
 
@@ -201,9 +199,9 @@ class SessionManager implements \ArrayAccess{
 	public function offsetSet($offset, $value) {
 
 		if (is_null($offset)) {
-			$this->session_zone[] = $value;
+			$_SESSION[] = $value;
 		} else {
-			$this->session_zone[$offset] = $value;
+			$_SESSION[$offset] = $value;
 		}
 
 	}
@@ -215,7 +213,7 @@ class SessionManager implements \ArrayAccess{
 	 */
 	public function offsetExists($offset) {
 
-		return isset($this->session_zone[$offset]);
+		return isset($_SESSION[$offset]);
 
 	}
 	
@@ -225,7 +223,7 @@ class SessionManager implements \ArrayAccess{
 	 */
 	public function offsetUnset($offset) {
 
-		unset($this->session_zone[$offset]);
+		unset($_SESSION[$offset]);
 
 	}
 
