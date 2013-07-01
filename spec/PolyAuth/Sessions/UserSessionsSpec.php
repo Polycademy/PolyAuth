@@ -9,9 +9,6 @@ use Prophecy\Prophet;
 use PDO;
 use PDOStatement;
 
-use Aura\Session\Manager as SessionManager;
-use Aura\Session\Segment as SessionSegment;
-
 use PolyAuth\Options;
 use PolyAuth\Language;
 
@@ -19,6 +16,7 @@ use PolyAuth\Accounts\AccountsManager;
 use PolyAuth\Accounts\Rbac;
 
 use PolyAuth\Cookies;
+use PolyAuth\Sessions\SessionZone;
 use PolyAuth\Sessions\LoginAttempts;
 
 use PolyAuth\Exceptions\ValidationExceptions\SessionValidationException;
@@ -29,7 +27,6 @@ class UserSessionsSpec extends ObjectBehavior{
 
 	public $prophet;
 	public $user;
-	public $session;
 
 	function let(
 		PDO $db, 
@@ -38,8 +35,7 @@ class UserSessionsSpec extends ObjectBehavior{
 		Language $language, 
 		AccountsManager $accounts_manager, 
 		Rbac $rbac,
-		SessionManager $session_manager, 
-		SessionSegment $session_segment,
+		SessionZone $session_zone, 
 		Cookies $cookies,
 		LoginAttempts $login_attempts
 	){
@@ -53,7 +49,7 @@ class UserSessionsSpec extends ObjectBehavior{
 		$mocks += $this->setup_logger_mocks();
 		$mocks += $this->setup_accounts_manager_mocks($accounts_manager);
 		$mocks += $this->setup_rbac_mocks($rbac);
-		$mocks += $this->setup_session_manager_mocks($session_manager);
+		$mocks += $this->setup_session_zone_mocks($session_zone);
 		$mocks += $this->setup_cookies_mocks($cookies);
 		$mocks += $this->setup_login_attempts_mocks($login_attempts);
 		
@@ -65,7 +61,7 @@ class UserSessionsSpec extends ObjectBehavior{
 			$mocks['logger'],
 			$mocks['accounts_manager'],
 			$mocks['rbac'],
-			$mocks['session_manager'],
+			$mocks['session_zone'],
 			$mocks['cookies'],
 			$mocks['login_attempts']
 		);
@@ -268,27 +264,48 @@ class UserSessionsSpec extends ObjectBehavior{
 	
 	}
 	
-	function setup_session_manager_mocks(SessionManager $session_manager){
+	function setup_session_zone_mocks(SessionZone $session_zone){
 	
-		$session_segment = $this->prophet->prophesize();
-		$session_segment->user_id = 1;
-		$session_segment->anonymous = false;
-		$session_segment->timeout = time();
-		$session_segment = $session_segment->reveal();
-		
-		$this->session = $session_segment;
+		// $session_segment = $this->prophet->prophesize();
+		// $session_segment->user_id = 1;
+		// $session_segment->anonymous = false;
+		// $session_segment->timeout = time();
+		// $session_segment = $session_segment->reveal();
+		$_SESSION = array();
+		$_SESSION['user_id'] = 1;
+		$_SESSION['anonymous'] = false;
+		$_SESSION['timeout'] = time();
 	
-		$session_manager->newSegment(Argument::any())->willReturn($session_segment);
-		$session_manager->isStarted()->willReturn(false);
-		$session_manager->commit()->willReturn(true);
-		$session_manager->start()->willReturn(true);
-		$session_manager->getName()->willReturn('PHPSESSID');
-		$session_manager->destroy()->willReturn(true);
-		$session_manager->clear()->willReturn(true);
-		$session_manager->regenerateId()->willReturn(true);
+		$session_zone->is_started()->willReturn(false);
+		$session_zone->commit_session()->willReturn(true);
+		$session_zone->start_session()->willReturn(true);
+		$session_zone->get_name()->willReturn('PHPSESSID');
+		$session_zone->destroy()->willReturn(true);
+		$session_zone->get_all()->willReturn($_SESSION);
+		$session_zone->clear_all()->willReturn(true);
+		$session_zone->regenerate()->willReturn(true);
+
+		$session_zone->offsetGet(Argument::any())->will(function($args) use (&$_SESSION){
+			$key = $args[0];
+			return $_SESSION[$key];
+		});
+		$session_zone->offsetSet(Argument::cetera())->will(function($args) use (&$_SESSION){
+			if(is_null($args[0])){
+				$_SESSION[] = $args[1];
+			} else {
+				$_SESSION[$args[0]] = $args[1];
+			}
+		});
+		$session_zone->offsetExists(Argument::any())->will(function($args) use (&$_SESSION){
+			return isset($_SESSION[$args[0]]);
+		});
+		$session_zone->offsetUnset(Argument::any())->will(function($args) use (&$_SESSION){
+			$key = $args[0];
+			unset($_SESSION[$key]);
+		});
 		
 		return [
-			'session_manager' => $session_manager,
+			'session_zone' => $session_zone,
 		];
 	
 	}
@@ -338,9 +355,9 @@ class UserSessionsSpec extends ObjectBehavior{
 		//our fixtures determine that this person is authorised, so the session will continue
 		$this->start();
 		
-		$session = $this->get_session();
-		$session->anonymous->shouldReturn(false);
-		$session->user_id->shouldReturn(1);
+		$session = $this->get_properties();
+		$session['anonymous']->shouldBe(false);
+		$session['user_id']->shouldBe(1);
 	
 	}
 	
@@ -392,25 +409,20 @@ class UserSessionsSpec extends ObjectBehavior{
 		$this->login(['identity' => 'CMCDragonkai', 'password' => 'blahblah1234']);
 	
 		$this->get_user()->shouldReturn($this->user);
-		$this->get_session()->shouldReturn($this->session);
+		$this->get_properties()->shouldReturn($_SESSION);
 	
 	}
 	
 	function it_should_manipulate_session_properties(){
 	
 		//add some data
-		$session = $this->set_property('newKey', 'SomeData');
-		$session->newKey->shouldReturn('SomeData');
+		$this->set_property('newKey', 'SomeData');
+		$session = $this->get_properties();
+		$session['newKey']->shouldBe('SomeData');
 		//revert back to the old session!
-		$session = $this->delete_property('newKey')->shouldReturn($this->session);
+		$session = $this->delete_property('newKey');
 		//add invalid data
 		$session = $this->shouldThrow(new SessionValidationException('You cannot manipulate properties on the session object that have reserved keys.'))->during('set_property', ['user_id', 'invalid']);
-	
-	}
-	
-	function it_should_regenerate_sessions(){
-	
-		$this->regenerate_session()->shouldReturn(null);
 	
 	}
 

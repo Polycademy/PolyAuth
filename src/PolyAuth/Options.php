@@ -2,8 +2,6 @@
 
 namespace PolyAuth;
 
-use PolyAuth\Sessions\EncryptedSessionHandler;
-
 //standard options object to be passed in
 class Options implements \ArrayAccess{
 
