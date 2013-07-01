@@ -7,6 +7,10 @@ use PolyAuth\Sessions\EncryptedSessionHandler;
 //standard options object to be passed in
 class Options implements \ArrayAccess{
 
+	//session_expiration => expiration of a particular user or anonymous sesion (remembering staying on the page)
+	//cookie_lifetime => expiration of the session cookie (remembering across pages)
+	//login_expiration => expiration of the autologin cookie
+
 	public $options = array(
 		//table options, see that the migration to be reflected. (RBAC options are not negotiable)
 		'table_users'						=> 'user_accounts',
@@ -16,14 +20,17 @@ class Options implements \ArrayAccess{
 		'hash_rounds'						=> 10,
 		//session options
 		'session_handler'					=> null, //SessionHandlerInterface or null (can use EncryptedSessionHandler('abc4345ncu'))
+		'session_save_path'					=> '',
+		'session_cache_limiter'				=> '',
+		'session_cache_expire'				=> '',
 		'session_expiration'				=> 43200, //expiration of a single session (set to 0 for infinite)
 		//cookie options
 		'cookie_domain'						=> '',
 		'cookie_path'						=> '/',
 		'cookie_prefix'						=> 'polyauth_',
 		'cookie_secure'						=> false,
-		'cookie_httponly'					=> false,
-		'cookie_lifetime'					=> 0, //for when the browser is closed (how long should the cookies be remembered for) (0 means the cookie dies as soon as the browser closes)
+		'cookie_httponly'					=> true,
+		'cookie_lifetime'					=> 0, //for when the browser is closed (how long should the session cookies should be remembered for) (0 means the cookie dies as soon as the browser closes)
 		//email options (email data should be passed in as a string, end user manages their own stuff)
 		'email'								=> false, //make this true to use the emails by PHPMailer, otherwise false if you want to roll your own email solution, watch out for email activation
 		'email_smtp'						=> false,
@@ -82,7 +89,7 @@ class Options implements \ArrayAccess{
 			$this->set_session_handler($this->options['session_handler']);
 		}
 		
-		$this->set_cookie_settings();
+		$this->set_session_and_cookie_settings();
 		
 	}
 	
@@ -96,7 +103,7 @@ class Options implements \ArrayAccess{
 	
 	}
 	
-	protected function set_cookie_settings(){
+	protected function set_session_and_cookie_settings(){
 	
 		$session_name = ini_get('session.name');
 		$session_name = $this->options['cookie_prefix'] . $session_name;
@@ -109,6 +116,18 @@ class Options implements \ArrayAccess{
 			$this->options['cookie_secure'],
 			$this->options['cookie_httponly']
 		);
+
+		if(!empty($this->options['session_save_path'])){
+			session_save_path($this->options['session_save_path']);
+		}
+
+		if(!empty($this->options['session_cache_limiter'])){
+			session_cache_limiter($this->options['session_cache_limiter']);
+		}
+
+		if(!empty($this->options['session_cache_expire'])){
+			session_cache_expire($this->options['session_cache_expire']);
+		}
 	
 	}
 	
