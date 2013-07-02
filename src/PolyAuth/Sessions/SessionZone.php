@@ -190,7 +190,7 @@ class SessionZone implements \ArrayAccess{
 		return isset($_SESSION[$offset]) ? $_SESSION[$offset] : null;
 
 	}
-
+	
 	/**
 	 * Get for ArrayAccess
 	 * @param  string $offset Key of the value
