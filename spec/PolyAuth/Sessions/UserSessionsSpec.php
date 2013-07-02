@@ -413,6 +413,7 @@ class UserSessionsSpec extends ObjectBehavior{
 		//add some data
 		$this->set_property('newKey', 'SomeData');
 		$session = $this->get_properties();
+		var_dump($session);
 		$session['newKey']->shouldBe('SomeData');
 		//revert back to the old session!
 		$session = $this->delete_property('newKey');
