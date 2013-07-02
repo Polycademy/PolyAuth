@@ -618,11 +618,7 @@ class UserSessions implements LoggerAwareInterface{
 		try{
 		
 			$sth->execute();
-			if($sth->fetch()){
-				return true;
-			}else{
-				return false;
-			}
+			return true;
 		
 		}catch(PDOException $db_err){
 		
