@@ -2,3 +2,4 @@ vendor/*
 bin/*
 build/*
 .c9revisions/*
+tests/_log/*
