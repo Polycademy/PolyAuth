@@ -41,7 +41,7 @@ Features
 - Password Complexity Checks
 - Excellent Random Token Generator
 - Authentication Strategy Interface Server Side Implementation - Can be used for HTTP Basic, Cookie, OAuth 1 & 2 Consumer Access Delegation, OAuth 2 Provider, and OpenID. (HTTP Digest is not supported due to its crytographic constraints)
-- SpecBDD tested with Continuous Integration at Travis so you can trust that it works!
+- Unit tested with Continuous Integration at Travis so you can trust that it works!
 - Optional caching library involving APC or Filesystem. It's also extendable with the caching interface.
 
 To Do
