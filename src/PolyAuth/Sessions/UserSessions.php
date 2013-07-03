@@ -507,7 +507,7 @@ class UserSessions implements LoggerAwareInterface{
 	 * Delete custom properties on the session.
 	 * You cannot use reserved keys such as 'user_id', 'anonymous' or 'timeout'
 	 */
-	public function delete_property($key){
+	public function delete_property($key, $flash = false){
 	
 		if($key == 'user_id' OR $key == 'anonymous' OR $key == 'timeout'){
 			throw new SessionValidationException($this->lang['session_invalid_key']);
@@ -515,7 +515,11 @@ class UserSessions implements LoggerAwareInterface{
 		
 		$this->session_zone->start_session();
 		
-		unset($this->session_zone[$key]);
+		if($flash){
+			$this->session_zone->get_flash($key);
+		}else{
+			unset($this->session_zone[$key]);
+		}
 		
 		$this->session_zone->commit_session();
 	
@@ -524,18 +528,13 @@ class UserSessions implements LoggerAwareInterface{
 	/**
 	 * Does the session have a particular property? Useful mainly for flash values so you don't lose it.
 	 * @param  string  $key   Name of the value
-	 * @param  boolean $flash Is it detecting a flash value?
 	 * @return boolean
 	 */
-	public function has_property($key, $flash = false){
+	public function has_flash_property($key){
 
 		$this->session_zone->start_session();
 
-		if($flash){
-			$value = $this->session_zone->has_flash($key);
-		}else{
-			$value = isset($this->session_zone[$key]);
-		}
+		$value = $this->session_zone->has_flash($key);
 
 		$this->session_zone->commit_session();
 
