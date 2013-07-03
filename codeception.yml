@@ -6,9 +6,9 @@ paths:
 settings:
     bootstrap: _bootstrap.php
     suite_class: \PHPUnit_Framework_TestSuite
-    colors: false
+    colors: true
     memory_limit: 1024M
-    log: true
+    log: false
 modules:
     config:
         Db:

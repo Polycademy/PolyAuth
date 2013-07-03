@@ -5,8 +5,9 @@ php: [5.4, 5.5]
 before_script:
   - curl http://getcomposer.org/installer | php
   - php composer.phar install --dev
+  - mysql -e 'create database test;'
 
-script: bin/phpspec
+script: bin/codecept run --defer-flush
 
 branches:
   only:
