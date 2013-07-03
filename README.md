@@ -50,6 +50,7 @@ To Do
 - Add OAuth consumption, OpenID consumption, Hawk and Oz authentication strategies
 - SQL Migration
 - Storage Interface for Database Independent Functionality, will need to abstract PHPRBAC
+- Add OAuth2 provision
 
 Install with Composer
 ---------------------
