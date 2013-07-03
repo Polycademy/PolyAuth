@@ -3,7 +3,6 @@
 namespace PolyAuth\Sessions;
 
 use Codeception\Util\Stub;
-use Codeception\Util\Fixtures;
 
 class UserSessionsWithHTTPBasicTest extends \Codeception\TestCase\Test
 {

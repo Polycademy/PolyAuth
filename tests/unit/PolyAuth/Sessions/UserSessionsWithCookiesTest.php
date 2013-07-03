@@ -31,13 +31,6 @@ class UserSessionsWithCookiesTest extends \Codeception\TestCase\Test
 
     }
 
-    public function testConstructionAndImplementation(){
-
-        $this->assertInstanceOf('PolyAuth\Sessions\UserSessions', $this->user_sessions);
-        $this->assertInstanceOf('Psr\Log\LoggerAwareInterface', $this->user_sessions);
-
-    }
-
     public function testSessionTracking(){
 
         $this->user_sessions->start();

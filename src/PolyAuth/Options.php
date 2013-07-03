@@ -48,7 +48,7 @@ class Options implements \ArrayAccess{
 		'email_forgotten_identity_template'	=> 'Identity: {{identity}} User id {{user_id}}.',
 		'email_forgotten_password_template'	=> 'Temporary login: {{forgotten_code}} Identity: {{identity}} User id {{user_id}}.',
 		//rbac options (initial roles from the migration, also who's the default role, and root access role?)
-		'role_default'						=> 'members',
+		'role_default'						=> 'member',
 		//login options (this is the field used to login with, plus login attempts)
 		'login_identity'					=> 'username', //can be email or username
 		'login_password_complexity'			=> array(
