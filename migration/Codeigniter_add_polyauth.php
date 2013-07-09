@@ -80,10 +80,12 @@ class Migration_add_polyauth extends CI_Migration {
 			'username' => array(
 				'type' => 'VARCHAR',
 				'constraint' => '100',
+				'null'	=> TRUE,
 			),
 			'password' => array(
 				'type' => 'VARCHAR',
 				'constraint' => '255',
+				'null'	=> TRUE,
 			),
 			'passwordChange' => array(
 				'type' => 'TINYINT',
@@ -94,6 +96,7 @@ class Migration_add_polyauth extends CI_Migration {
 			'email' => array(
 				'type' => 'VARCHAR',
 				'constraint' => '100'
+				'null'	=> TRUE,
 			),
 			'activationCode' => array(
 				'type' => 'VARCHAR',
@@ -167,6 +170,31 @@ class Migration_add_polyauth extends CI_Migration {
 		
 		$this->dbforge->add_key('id', TRUE);
 		$this->dbforge->create_table('login_attempts', true);
+
+		// Table structure for table 'external_providers' (essentially the token storage stable)
+		$this->dbforge->add_field(array(
+			'id'	=> array(
+				'type' => 'MEDIUMINT',
+				'constraint' => '8',
+				'unsigned' => TRUE,
+				'auto_increment' => TRUE
+			),
+			'userId'	=> array(
+				'type' => 'MEDIUMINT',
+				'constraint' => '8',
+				'unsigned' => TRUE,
+			),
+			'provider'	=> array(
+				'type' => 'VARCHAR',
+				'constraint' => '100',
+			),
+			'tokenObject'	=> array(
+				'type' => 'TEXT',
+			)
+		));
+
+		$this->dbforge->add_key('id', TRUE);
+		$this->dbforge->create_table('external_providers', true);
 	
 		//This is the RBAC schema designed for MySQL, it's complex, so we use direct queries!
 		//This is LEVEL 1 RBAC, later on you can update to LEVEL 2 RBAC

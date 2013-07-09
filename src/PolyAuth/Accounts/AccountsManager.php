@@ -168,6 +168,28 @@ class AccountsManager implements LoggerAwareInterface{
 		return $registered_user;
 		
 	}
+
+	/**
+	 * A more tolerant registration function designed to be used when logging in from external providers for the first time.
+	 * @param  array  $data An array of user details to register
+	 * @return object       The user object
+	 */
+	public function external_register(array $data){
+
+		//$data may have username OR not
+		//it must have email! The login_identity must be email! Throw exception if not!
+		//email must not be the same, check for duplicate identity
+		//then begin federation
+		//This may have a a password, if it exists, check for password complexity, otherwise fail
+		//If no password, just go ahead and do it. Pass in an empty password.
+		//If the forcelocal option was set, passwordChange will be set... but not if there a password was already passed in, in that case the password is already set (and no need for further prompts)
+
+
+		//the deregister function needs to check for the external auth tables for any linked ids, and remove them!
+		//the get user function needs to acquire all the user's external authentication aswell!
+		//Look for all the other areas that require updates
+
+	}
 	
 	/**
 	 * Removes a user

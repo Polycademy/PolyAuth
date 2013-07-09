@@ -13,6 +13,7 @@ class Options implements \ArrayAccess{
 		//table options, see that the migration to be reflected. (RBAC options are not negotiable)
 		'table_users'						=> 'user_accounts',
 		'table_login_attempts'				=> 'login_attempts',
+		'table_external_providers'			=> 'external_providers',
 		//password options
 		'hash_method'						=> PASSWORD_DEFAULT, //PASSWORD_DEFAULT || PASSWORD_BCRYPT
 		'hash_rounds'						=> 10,
@@ -50,8 +51,8 @@ class Options implements \ArrayAccess{
 		//rbac options (initial roles from the migration, also who's the default role, and root access role?)
 		'role_default'						=> 'member',
 		//login options (this is the field used to login with, plus login attempts)
-		'login_identity'					=> 'username', //can be email or username
-		'login_password_complexity'			=> array(
+		'login_identity'					=> 'email', //can be email or username, if you are using third party sign in, THIS MUST BE 'email'
+		'login_password_complexity'			=> array( //this should allow spaced names...?
 			'min'			=> 8, //('' or false or 8)
 			'max'			=> 32,
 			'lowercase'		=> false,
@@ -71,6 +72,18 @@ class Options implements \ArrayAccess{
 		'login_realm'						=> 'Protected by PolyAuth Realm', //only relevant to HTTP auth
 		//registration options
 		'reg_activation'					=> false, //can be email, manual, or false
+		//oauth1/2 consumption options
+		'external_federation'				=> true, //boolean as to whether accounts from third parties should be merged together and also combined with local accounts to maintain identity integrity across multiple external providers. This will not work with Twitter, and it will not work when multiple emails are used.
+		'external_forcelocal'				=> false, //force users using third party sign in to create a password for a local account when they first sign in, thus keeping their identity on your site aswell. The password prompt would only be prompted on the next login, if it is to be done immediately, you have you manually program it
+		'external_providers'				=> array( //can be false or empty array
+			'github'		=> array(
+				'key'					=> '',
+				'secret'				=> '',
+				'callback_url'			=> '', //if it is not set (or empty), it will be auto set to the current url in which the code is called, this will be overwritten if passed in directly during login
+				'email_api_call'		=> array('url'	=> 'field_name'), //optional
+				'username_api_call'		=> array('url'	=> 'field_name'), //optional, if forcelocal a random username may be used
+			),
+		),
 		//cache options
 		'cache_directory'					=> '', //this is only relevant to the FileSystemCache
 		'cache_ttl'							=> 3600, //maximum time an item can live in memory, this is only relevant to APCCache

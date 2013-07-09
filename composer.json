@@ -12,11 +12,12 @@
 	}],
 	"require": {
 		"php": ">=5.4.12",
-		"leighmacdonald/php_rbac": "<=1.0",
+		"leighmacdonald/php_rbac": "<1.0",
 		"ircmaxell/password-compat": "*",
 		"phpmailer/phpmailer": "5.2.*",
 		"psr/log": "1.0.0",
-		"tedivm/stash": "0.10.*"
+		"tedivm/stash": "0.10.*",
+		"lusitanian/oauth": "0.1.*@dev"
 	},
 	"require-dev": {
 		"codeception/codeception": "1.6.3.1"
