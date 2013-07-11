@@ -591,17 +591,13 @@ class AccountsManager implements LoggerAwareInterface{
 
 	public function add_external_provider(array $data){
 
-		
+
 
 	}
 
 	public function update_external_provider($provider_id, array $new_provider_details){
 
 
-
-	}
-
-	public function federate_external_providers(){
 
 	}
 
