@@ -15,6 +15,7 @@ use PolyAuth\Accounts\Rbac;
 
 use PolyAuth\Security\PasswordComplexity;
 use PolyAuth\Security\Random;
+use PolyAuth\Security\Encryption;
 
 use PolyAuth\Emailer;
 use PolyAuth\Sessions\LoginAttempts;
@@ -34,6 +35,7 @@ class AccountsManager implements LoggerAwareInterface{
 	protected $rbac;
 	protected $password_complexity;
 	protected $random;
+	protected $encryption;
 	protected $emailer;
 	protected $login_attempts;
 	
@@ -45,6 +47,7 @@ class AccountsManager implements LoggerAwareInterface{
 		Rbac $rbac = null, 
 		PasswordComplexity $password_complexity = null, 
 		Random $random = null, 
+		Encryption $encryption = null,
 		Emailer $emailer = null,
 		LoginAttempts $login_attempts = null
 	){
@@ -56,6 +59,7 @@ class AccountsManager implements LoggerAwareInterface{
 		$this->rbac  = ($rbac) ? $rbac : new Rbac($db, $language, $logger);
 		$this->password_complexity = ($password_complexity) ? $password_complexity : new PasswordComplexity($options, $language);
 		$this->random = ($random) ? $random : new Random;
+		$this->encryption = ($encryption) ? $encryption : new Encryption();
 		$this->emailer = ($emailer) ? $emailer : new Emailer($options, $language, $logger);
 		$this->login_attempts = ($login_attempts) ? $login_attempts : new LoginAttempts($db, $options, $logger);
 		
@@ -76,7 +80,7 @@ class AccountsManager implements LoggerAwareInterface{
 	 * Validation of the $data array is the end user's responsibility. We don't know what custom data fields the end user may want.
 	 *
 	 * @param $data array - $data parameter corresponds to user columns or properties. Make sure the identity and password and any other insertable properties are part of it.
-	 * @param $force_active boolean - Used to force a registered active user regardless of reg activation options. Can be used to create admin accounts or social sign in accounts.
+	 * @param $force_active boolean - Used to force a registered active user regardless of reg activation options. Can be used to create admin accounts
 	 * @return $registered_user object | false - This is a fully loaded user object containing its roles and user data.
 	 */
 	public function register(array $data, $force_active = false){
@@ -119,8 +123,8 @@ class AccountsManager implements LoggerAwareInterface{
 		    'active'	=> $activated,
 		);
 		
-		//inserting activation code into the users table, if the reg_activation is by email
-		if($this->options['reg_activation'] == 'email'){
+		//inserting activation code into the users table, whether it is manual or email
+		if(!empty($this->options['reg_activation']) AND !$force_active){
 			$data['activationCode'] = $this->random->generate(40); 
 		}
 		
@@ -161,7 +165,12 @@ class AccountsManager implements LoggerAwareInterface{
 		$registered_user = $this->rbac->register_user_roles($registered_user, array($this->options['role_default']));
 		
 		//automatically send the activation email
-		if($this->options['reg_activation'] == 'email' AND $this->options['email'] AND $registered_user['email']){
+		if(
+			$this->options['reg_activation'] == 'email' 
+			AND $this->options['email'] 
+			AND $registered_user['email'] 
+			AND !$force_active
+		){
 			$this->emailer->send_activation($registered_user);
 		}
 		
@@ -526,16 +535,49 @@ class AccountsManager implements LoggerAwareInterface{
 	}
 
 	/**
-	 * A more tolerant registration function designed to be used when logging in from external providers for the first time.
-	 * @param  array  $data An array of user details to register
+	 * Registration for users that are authenticating from external providers.
+	 * You do not need any user details, they can be filled in later.
+	 * This means that we're registering a user with no username, password or email.
 	 * @return object       The user object
 	 */
 	public function external_register(){
 
-		//random username and password and email?
-		//watchout for identity forcing though
-		//you'll need to make sure they are distinct
-		//if the field is the "identity"
+		$ip = (!empty($_SERVER['REMOTE_ADDR'])) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1';
+		
+		$data = array(
+			'ipAddress'	=> inet_pton($ip),
+		    'createdOn'	=> date('Y-m-d H:i:s'),
+		    'lastLogin'	=> date('Y-m-d H:i:s'),
+		    'active'	=> 1,
+		);
+
+		$query = "INSERT INTO {$this->options['table_users']} (ipAddress, createdOn, lastLogin, active) VALUES (:ip_address, :created_on, :last_login, :active)";
+		$sth = $this->db->prepare($query);
+		$sth->bindValue('ip_address', $data['ipAddress'], PDO::PARAM_STR);
+		$sth->bindValue('created_on', $data['createdOn'], PDO::PARAM_STR);
+		$sth->bindValue('lastLogin', $data['last_login'], PDO::PARAM_STR);
+		$sth->bindValue('active', $data['active'], PDO::PARAM_INT);
+		
+		try{
+		
+			$sth->execute();
+			$last_insert_id = $this->db->lastInsertId();
+			
+		}catch(PDOException $db_err){
+
+			if($this->logger){
+				$this->logger->error('Failed to execute query to register a new user from external providers.', ['exception' => $db_err]);
+			}
+			
+			throw $db_err;
+			
+		}
+		
+		$registered_user = $this->get_user($last_insert_id);
+		
+		$registered_user = $this->rbac->register_user_roles($registered_user, array($this->options['role_default']));
+		
+		return $registered_user;
 
 	}
 
@@ -571,9 +613,7 @@ class AccountsManager implements LoggerAwareInterface{
 			return false;
 		}
 
-		//regardless of how many results there are, we need to check if one of them contains the same provider
-		//this would mean that this provider is already registered with us and we would need to update the tokenObject
-		$existing_provider = false;
+		//we need to check if one of them contains the same provider this would mean that this provider is already registered with us and we would need to update the tokenObject
 		foreach($result as $row){
 			if($row->provider == $provider_name){
 				return array(
@@ -583,19 +623,29 @@ class AccountsManager implements LoggerAwareInterface{
 			}
 		}
 
-		//at this point the provider doesn't currently exist, but there are other providers that match the external_identifier
-		//therefore we would need add a new provider record
+		//at this point the provider doesn't currently exist, but there are other providers that match the external_identifier therefore we would need add a new provider record
 		return array('user_id' => $result[0]->userId);
 
 	}
 
 	public function add_external_provider(array $data){
 
+		if(!empty($this->options['external_token_encryption'])){
 
+			//encrypt the token data and serialize
+
+		}
 
 	}
 
-	public function update_external_provider($provider_id, array $new_provider_details){
+	public function update_external_provider($id, array $new_provider_data){
+
+
+		if(!empty($this->options['external_token_encryption'])){
+
+			//encrypt the token data and serialize
+
+		}
 
 
 

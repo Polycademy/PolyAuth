@@ -141,52 +141,36 @@ class OAuthStrategy implements AuthStrategyInterface{
 
 		$provider_records = $this->accounts_manager->existing_external_provider_check($external_identifier, $provider['name']);
 
-		//there three choices here!
-		if(!$provider_records){
+		if(!empty($provider_records['provider_id'])){
 
-			//create a new user account and new provider
-			$user_id = $this->accounts_manager->external_register();
-			$this->accounts_manager->add_external_provider(array(
-				'userId'				=> $user_id,
-				'provider'				=> $provider['name'],
-				'externalIdentifier'	=> $external_identifier,
-				'tokenObject'			=> $token,
-			));
-
-		}elseif(!empty($provider_records['provider_id'])){
-
-			//update an existing provider
+			//update existing provider
 			$this->accounts_manager->update_external_provider(
 				$provider_records['provider_id'], 
 				array('tokenObject' => $token)
 			);
 			$user_id = $provider_records['user_id'];
 
+		}elseif(!empty($provider_records['user_id']) AND $this->options['external_federation']){
+
+			//federate the providers (add the provider to an existing user)
+			$this->accounts_manager->add_external_provider(array(
+				'userId'				=> $provider_records['user_id'],
+				'provider'				=> $provider['name'],
+				'externalIdentifier'	=> $external_identifier,
+				'tokenObject'			=> $token,
+			));
+			$user_id = $provider_records['user_id'];
+
 		}else{
 
-			//add the new provider but only if external_federation is true
-			//otherwise, create a new user account and new provider
-			if($this->options['external_federation']){
-
-				$this->accounts_manager->add_external_provider(array(
-					'userId'				=> $provider_records['user_id'],
-					'provider'				=> $provider['name'],
-					'externalIdentifier'	=> $external_identifier,
-					'tokenObject'			=> $token,
-				));
-				$user_id = $provider_records['user_id'];
-
-			}else{
-
-				$user_id = $this->accounts_manager->external_register();
-				$this->accounts_manager->add_external_provider(array(
-					'userId'				=> $user_id,
-					'provider'				=> $provider['name'],
-					'externalIdentifier'	=> $external_identifier,
-					'tokenObject'			=> $token,
-				));
-
-			}
+			//create a new user account and add the provider to an existing user
+			$user_id = $this->accounts_manager->external_register()['id'];
+			$this->accounts_manager->add_external_provider(array(
+				'userId'				=> $user_id,
+				'provider'				=> $provider['name'],
+				'externalIdentifier'	=> $external_identifier,
+				'tokenObject'			=> $token,
+			));
 
 		}
 

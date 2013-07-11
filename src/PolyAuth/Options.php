@@ -71,7 +71,7 @@ class Options implements \ArrayAccess{
 		'login_forgot_expiration'			=> 0, //how long before the temporary password expires in seconds!
 		'login_realm'						=> 'Protected by PolyAuth Realm', //only relevant to HTTP auth
 		//registration options
-		'reg_activation'					=> false, //can be email, manual, or false
+		'reg_activation'					=> false, //can be email, manual, or false (if doing manual, the activationCode is still generated, but you will need to send the email yourself)
 		//oauth1/2 consumption options
 		'external_federation'				=> true, //to auto federate across providers (duplicate providers will always merge regardless)
 		'external_providers'				=> array( //can be false or empty array
@@ -98,6 +98,7 @@ class Options implements \ArrayAccess{
 				), //twitter id is better than their name handle
 			),
 		),
+		'external_token_encryption'			=> '', //if this is false, we will not encrypt the token data, otherwise provide a random key, only set this once, if you change this option, you'll need to manually encrypt/decrypt all the database tokens
 		//cache options
 		'cache_directory'					=> '', //this is only relevant to the FileSystemCache
 		'cache_ttl'							=> 3600, //maximum time an item can live in memory, this is only relevant to APCCache

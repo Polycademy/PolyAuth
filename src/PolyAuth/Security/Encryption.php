@@ -4,7 +4,6 @@ namespace PolyAuth\Security;
 	
 /**
  * This encryption class serialises data and encrypts with a given key. It can of course do the opposite.
- * PolyAuth uses this to encrypt session data in the Sessions\EncryptedSessionHandler
  */
 class Encryption{
 
