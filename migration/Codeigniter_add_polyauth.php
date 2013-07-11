@@ -188,9 +188,12 @@ class Migration_add_polyauth extends CI_Migration {
 				'type' => 'VARCHAR',
 				'constraint' => '100',
 			),
+			'externalIdentifier'	=> array(
+				'type'	=> 'TEXT'
+			),
 			'tokenObject'	=> array(
-				'type' => 'TEXT',
-			)
+				'type'		=> 'TEXT',
+			),
 		));
 
 		$this->dbforge->add_key('id', TRUE);

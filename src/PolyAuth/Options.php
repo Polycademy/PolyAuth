@@ -73,15 +73,29 @@ class Options implements \ArrayAccess{
 		//registration options
 		'reg_activation'					=> false, //can be email, manual, or false
 		//oauth1/2 consumption options
-		'external_federation'				=> true, //boolean as to whether accounts from third parties should be merged together and also combined with local accounts to maintain identity integrity across multiple external providers. This will not work with Twitter, and it will not work when multiple emails are used.
-		'external_forcelocal'				=> false, //force users using third party sign in to create a password for a local account when they first sign in, thus keeping their identity on your site aswell. The password prompt would only be prompted on the next login, if it is to be done immediately, you have you manually program it
+		'external_federation'				=> true, //to auto federate across providers (duplicate providers will always merge regardless)
 		'external_providers'				=> array( //can be false or empty array
 			'github'		=> array(
-				'key'					=> '',
-				'secret'				=> '',
-				'callback_url'			=> '', //if it is not set (or empty), it will be auto set to the current url in which the code is called, this will be overwritten if passed in directly during login
-				'email_api_call'		=> array('url'	=> 'field_name'), //optional
-				'username_api_call'		=> array('url'	=> 'field_name'), //optional, if forcelocal a random username may be used
+				'key'				=> '',
+				'secret'			=> '',
+				'scope'				=> array(), //if scopes change, it will require everybody to relogin
+				'callback_url'		=> '', //if it is not set (or empty), it will be auto set to the current url in which the code is called, this will be overwritten if passed in directly during login
+				'identifier'		=> array(
+					'api' 		=> 'user/email'
+					'key'		=> 'email',
+					'type'		=> 'email',
+				), //key to url (expected JSON, but can also be done with other information too...)
+			),
+			'twitter'		=> array(
+				'key'				=> '',
+				'secret'			=> '',
+				'scope'				=> false, //OAUTH1 does not have scopes, make sure to be false
+				'callback_url'		=> '', //note that we'll add in a custom "provider" query parameter, so that is reserved!
+				'identifier'		=> array(
+					'api'	=> 'blah',
+					'key'	=> 'id', //this is the json key
+					'type'	=> 'id', //this the type prefix, all identifiers that are to be federated need the same type, if you have different types, they not will be federated even if you ask it to, in order to prevent confusion between the same values
+				), //twitter id is better than their name handle
 			),
 		),
 		//cache options

@@ -159,7 +159,7 @@ class UserSessions implements LoggerAwareInterface{
 		}
 	
 	}
-	
+
 	/**
 	 * Manually logs in the user, given a $data array of input parameters.
 	 * The input parameter can be an array of ['identity'] (string) AND ['password'] (string) AND ['autologin'] (boolean)

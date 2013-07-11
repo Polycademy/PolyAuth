@@ -168,28 +168,6 @@ class AccountsManager implements LoggerAwareInterface{
 		return $registered_user;
 		
 	}
-
-	/**
-	 * A more tolerant registration function designed to be used when logging in from external providers for the first time.
-	 * @param  array  $data An array of user details to register
-	 * @return object       The user object
-	 */
-	public function external_register(array $data){
-
-		//$data may have username OR not
-		//it must have email! The login_identity must be email! Throw exception if not!
-		//email must not be the same, check for duplicate identity
-		//then begin federation
-		//This may have a a password, if it exists, check for password complexity, otherwise fail
-		//If no password, just go ahead and do it. Pass in an empty password.
-		//If the forcelocal option was set, passwordChange will be set... but not if there a password was already passed in, in that case the password is already set (and no need for further prompts)
-
-
-		//the deregister function needs to check for the external auth tables for any linked ids, and remove them!
-		//the get user function needs to acquire all the user's external authentication aswell!
-		//Look for all the other areas that require updates
-
-	}
 	
 	/**
 	 * Removes a user
@@ -546,6 +524,89 @@ class AccountsManager implements LoggerAwareInterface{
 		}
 	
 	}
+
+	/**
+	 * A more tolerant registration function designed to be used when logging in from external providers for the first time.
+	 * @param  array  $data An array of user details to register
+	 * @return object       The user object
+	 */
+	public function external_register(){
+
+		//random username and password and email?
+		//watchout for identity forcing though
+		//you'll need to make sure they are distinct
+		//if the field is the "identity"
+
+	}
+
+	public function existing_external_provider_check($external_identifier, $provider_name){
+
+		$query = "
+			SELECT ep.id, ep.userId, ep.provider 
+			FROM {$this->options['table_external_providers']} AS ep 
+			INNER JOIN {$this->options['table_users']} AS ua 
+			ON ep.userId = ua.id 
+			WHERE ep.externalIdentifier = :external_identifier
+		";
+		$sth = $this->db->prepare($query);
+		$sth->bindValue('external_identifier', $external_identifier, PDO::PARAM_STR);
+
+		try{
+
+			$sth->execute();
+			$result = $sth->fetchAll(PDO::FETCH_OBJ);
+
+		}catch(PDOException $db_err){
+
+			if($this->logger){
+				$this->logger->error("Failed to execute query to find existing accounts authorised externally.", ['exception' => $db_err]);
+			}
+			
+			throw $db_err;
+		
+		}
+
+		//if false, we will create a new user account
+		if(!$result){
+			return false;
+		}
+
+		//regardless of how many results there are, we need to check if one of them contains the same provider
+		//this would mean that this provider is already registered with us and we would need to update the tokenObject
+		$existing_provider = false;
+		foreach($result as $row){
+			if($row->provider == $provider_name){
+				return array(
+					'user_id'		=> $row->userId,
+					'provider_id'	=> $row->id,
+				);
+			}
+		}
+
+		//at this point the provider doesn't currently exist, but there are other providers that match the external_identifier
+		//therefore we would need add a new provider record
+		return array('user_id' => $result[0]->userId);
+
+	}
+
+	public function add_external_provider(array $data){
+
+		
+
+	}
+
+	public function update_external_provider($provider_id, array $new_provider_details){
+
+
+
+	}
+
+	public function federate_external_providers(){
+
+	}
+
+	//also note to change any functions relating to deletion of users (such as deregister)
+	//also change the user object in order to extract any external providers! 
 	
 	/**
 	 * Changes the password of the user. If the old password was provided, it will be checked against the user, otherwise the password change will be forced.
@@ -801,7 +862,7 @@ class AccountsManager implements LoggerAwareInterface{
 			$result = $sth->fetchAll(PDO::FETCH_OBJ);
 			if(!$result){
 				//no users correspond to any of the roles
-				throw UserNotFoundException($this->lang['user_role_select_empty']);
+				throw new UserNotFoundException($this->lang['user_role_select_empty']);
 			}
 		
 		}catch(PDOException $db_err){
@@ -850,7 +911,7 @@ class AccountsManager implements LoggerAwareInterface{
 			$result = $sth->fetchAll(PDO::FETCH_OBJ);
 			if(!$result){
 				//no users correspond to any of the permissions
-				throw UserNotFoundException($this->lang['user_permission_select_empty']);
+				throw new UserNotFoundException($this->lang['user_permission_select_empty']);
 			}
 		
 		}catch(PDOException $db_err){
@@ -1019,7 +1080,7 @@ class AccountsManager implements LoggerAwareInterface{
 			//will return an numerically indexed array of field names
 			$table_fields = $sth->fetchAll(PDO::FETCH_COLUMN, 0);
 			
-		}catch(PDOExcepton $db_err){
+		}catch(PDOException $db_err){
 		
 			if($this->logger){
 				$this->logger->error("Failed to execute query to describe $table.", ['exception' => $db_err]);

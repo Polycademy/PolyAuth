@@ -2,7 +2,6 @@
 
 namespace PolyAuth\AuthStrategies;
 
-use Psr\Log\LoggerInterface;
 use Psr\Log\LoggerAwareInterface;
 
 interface AuthStrategyInterface extends LoggerAwareInterface{
@@ -30,10 +29,5 @@ interface AuthStrategyInterface extends LoggerAwareInterface{
 	 * Destroy any client session data. PolyAuth will destroy the corresponding server session data.
 	 */
 	public function logout_hook();
-	
-	/**
-	 * Sets a logger instance on the object
-	 */
-	public function setLogger(LoggerInterface $logger);
 
 }
