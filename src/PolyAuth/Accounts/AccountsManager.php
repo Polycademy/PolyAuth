@@ -581,7 +581,7 @@ class AccountsManager implements LoggerAwareInterface{
 
 	}
 
-	public function existing_external_provider_check($external_identifier, $provider_name){
+	public function external_provider_check($external_identifier, $provider_name){
 
 		$query = "
 			SELECT ep.id, ep.userId, ep.provider 
@@ -628,26 +628,82 @@ class AccountsManager implements LoggerAwareInterface{
 
 	}
 
-	public function add_external_provider(array $data){
+	public function register_external_provider(array $data){
 
 		if(!empty($this->options['external_token_encryption'])){
+			$data['tokenObject'] = $this->encryption->encrypt($data['tokenObject'], $this->options['external_token_encryption']);
+		}
 
-			//encrypt the token data and serialize
+		$query = "INSERT INTO {$this->options['table_external_providers']} (userId, provider, externalIdentifier, tokenObject) VALUES (:user_id, :provider, :external_identifier, :token_object)";
+
+		$sth = $this->db->prepare($query);
+		$sth->bindValue('user_id', $data['userId'], PDO::PARAM_INT);
+		$sth->bindValue('provider', $data['provider'], PDO::PARAM_STR);
+		$sth->bindValue('external_identifier', $data['externalIdentifier'], PDO::PARAM_STR);
+		$sth->bindValue('token_object', $data['tokenObject'], PDO::PARAM_STR);
+
+		try{
+
+			$sth->execute();
+			return true;
+
+		}catch(PDOException $db_err){
+
+			if($this->logger){
+				$this->logger->error("Failed to execute query to insert a new provider record.", ['exception' => $db_err]);
+			}
+			
+			throw $db_err;
 
 		}
 
 	}
 
-	public function update_external_provider($id, array $new_provider_data){
+	//removes external provider given a provider_id
+	//or perhaps provider name with user id??
+	//this would be used for unlinking provider accounts
+	//or perhaps if we could detect revokes?
+	public function deregister_external_provider(){
 
+	}
+
+	//this would be used for autologin, since when we login we would already have the token object.
+	//we would get all the providers, given a user_id
+	//then augment the providers in the OAuthStrategy
+	public function get_external_providers_by_user(){
+
+	}
+
+	public function update_external_provider($provider_id, array $new_data){
 
 		if(!empty($this->options['external_token_encryption'])){
-
-			//encrypt the token data and serialize
-
+			$new_data['tokenObject'] = $this->encryption->encrypt($new_data['tokenObject'], $this->options['external_token_encryption']);
 		}
 
+		$columns = array_keys($new_data);
+		$update_placeholder = implode(' = ?, ', $columns) . ' = ?';
+		
+		$query = "UPDATE {$this->options['table_external_providers']} SET $update_placeholder WHERE id = :provider_id";
+		$sth = $this->db->prepare($query);
+		$sth->bindValue('provider_id', $provider_id, PDO::PARAM_INT);
 
+		try{
+
+			$sth->execute();
+			if($sth->rowCount() >= 1){
+				return true;
+			}
+			return false;
+
+		}catch(PDOException $db_err){
+
+			if($this->logger){
+				$this->logger->error("Failed to execute query to update an existing provider.", ['exception' => $db_err]);
+			}
+			
+			throw $db_err;
+
+		}
 
 	}
 

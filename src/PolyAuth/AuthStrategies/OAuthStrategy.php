@@ -139,7 +139,7 @@ class OAuthStrategy implements AuthStrategyInterface{
 		//so that there is no confusion between identifiers
 		$external_identifier = $identifier_type . ':' . $external_identifier;
 
-		$provider_records = $this->accounts_manager->existing_external_provider_check($external_identifier, $provider['name']);
+		$provider_records = $this->accounts_manager->external_provider_check($external_identifier, $provider['name']);
 
 		if(!empty($provider_records['provider_id'])){
 
@@ -153,7 +153,7 @@ class OAuthStrategy implements AuthStrategyInterface{
 		}elseif(!empty($provider_records['user_id']) AND $this->options['external_federation']){
 
 			//federate the providers (add the provider to an existing user)
-			$this->accounts_manager->add_external_provider(array(
+			$this->accounts_manager->register_external_provider(array(
 				'userId'				=> $provider_records['user_id'],
 				'provider'				=> $provider['name'],
 				'externalIdentifier'	=> $external_identifier,
@@ -165,7 +165,7 @@ class OAuthStrategy implements AuthStrategyInterface{
 
 			//create a new user account and add the provider to an existing user
 			$user_id = $this->accounts_manager->external_register()['id'];
-			$this->accounts_manager->add_external_provider(array(
+			$this->accounts_manager->register_external_provider(array(
 				'userId'				=> $user_id,
 				'provider'				=> $provider['name'],
 				'externalIdentifier'	=> $external_identifier,
