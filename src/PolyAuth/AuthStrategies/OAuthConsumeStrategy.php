@@ -30,7 +30,7 @@ use OAuth\OAuth2\Service\Exception\InvalidScopeException;
 use OAuth\OAuth2\Service\Exception\MissingRefreshTokenException;
 
 //try extending OAuthStrategy to CookieStrategy, to allow independent logins and autologin functionality
-class OAuthStrategy implements AuthStrategyInterface{
+class OAuthConsumeStrategy implements AuthStrategyInterface{
 
 	protected $db;
 	protected $options;
