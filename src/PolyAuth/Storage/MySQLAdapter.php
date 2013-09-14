@@ -48,6 +48,10 @@ class MySQLAdapter implements StorageInterface{
 	
 	}
 
+	//////////////////////
+	// ACCOUNTS MANAGER //
+	//////////////////////
+
 	/**
 	 * Registers a new user. It accepts an array of $data and a corresponding array of $columns
 	 * @param  array $data    Array of values
@@ -736,6 +740,62 @@ class MySQLAdapter implements StorageInterface{
 		}
 
 		return $permissions;
+
+	}
+
+	/////////////////////
+	// SESSION MANAGER //
+	/////////////////////
+
+	public function get_login_check($identity){
+
+		$query = "SELECT id, password FROM {$this->options['table_users']} WHERE {$this->options['login_identity']} = :identity";
+		$sth = $this->db->prepare($query);
+		$sth->bindValue('identity', $identity, PDO::PARAM_STR);
+		
+		try{
+		
+			$sth->execute();
+			$row = $sth->fetch(PDO::FETCH_OBJ);
+			return $row;
+		
+		}catch(PDOException $db_err){
+		
+			if($this->logger){
+				$this->logger->error("Failed to execute query to login.", ['exception' => $db_err]);
+			}
+			throw $db_err;
+		
+		}
+
+	}
+
+	/**
+	 * Update the last login time given a particular user id.
+	 *
+	 * @param $user_id integer
+	 * @return boolean
+	 */
+	public function update_last_login($user_id){
+
+		$query = "UPDATE {$this->options['table_users']} SET lastLogin = :last_login WHERE id = :user_id";
+		$sth = $this->db->prepare($query);
+		$sth->bindValue('last_login', date('Y-m-d H:i:s'), PDO::PARAM_STR);
+		$sth->bindValue('user_id', $user_id, PDO::PARAM_INT);
+		
+		try{
+		
+			$sth->execute();
+			return true;
+		
+		}catch(PDOException $db_err){
+		
+			if($this->logger){
+				$this->logger->error("Failed to execute query to update last login time for user $user_id.", ['exception' => $db_err]);
+			}
+			throw $db_err;
+		
+		}
 
 	}
 

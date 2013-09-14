@@ -59,6 +59,9 @@ interface StorageInterface extends LoggerAwareInterface, RBACStorageInterface{
 	public function validate_columns($table, array $columns);
 
 	//SessionManager
+	public function get_login_check($identity);
+
+	public function update_last_login($user_id);
 
 	//LoginAttempts
 	public function locked_out($identity, $ip_address);

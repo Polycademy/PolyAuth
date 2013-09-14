@@ -2,13 +2,12 @@
 
 namespace PolyAuth\Sessions;
 
-use PDO;
-use PDOException;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LoggerAwareInterface;
 
 use PolyAuth\Options;
 use PolyAuth\Language;
+use PolyAuth\Storage\StorageInterface;
 
 use PolyAuth\AuthStrategies\AuthStrategyInterface;
 
@@ -32,7 +31,7 @@ use PolyAuth\Exceptions\ValidationExceptions\SessionValidationException;
 class UserSessions implements LoggerAwareInterface{
 
 	protected $strategy;
-	protected $db;
+	protected $storage;
 	protected $options;
 	protected $lang;
 	protected $logger;
@@ -46,7 +45,7 @@ class UserSessions implements LoggerAwareInterface{
 
 	public function __construct(
 		AuthStrategyInterface $strategy, 
-		PDO $db, 
+		StorageInterface $storage, 
 		Options $options, 
 		Language $language, 
 		LoggerInterface $logger = null, 
@@ -58,15 +57,15 @@ class UserSessions implements LoggerAwareInterface{
 	){
 		
 		$this->strategy = $strategy;
-		$this->db = $db;
+		$this->storage = $storage;
 		$this->options = $options;
 		$this->lang = $language;
 		$this->logger = $logger;
-		$this->accounts_manager = ($accounts_manager) ? $accounts_manager : new AccountsManager($db, $options, $language, $logger);
-		$this->rbac = ($rbac) ? $rbac : new Rbac($db, $language, $logger);
+		$this->accounts_manager = ($accounts_manager) ? $accounts_manager : new AccountsManager($storage, $options, $language, $logger);
+		$this->rbac = ($rbac) ? $rbac : new Rbac($storage, $language, $logger);
 		$this->session_zone = ($session_zone) ? $session_zone : new SessionZone($options);
 		$this->cookies = ($cookies) ? $cookies : new Cookies($options);
-		$this->login_attempts = ($login_attempts) ? $login_attempts : new LoginAttempts($db, $options, $logger);
+		$this->login_attempts = ($login_attempts) ? $login_attempts : new LoginAttempts($storage, $options, $logger);
 	
 	}
 	
@@ -141,7 +140,7 @@ class UserSessions implements LoggerAwareInterface{
 		if($user_id){
 		
 			$this->user = $this->accounts_manager->get_user($user_id);
-			$this->update_last_login($this->user['id']);
+			$this->storage->update_last_login($this->user['id']);
 			$this->session_zone->regenerate();
 			$this->set_default_session($user_id, false);
 			
@@ -192,49 +191,35 @@ class UserSessions implements LoggerAwareInterface{
 				$this->login_failure($data, sprintf($this->lang['login_lockout'], $lockout_time));
 			}
 		}
-		
-		$query = "SELECT id, password FROM {$this->options['table_users']} WHERE {$this->options['login_identity']} = :identity";
-		$sth = $this->db->prepare($query);
-		$sth->bindValue('identity', $data['identity'], PDO::PARAM_STR);
-		
-		try{
-		
-			$sth->execute();
-			if($row = $sth->fetch(PDO::FETCH_OBJ)){
+
+		$row = $this->storage->get_login_check($identity);
+
+		if($row){
+
+			if(password_verify($data['password'], $row->password)){
 			
-				if(password_verify($data['password'], $row->password)){
-				
-					//identity is valid, and password has been verified
-					$user_id = $row->id;
-					
-				}else{
-				
-					//this is only attempt that is considered a real failed login attempt
-					//the third parameter is true in order to implement login throttling
-					$this->login_failure($data, $this->lang['login_password'], true);
-				
-				}
+				//identity is valid, and password has been verified
+				$user_id = $row->id;
 				
 			}else{
 			
-				$this->login_failure($data, $this->lang['login_identity']);
-				
+				//this is only attempt that is considered a real failed login attempt
+				//the third parameter is true in order to implement login throttling
+				$this->login_failure($data, $this->lang['login_password'], true);
+			
 			}
-		
-		}catch(PDOException $db_err){
-		
-			if($this->logger){
-				$this->logger->error("Failed to execute query to login.", ['exception' => $db_err]);
-			}
-			throw $db_err;
-		
+
+		}else{
+
+			$this->login_failure($data, $this->lang['login_identity']);
+
 		}
 		
 		$this->user = $this->accounts_manager->get_user($user_id);
 		if(!empty($this->options['login_lockout'])){
 			$this->login_attempts->clear($this->user[$this->options['login_identity']]);
 		}
-		$this->update_last_login($this->user['id']);
+		$this->storage->update_last_login($this->user['id']);
 		
 		$this->session_zone->regenerate();
 		$this->set_default_session($user_id, false);
@@ -344,32 +329,16 @@ class UserSessions implements LoggerAwareInterface{
 		$this->session_zone->commit_session();
 		
 		//check if the user id actually exists (this may be redundant, but better safe than sorry)
-		$query = "SELECT id, {$this->options['login_identity']} FROM {$this->options['table_users']} WHERE id = :user_id";
-		$sth = $this->db->prepare($query);
-		$sth->bindValue('user_id', $user_id, PDO::PARAM_INT);
+		$row = $this->storage->get_user($user_id);
+
+		//does the id exist?
+		if(!$row){
+			return false;
+		}
 		
-		try{
-		
-			$sth->execute();
-			$row = $sth->fetch(PDO::FETCH_OBJ);
-			
-			//does the id exist?
-			if(!$row){
-				return false;
-			}
-			
-			//identity check
-			if($identities AND !in_array($row->{$this->options['login_identity']}, $identities)){
-				return false;
-			}
-		
-		}catch(PDOException $db_err){
-		
-			if($this->logger){
-				$this->logger->error("Failed to execute query to check if the user identity exists.", ['exception' => $db_err]);
-			}
-			throw $db_err;
-		
+		//identity check
+		if($identities AND !in_array($row->{$this->options['login_identity']}, $identities)){
+			return false;
 		}
 		
 		//reset the user variable if it does not exist, this is possible if the developer not use $this->start()
@@ -599,35 +568,6 @@ class UserSessions implements LoggerAwareInterface{
 			throw new UserPasswordChangeException($this->lang['password_change_required']);
 		}
 		
-	}
-	
-	/**
-	 * Update the last login time given a particular user id.
-	 *
-	 * @param $user_id integer
-	 * @return boolean
-	 */
-	protected function update_last_login($user_id){
-	
-		$query = "UPDATE {$this->options['table_users']} SET lastLogin = :last_login WHERE id = :user_id";
-		$sth = $this->db->prepare($query);
-		$sth->bindValue('last_login', date('Y-m-d H:i:s'), PDO::PARAM_STR);
-		$sth->bindValue('user_id', $user_id, PDO::PARAM_INT);
-		
-		try{
-		
-			$sth->execute();
-			return true;
-		
-		}catch(PDOException $db_err){
-		
-			if($this->logger){
-				$this->logger->error("Failed to execute query to update last login time for user {$user_id}.", ['exception' => $db_err]);
-			}
-			throw $db_err;
-		
-		}
-	
 	}
 	
 }
