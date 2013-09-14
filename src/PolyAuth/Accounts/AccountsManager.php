@@ -39,7 +39,7 @@ class AccountsManager implements LoggerAwareInterface{
 	protected $login_attempts;
 	
 	public function __construct(
-		PDO $storage, 
+		StorageInterface $storage, 
 		Options $options, 
 		Language $language, 
 		LoggerInterface $logger = null, 
