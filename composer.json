@@ -3,7 +3,7 @@
 	"description": "Authentication & Authorisation Library",
 	"keywords": ["authentication", "authorisation", "sessions", "user accounts", "rbac", "access control", "oauth"],
 	"homepage": "https://github.com/Polycademy/PolyAuth",
-	"license": "WTFPL",
+	"license": "MIT",
 	"authors": [{
 		"name": "Roger Qiu",
 		"email": "roger.qiu@polycademy.com",
@@ -12,12 +12,12 @@
 	}],
 	"require": {
 		"php": ">=5.4.12",
-		"leighmacdonald/php_rbac": "<1.0",
-		"ircmaxell/password-compat": "*",
-		"phpmailer/phpmailer": "5.2.*",
+		"leighmacdonald/php_rbac": "dev-master",
+		"ircmaxell/password-compat": "1.0.3",
+		"phpmailer/phpmailer": "5.2.7",
 		"psr/log": "1.0.0",
-		"tedivm/stash": "0.10.*",
-		"lusitanian/oauth": "0.1.*@dev"
+		"tedivm/stash": "0.10.5",
+		"lusitanian/oauth": "0.2.2"
 	},
 	"require-dev": {
 		"codeception/codeception": "1.6.3.1"
