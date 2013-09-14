@@ -2,8 +2,6 @@
 
 namespace PolyAuth\AuthStrategies;
 
-use PDO;
-use PDOException;
 use Psr\Log\LoggerInterface;
 use PolyAuth\Options;
 
@@ -14,19 +12,19 @@ use PolyAuth\Options;
  */
 class HTTPStrategy implements AuthStrategyInterface{
 
-	protected $db;
+	protected $storage;
 	protected $options;
 	protected $logger;
 	protected $realm;
 	
 	public function __construct(
-		PDO $db, 
+		StorageInterface $storage, 
 		Options $options, 
 		LoggerInterface $logger = null,
 		$realm = false
 	){
 		
-		$this->db = $db;
+		$this->storage = $storage;
 		$this->options = $options;
 		$this->logger = $logger;
 		$this->realm = ($realm) ? $realm : $options['login_realm'];
@@ -44,7 +42,7 @@ class HTTPStrategy implements AuthStrategyInterface{
 	}
 	
 	/**
-	 * Checks for the HTTP Authorization header for username and password.
+	 * Checks for the HTTP Authorization header for identity and password.
 	 * This does not send HTTP 401 challenge, it's meant to be non-intrusive.
 	 * The end user will need to send that manually if they wish for a page to be authenticated.
 	 *
@@ -52,31 +50,16 @@ class HTTPStrategy implements AuthStrategyInterface{
 	 */
 	public function autologin(){
 	
-		//check if the username or password is passed in as HTTP
+		//check if the identity or password is passed in as HTTP
 		if(!empty($_SERVER['PHP_AUTH_USER'])){
 		
-			$username = $_SERVER['PHP_AUTH_USER'];
+			$identity = $_SERVER['PHP_AUTH_USER'];
 			$password = $_SERVER['PHP_AUTH_PW'];
-			
-			$query = "SELECT id, password FROM {$this->options['table_users']} WHERE username = :username";
-			$sth = $this->db->prepare($query);
-			$sth->bindValue('username', $username, PDO::PARAM_STR);
-			
-			try{
-			
-				$sth->execute();
-				$row = $sth->fetch(PDO::FETCH_OBJ);
-				if($row AND password_verify($password, $row->password)){
-					return $row->id;
-				}
-			
-			}catch(PDOException $db_err){
-			
-				if($this->logger){
-					$this->logger->error("Failed to execute query to autologin.", ['exception' => $db_err]);
-				}
-				throw $db_err;
-			
+
+			$row = $this->storage->get_login_check($identity);
+
+			if($row AND password_verify($password, $row->password)){
+				return $row->id;
 			}
 		
 		}
