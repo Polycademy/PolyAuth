@@ -71,7 +71,13 @@ interface StorageInterface extends LoggerAwareInterface, RBACStorageInterface{
 	public function clear_login_attempts($identity, $ip_address, $either_or);
 
 	//Strategies
+	public function check_autologin($id, $autocode, $valid_date);
 
+	public function set_autologin($id, $autocode);
+
+	public function clear_autologin($id);
+
+	
 
 
 	//Rbac
