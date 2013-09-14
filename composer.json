@@ -20,7 +20,7 @@
 		"lusitanian/oauth": "0.2.2"
 	},
 	"require-dev": {
-		"codeception/codeception": "1.6.3.1"
+		"codeception/codeception": "1.6.7"
 	},
 	"suggest": {
 		"ext-apc": "Can provide a faster memory cache for PolyAuth."
