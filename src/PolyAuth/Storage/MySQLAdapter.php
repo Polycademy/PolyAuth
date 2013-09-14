@@ -10,6 +10,7 @@ use PolyAuth\Storage\StorageInterface;
 
 use RBAC\Permission;
 use RBAC\Role\Role;
+use RBAC\Manager\RoleManager;
 use RBAC\Subject\SubjectInterface;
 use RBAC\DataStore\PDOMySQLAdapter;
 
@@ -45,6 +46,38 @@ class MySQLAdapter implements StorageInterface{
 		$this->logger = $logger;
 		$this->rbac_storage = new PDOMySQLADapter($this->db, $logger);
 	
+	}
+
+	/**
+	 * Gets an array of permission objects from an array of permission names
+	 *
+	 * @param $requested_permissions array | null
+	 * @return $permissions array | null
+	 */
+	public function get_permissions(array $requested_permissions){
+
+		$select_placeholders = implode(",", array_fill(0, count($requested_permissions), '?'));
+		
+		$query = "SELECT * FROM auth_permission WHERE name IN ($select_placeholders)";
+		$sth = $this->db->prepare($query);
+	
+		try{
+		
+			$sth->execute($requested_permissions);
+			//this fetches the row into an instantiated object of an existing class, which is the Permission class
+			$permissions = $sth->fetchAll(PDO::FETCH_CLASS, RoleManager::CLASS_PERMISSION);
+		
+		}catch(PDOException $db_err){
+		
+			if($this->logger){
+				$this->logger->error('Failed to execute query to select permissions from auth permission based on permission names.', ['exception' => $db_err]);
+			}
+			throw $db_err;
+		
+		}
+
+		return $permissions;
+
 	}
 
 	//////////////////////

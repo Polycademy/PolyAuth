@@ -2,13 +2,11 @@
 
 namespace PolyAuth\Accounts;
 
-use PDO;
-use PDOException;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LoggerAwareInterface;
 
-use PolyAuth\Options;
 use PolyAuth\Language;
+use PolyAuth\Storage\StorageInterface;
 
 use PolyAuth\UserAccount;
 use RBAC\Permission;
@@ -23,23 +21,22 @@ use PolyAuth\Exceptions\PermissionExceptions\PermissionSaveException;
 
 class Rbac implements LoggerAwareInterface{
 
-	protected $db;
-	protected $options;
+	protected $storage;
 	protected $lang;
 	protected $logger;
 	protected $role_manager;
 	
 	public function __construct(
-		PDO $db, 
+		StorageInterface $storage, 
 		Language $language, 
 		LoggerInterface $logger = null, 
 		RoleManager $role_manager = null
 	){
 	
-		$this->db = $db;
+		$this->storage = $storage;
 		$this->lang = $language;
 		$this->logger = $logger;
-		$this->role_manager  = ($role_manager) ? $role_manager : new RoleManager($db, $logger);
+		$this->role_manager  = ($role_manager) ? $role_manager : new RoleManager($storage, $logger);
 		
 	}
 	
@@ -50,7 +47,9 @@ class Rbac implements LoggerAwareInterface{
 	 * @return null
 	 */
 	public function setLogger(LoggerInterface $logger){
+
 		$this->logger = $logger;
+
 	}
 	
 	/**
@@ -60,7 +59,9 @@ class Rbac implements LoggerAwareInterface{
 	 * @return $user UserAccount
 	 */
 	public function load_subject_roles(UserAccount $user){
+
 		return $this->role_manager->loadSubjectRoles($user);
+
 	}
 	
 	/**
@@ -139,31 +140,9 @@ class Rbac implements LoggerAwareInterface{
 		$permissions = array();
 		
 		if($requested_permissions){
-		
-			$select_placeholders = implode(",", array_fill(0, count($requested_permissions), '?'));
-			
-			$query = "SELECT * FROM auth_permission WHERE name IN ($select_placeholders)";
-			$sth = $this->db->prepare($query);
-		
-			try{
-			
-				$sth->execute($requested_permissions);
-				//this fetches the row into an instantiated object of an existing class, which is the Permission class
-				$permissions = $sth->fetchAll(PDO::FETCH_CLASS, RoleManager::CLASS_PERMISSION);
-			
-			}catch(PDOException $db_err){
-			
-				if($this->logger){
-					$this->logger->error('Failed to execute query to select permissions from auth permission based on permission names.', ['exception' => $db_err]);
-				}
-				throw $db_err;
-			
-			}
-		
+			$permissions = $this->storage->get_permissions($requested_permissions);
 		}else{
-		
 			$permissions = $this->role_manager->permissionFetch();
-		
 		}
 		
 		if(empty($permissions)){
