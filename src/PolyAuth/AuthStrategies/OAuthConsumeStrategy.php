@@ -2,12 +2,11 @@
 
 namespace PolyAuth\AuthStrategies;
 
-use PDO;
-use PDOException;
 use Psr\Log\LoggerInterface;
 
 use PolyAuth\Options;
 use PolyAuth\Language;
+use PolyAuth\Storage\StorageInterface;
 use PolyAuth\Cookies;
 use PolyAuth\Security\Random;
 use PolyAuth\Accounts\AccountsManager;
@@ -32,7 +31,7 @@ use OAuth\OAuth2\Service\Exception\MissingRefreshTokenException;
 //try extending OAuthStrategy to CookieStrategy, to allow independent logins and autologin functionality
 class OAuthConsumeStrategy implements AuthStrategyInterface{
 
-	protected $db;
+	protected $storage;
 	protected $options;
 	protected $language;
 	protected $logger;
@@ -44,7 +43,7 @@ class OAuthConsumeStrategy implements AuthStrategyInterface{
 	protected $providers;
 	
 	public function __construct(
-		PDO $db, 
+		StorageInterface $storage, 
 		Options $options,
 		Language $language, 
 		LoggerInterface $logger = null,
@@ -55,13 +54,13 @@ class OAuthConsumeStrategy implements AuthStrategyInterface{
 		ServiceFactory $service_factory = null
 	){
 
-		$this->db = $db;
+		$this->storage = $storage;
 		$this->options = $options;
 		$this->language = $language;
 		$this->logger = $logger;
 		$this->cookies = ($cookies) ? $cookies : new Cookies($options);
 		$this->random = ($random) ? $random : new Random;
-		$this->accounts_manager = ($accounts_manager) ? $accounts_manager : new AccountsManager($db, $options, $language, $logger);
+		$this->accounts_manager = ($accounts_manager) ? $accounts_manager : new AccountsManager($storage, $options, $language, $logger);
 		$this->uri_factory = ($uri_factory) ? $uri_factory : new UriFactory;
 		$this->service_factory = ($service_factory) ? $service_factory : new ServiceFactory;
 
