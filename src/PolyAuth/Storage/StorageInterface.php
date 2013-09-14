@@ -77,9 +77,6 @@ interface StorageInterface extends LoggerAwareInterface, RBACStorageInterface{
 
 	public function clear_autologin($id);
 
-	
-
-
 	//Rbac
 	public function get_permissions(array $requested_permissions);
 

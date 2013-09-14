@@ -4,6 +4,7 @@ namespace PolyAuth\AuthStrategies;
 
 use Psr\Log\LoggerInterface;
 use PolyAuth\Options;
+use PolyAuth\Storage\StorageInterface;
 
 /**
  * To use HTTP strategy, you need to make sure to capture any LoginValidationException, UserInactiveException or UserBannedException, and send the HTTP authentication 401 and WWW-Authenticate challenge to the client.
