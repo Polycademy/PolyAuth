@@ -3,11 +3,10 @@
 namespace PolyAuth\Storage;
 
 use Psr\Log\LoggerAwareInterface;
+use RBAC\DataStore\StorageInterface as RBACStorageInterface;
 
-//RBAC's interface
+interface StorageInterface extends LoggerAwareInterface, RBACStorageInterface{
 
-
-interface StorageInterface extends LoggerAwareInterface{
 
 
 }
