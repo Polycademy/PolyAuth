@@ -2,13 +2,12 @@
 
 namespace PolyAuth\Accounts;
 
-use PDO;
-use PDOException;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LoggerAwareInterface;
 
 use PolyAuth\Options;
 use PolyAuth\Language;
+use PolyAuth\Storage\StorageInterface;
 
 use PolyAuth\UserAccount;
 use PolyAuth\Accounts\Rbac;
@@ -28,7 +27,7 @@ use PolyAuth\Exceptions\UserExceptions\UserNotFoundException;
 
 class AccountsManager implements LoggerAwareInterface{
 
-	protected $db;
+	protected $storage;
 	protected $options;
 	protected $lang;
 	protected $logger;
@@ -40,7 +39,7 @@ class AccountsManager implements LoggerAwareInterface{
 	protected $login_attempts;
 	
 	public function __construct(
-		PDO $db, 
+		PDO $storage, 
 		Options $options, 
 		Language $language, 
 		LoggerInterface $logger = null, 
@@ -52,16 +51,16 @@ class AccountsManager implements LoggerAwareInterface{
 		LoginAttempts $login_attempts = null
 	){
 	
-		$this->db = $db;
+		$this->storage = $storage;
 		$this->options = $options;
 		$this->lang = $language;
 		$this->logger = $logger;
-		$this->rbac  = ($rbac) ? $rbac : new Rbac($db, $language, $logger);
+		$this->rbac  = ($rbac) ? $rbac : new Rbac($storage, $language, $logger);
 		$this->password_complexity = ($password_complexity) ? $password_complexity : new PasswordComplexity($options, $language);
 		$this->random = ($random) ? $random : new Random;
 		$this->encryption = ($encryption) ? $encryption : new Encryption();
 		$this->emailer = ($emailer) ? $emailer : new Emailer($options, $language, $logger);
-		$this->login_attempts = ($login_attempts) ? $login_attempts : new LoginAttempts($db, $options, $logger);
+		$this->login_attempts = ($login_attempts) ? $login_attempts : new LoginAttempts($storage, $options, $logger);
 		
 	}
 	
@@ -137,26 +136,7 @@ class AccountsManager implements LoggerAwareInterface{
 		}
 		$columns = implode(', ', $columns);
 		
-		$insert_placeholders = implode(', ', array_fill(0, count($data), '?'));
-		
-		$query = "INSERT INTO {$this->options['table_users']} ($columns) VALUES ($insert_placeholders)";
-		
-		$sth = $this->db->prepare($query);
-		
-		try {
-		
-			$sth->execute(array_values($data));
-			$last_insert_id = $this->db->lastInsertId();
-			
-		}catch(PDOException $db_err){
-
-			if($this->logger){
-				$this->logger->error('Failed to execute query to register a new user and assign permissions.', ['exception' => $db_err]);
-			}
-			
-			throw $db_err;
-			
-		}
+		$last_insert_id = $this->storage->register_user($data, $columns);
 		
 		//grab the user's data that we just inserted
 		$registered_user = $this->get_user($last_insert_id);
@@ -185,30 +165,15 @@ class AccountsManager implements LoggerAwareInterface{
 	 * @return boolean
 	 */
 	public function deregister(UserAccount $user){
-	
-		$query = "DELETE FROM {$this->options['table_users']} WHERE id = :user_id";
-		$sth = $this->db->prepare($query);
-		$sth->bindValue(':user_id', $user['id'], PDO::PARAM_INT);
-		
-		try{
-		
-			$sth->execute();
-			
-			if($sth->rowCount() >= 1){
-				return true;
-			}
-			
+
+		if(!$this->storage->deregister_user($user['id'])){
+
 			throw new UserNotFoundException($this->lang['account_delete_already']);
-			
-		}catch(PDOException $db_err){
-		
-			if($this->logger){
-				$this->logger->error('Failed to execute query to delete a user.', ['exception' => $db_err]);
-			}
-			
-			throw $db_err;
-		
-		}
+			return false;
+
+		};
+
+		return true;
 	
 	}
 	
@@ -220,27 +185,7 @@ class AccountsManager implements LoggerAwareInterface{
 	 */
 	public function duplicate_identity_check($identity){
 		
-		$query = "SELECT id FROM {$this->options['table_users']} WHERE {$this->options['login_identity']} = :identity";
-		$sth = $this->db->prepare($query);
-		$sth->bindValue(':identity', $identity, PDO::PARAM_STR);
-		
-		try {
-		
-			$sth->execute();
-			if($sth->fetch()){
-				return true;
-			}
-			return false;
-			
-		}catch(PDOException $db_err){
-
-			if($this->logger){
-				$this->logger->error('Failed to execute query to check duplicate login identities.', ['exception' => $db_err]);
-			}
-			
-			throw $db_err;
-			
-		}
+		return $this->storage->duplicate_identity_check($identity);
 	
 	}
 	
@@ -290,32 +235,20 @@ class AccountsManager implements LoggerAwareInterface{
 	
 	}
 	
+	/**
+	 * Force activates an user account regardless of any conditions.
+	 * @param  UserAccount $user
+	 * @return Boolean
+	 */
 	protected function force_activate($user){
 	
-		$query = "UPDATE {$this->options['table_users']} SET active = 1, activationCode = NULL WHERE id = :id";
-		$sth = $this->db->prepare($query);
-		$sth->bindValue(':id', $user['id'], PDO::PARAM_INT);
-		
-		try{
-		
-			$sth->execute();
-			if($sth->rowCount() < 1){
-				return false;
-			}else{
-				$user['active'] = 1;
-				$user['activationCode'] = null;
-				return true;
-			}
-		
-		}catch(PDOException $db_err){
-		
-			if($this->logger){
-				$this->logger->error("Failed to execute query to activate user {$user['id']}.", ['exception' => $db_err]);
-			}
-			
-			throw $db_err;
-		
-		}
+		if($this->storage->force_activate($user['id']){
+			$user['active'] = 1;
+			$user['activationCode'] = null;
+			return true;
+		};
+
+		return false;
 		
 	}
 	
@@ -329,31 +262,14 @@ class AccountsManager implements LoggerAwareInterface{
 	
 		//generate new activation code and return it if it was successful
 		$activation_code = $this->random->generate(40);
-		$query = "UPDATE {$this->options['table_users']} SET active = 0, activationCode = :activation_code WHERE id = :id";
-		$sth = $this->db->prepare($query);
-		$sth->bindValue(':activation_code', $activation_code, PDO::PARAM_STR);
-		$sth->bindValue(':id', $user['id'], PDO::PARAM_INT);
-		
-		try{
-		
-			$sth->execute();
-			if($sth->rowCount() < 1){
-				return false;
-			}else{
-				$user['active'] = 0;
-				$user['activationCode'] = $activation_code;
-				return $activation_code;
-			}
-			
-		}catch(PDOException $db_err){
-		
-			if($this->logger){
-				$this->logger->error("Failed to execute query to deactivate user {$user['id']}.", ['exception' => $db_err]);
-			}
-			
-			throw $db_err;
-		
+
+		if($this->storage->deactivate($user['id'], $activation_code)){
+			$user['active'] = 0;
+			$user['activationCode'] = $activation_code;
+			return $activation_code;
 		}
+
+		return false;
 	
 	}
 	
@@ -384,29 +300,11 @@ class AccountsManager implements LoggerAwareInterface{
 		$user['forgottenCode'] = $this->random->generate(40);
 		$user['forgottenDate'] = date('Y-m-d H:i:s');
 		
-		$query = "UPDATE {$this->options['table_users']} SET forgottenCode = :forgotten_code, forgottenDate = :forgotten_date WHERE id = :user_id";
-		$sth = $this->db->prepare($query);
-		$sth->bindValue('forgotten_code', $user['forgottenCode'], PDO::PARAM_STR);
-		$sth->bindValue('forgotten_date', $user['forgottenDate'], PDO::PARAM_STR);
-		$sth->bindValue('user_id', $user['id'], PDO::PARAM_INT);
-		
-		try{
-		
-			$sth->execute();
-			if($sth->rowCount() < 1){
-				return false;
-			}
+		if($this->storage->forgotten_password($user['id'], $user['forgottenCode'], $user['forgottenDate'])){
 			return $this->emailer->send_forgotten_password($user);
-		
-		}catch(PDOException $db_err){
-		
-			if($this->logger){
-				$this->logger->error("Failed to execute query to update user with forgotten code and date", ['exception' => $db_err]);
-			}
-			
-			throw $db_err;
-			
 		}
+
+		return false;
 	
 	}
 	
@@ -443,24 +341,9 @@ class AccountsManager implements LoggerAwareInterface{
 				}
 			
 			}
-			
-			$query = "UPDATE {$this->options['table_users']} SET passwordChange = 1 WHERE id = :user_id";
-			$sth = $this->db->prepare($query);
-			$sth->bindValue('user_id', $user['id'], PDO::PARAM_INT);
-			
-			try{
-			
-				$sth->execute();
-				$user['passwordChange'] = 1;
-			
-			}catch(PDOException $db_err){
-			
-				if($this->logger){
-					$this->logger->error("Failed to execute query to set the the passwordChange flag to 1.", ['exception' => $db_err]);
-				}
-				throw $db_err;
-			
-			}
+
+			$this->storage->password_change_flag($user['id']);
+			$user['passwordChange'] = 1;
 			
 			return true;
 		
@@ -508,29 +391,12 @@ class AccountsManager implements LoggerAwareInterface{
 	 */
 	public function forgotten_clear(UserAccount $user){
 	
-		$query = "UPDATE {$this->options['table_users']} SET forgottenCode = NULL, forgottenDate = NULL WHERE id = :user_id";
-		$sth = $this->db->prepare($query);
-		$sth->bindValue('user_id', $user['id'], PDO::PARAM_INT);
-		
-		try{
-		
-			$sth->execute();
-			
+		if($this->storage->forgotten_password_clear($user['id'])){
 			$user['forgottenCode'] = null;
 			$user['forgottenDate'] = null;
-			
-			//will always return true (should be idempotent)
-			return true;
-		
-		}catch(PDOException $db_err){
-		
-			if($this->logger){
-				$this->logger->error("Failed to execute query to clear the forgotten code and forgotten time.", ['exception' => $db_err]);
-			}
-			
-			throw $db_err;
-		
 		}
+
+		return true;
 	
 	}
 
@@ -551,27 +417,7 @@ class AccountsManager implements LoggerAwareInterface{
 		    'active'	=> 1,
 		);
 
-		$query = "INSERT INTO {$this->options['table_users']} (ipAddress, createdOn, lastLogin, active) VALUES (:ip_address, :created_on, :last_login, :active)";
-		$sth = $this->db->prepare($query);
-		$sth->bindValue('ip_address', $data['ipAddress'], PDO::PARAM_STR);
-		$sth->bindValue('created_on', $data['createdOn'], PDO::PARAM_STR);
-		$sth->bindValue('lastLogin', $data['last_login'], PDO::PARAM_STR);
-		$sth->bindValue('active', $data['active'], PDO::PARAM_INT);
-		
-		try{
-		
-			$sth->execute();
-			$last_insert_id = $this->db->lastInsertId();
-			
-		}catch(PDOException $db_err){
-
-			if($this->logger){
-				$this->logger->error('Failed to execute query to register a new user from external providers.', ['exception' => $db_err]);
-			}
-			
-			throw $db_err;
-			
-		}
+		$last_insert_id = $this->storage->external_register($data);
 		
 		$registered_user = $this->get_user($last_insert_id);
 		
@@ -583,30 +429,7 @@ class AccountsManager implements LoggerAwareInterface{
 
 	public function external_provider_check($external_identifier, $provider_name){
 
-		$query = "
-			SELECT ep.id, ep.userId, ep.provider 
-			FROM {$this->options['table_external_providers']} AS ep 
-			INNER JOIN {$this->options['table_users']} AS ua 
-			ON ep.userId = ua.id 
-			WHERE ep.externalIdentifier = :external_identifier
-		";
-		$sth = $this->db->prepare($query);
-		$sth->bindValue('external_identifier', $external_identifier, PDO::PARAM_STR);
-
-		try{
-
-			$sth->execute();
-			$result = $sth->fetchAll(PDO::FETCH_OBJ);
-
-		}catch(PDOException $db_err){
-
-			if($this->logger){
-				$this->logger->error("Failed to execute query to find existing accounts authorised externally.", ['exception' => $db_err]);
-			}
-			
-			throw $db_err;
-		
-		}
+		$result = $this->storage->get_external_providers($external_identifier);
 
 		//if false, we will create a new user account
 		if(!$result){
@@ -634,28 +457,7 @@ class AccountsManager implements LoggerAwareInterface{
 			$data['tokenObject'] = $this->encryption->encrypt($data['tokenObject'], $this->options['external_token_encryption']);
 		}
 
-		$query = "INSERT INTO {$this->options['table_external_providers']} (userId, provider, externalIdentifier, tokenObject) VALUES (:user_id, :provider, :external_identifier, :token_object)";
-
-		$sth = $this->db->prepare($query);
-		$sth->bindValue('user_id', $data['userId'], PDO::PARAM_INT);
-		$sth->bindValue('provider', $data['provider'], PDO::PARAM_STR);
-		$sth->bindValue('external_identifier', $data['externalIdentifier'], PDO::PARAM_STR);
-		$sth->bindValue('token_object', $data['tokenObject'], PDO::PARAM_STR);
-
-		try{
-
-			$sth->execute();
-			return true;
-
-		}catch(PDOException $db_err){
-
-			if($this->logger){
-				$this->logger->error("Failed to execute query to insert a new provider record.", ['exception' => $db_err]);
-			}
-			
-			throw $db_err;
-
-		}
+		return $this->storage->register_external_provider($data);
 
 	}
 
@@ -680,30 +482,7 @@ class AccountsManager implements LoggerAwareInterface{
 			$new_data['tokenObject'] = $this->encryption->encrypt($new_data['tokenObject'], $this->options['external_token_encryption']);
 		}
 
-		$columns = array_keys($new_data);
-		$update_placeholder = implode(' = ?, ', $columns) . ' = ?';
-		
-		$query = "UPDATE {$this->options['table_external_providers']} SET $update_placeholder WHERE id = :provider_id";
-		$sth = $this->db->prepare($query);
-		$sth->bindValue('provider_id', $provider_id, PDO::PARAM_INT);
-
-		try{
-
-			$sth->execute();
-			if($sth->rowCount() >= 1){
-				return true;
-			}
-			return false;
-
-		}catch(PDOException $db_err){
-
-			if($this->logger){
-				$this->logger->error("Failed to execute query to update an existing provider.", ['exception' => $db_err]);
-			}
-			
-			throw $db_err;
-
-		}
+		return $this->storage->update_external_provider($provider_id, $new_data);
 
 	}
 
@@ -724,27 +503,10 @@ class AccountsManager implements LoggerAwareInterface{
 	
 		//if old password exists, we need to check if it matches the database record
 		if($old_password){
-		
-			$query = "SELECT password FROM {$this->options['table_users']} WHERE id = :user_id";
-			$sth = $this->db->prepare($query);
-			$sth->bindValue('user_id', $user['id'], PDO::PARAM_INT);
-			
-			try{
-			
-				$sth->execute();
-				$row = $sth->fetch(PDO::FETCH_OBJ);
-				if(!password_verify($old_password, $row->password)){
-					throw new PasswordValidationException($this->lang['password_change_unsuccessful']);
-				}
-				
-			}catch(PDOException $db_err){
-			
-				if($this->logger){
-					$this->logger->error("Failed to execute query to get the password hash from user {$user['id']}.", ['exception' => $db_err]);
-				}
-				
-				throw $db_err;
-				
+
+			$check_password = $this->storage->get_password($user['id']);
+			if(!password_verify($old_password, $check_password)){
+				throw new PasswordValidationException($this->lang['password_change_unsuccessful']);
 			}
 			
 		}
@@ -758,30 +520,11 @@ class AccountsManager implements LoggerAwareInterface{
 		$new_password = password_hash($new_password, $this->options['hash_method'], ['cost' => $this->options['hash_rounds']]);
 		
 		//update with new password
-		$query = "UPDATE {$this->options['table_users']} SET passwordChange = 0, password = :new_password WHERE id = :user_id";
-		$sth = $this->db->prepare($query);
-		$sth->bindValue('new_password', $new_password, PDO::PARAM_STR);
-		$sth->bindValue('user_id', $user['id'], PDO::PARAM_INT);
-		
-		try{
-		
-			$sth->execute();
-			
-			if($sth->rowCount() < 1){
-				return false;
-			}
-			
-			$user['passwordChange'] = 0;
-		
-		}catch(PDOException $db_err){
-		
-			if($this->logger){
-				$this->logger->error("Failed to execute query to update password hash with user {$user['id']}.", ['exception' => $db_err]);
-			}
-			
-			throw $db_err;
-		
+		if(!$this->storage->update_password($user['id'], $new_password)){
+			return false;
 		}
+		
+		$user['passwordChange'] = 0;
 		
 		return true;
 	
@@ -826,28 +569,17 @@ class AccountsManager implements LoggerAwareInterface{
 				$user_ids[] = $user;
 			}
 		}
-		
-		$update_placeholders = implode(",", array_fill(0, count($user_ids), '?'));
-		
-		$query = "UPDATE {$this->options['table_users']} SET passwordChange = 1 WHERE id IN ($update_placeholders)";
-		$sth = $this->db->prepare($query);
-		
-		try{
-		
-			$sth->execute($user_ids);
-			$user['passwordChange'] =  1;
-			//if they were already flagged, then the job has been done
-			return true;
-		
-		}catch(PDOException $db_err){
-		
-			if($this->logger){
-				$this->logger->error("Failed to execute query to flag the password for change.", ['exception' => $db_err]);
+
+		//if they were already flagged, then the job has been done
+		$this->storage->multi_password_change_flag($user_ids);
+
+		foreach($users as $user){
+			if($user instanceof UserAccount){
+				$user['passwordChange'] =  1;
 			}
-			
-			throw $db_err;
-		
 		}
+
+		return true;
 	
 	}
 	
@@ -858,26 +590,10 @@ class AccountsManager implements LoggerAwareInterface{
 	 * @return $user object
 	 */
 	public function get_user($user_id){
-		
-		$query = "SELECT * FROM {$this->options['table_users']} WHERE id = :user_id";
-		$sth = $this->db->prepare($query);
-		$sth->bindValue('user_id', $user_id, PDO::PARAM_INT);
-		
-		try{
-		
-			$sth->execute();
-			$row = $sth->fetch(PDO::FETCH_OBJ);
-			if(!$row){
-				throw new UserNotFoundException($this->lang['user_select_unsuccessful']);
-			}
-		
-		}catch(PDOException $db_err){
-		
-			if($this->logger){
-				$this->logger->error("Failed to execute query to select user $user_id.", ['exception' => $db_err]);
-			}
-			throw $db_err;
-		
+
+		$row = $this->storage->get_user($user_id);
+		if(!$row){
+			throw new UserNotFoundException($this->lang['user_select_unsuccessful']);
 		}
 		
 		//load in the data into the UserAccount
@@ -899,27 +615,10 @@ class AccountsManager implements LoggerAwareInterface{
 	 * @return $users array | null - Array of (id => UserAccount)
 	 */
 	public function get_users(array $user_ids){
-		
-		$select_placeholders = implode(",", array_fill(0, count($user_ids), '?'));
-		
-		$query = "SELECT * FROM {$this->options['table_users']} WHERE id IN ($select_placeholders)";
-		$sth = $this->db->prepare($query);
-		
-		try{
-		
-			$sth->execute($user_ids);
-            $result = $sth->fetchAll(PDO::FETCH_OBJ);
-			if(!$result){
-				throw new UserNotFoundException($this->lang['user_select_unsuccessful']);
-			}
-			
-		}catch(PDOException $db_err){
-		
-			if($this->logger){
-				$this->logger->error("Failed to execute query to select users.", ['exception' => $db_err]);
-			}
-			throw $db_err;
-		
+
+		$result = $this->storage->get_users($user_ids);
+		if(!$result){
+			throw new UserNotFoundException($this->lang['user_select_unsuccessful']);
 		}
 		
 		$output_users = array();
@@ -934,7 +633,7 @@ class AccountsManager implements LoggerAwareInterface{
 		
 		}
 		
-		return $output_users;	
+		return $output_users;
 	
 	}
 	
@@ -945,35 +644,11 @@ class AccountsManager implements LoggerAwareInterface{
 	 * @return $users array | null
 	 */
 	public function get_users_by_role(array $roles){
-	
-		$select_placeholders = implode(",", array_fill(0, count($roles), '?'));
-		
-		//double join
-		$query = "
-			SELECT asr.subject_id 
-			FROM auth_subject_role AS asr 
-			INNER JOIN auth_role AS ar ON asr.role_id = ar.role_id 
-			WHERE ar.name IN ($select_placeholders)
-		";
-		
-		$sth = $this->db->prepare($query);
-		
-		try{
-			
-			$sth->execute($roles);
-			$result = $sth->fetchAll(PDO::FETCH_OBJ);
-			if(!$result){
-				//no users correspond to any of the roles
-				throw new UserNotFoundException($this->lang['user_role_select_empty']);
-			}
-		
-		}catch(PDOException $db_err){
-		
-			if($this->logger){
-				$this->logger->error('Failed to execute query to select subjects from auth subject role based on role names.', ['exception' => $db_err]);
-			}
-			throw $db_err;
-		
+
+		$result = $this->storage->get_users_by_role($roles);
+		if(!$result){
+			//no users correspond to any of the roles
+			throw new UserNotFoundException($this->lang['user_role_select_empty']);
 		}
 		
 		$user_ids = array();
@@ -994,35 +669,10 @@ class AccountsManager implements LoggerAwareInterface{
 	 */
 	public function get_users_by_permission(array $permissions){
 	
-		$select_placeholders = implode(",", array_fill(0, count($permissions), '?'));
-		
-		//triple join
-		$query = "
-			SELECT asr.subject_id 
-			FROM auth_subject_role AS asr 
-			INNER JOIN auth_role_permissions AS arp ON asr.role_id = arp.role_id
-			INNER JOIN auth_permissions AS ap ON arp.permission_id = ap.permission_id
-			WHERE ap.name IN ($select_placeholders)
-		";
-		
-		$sth = $this->db->prepare($query);
-		
-		try{
-			
-			$sth->execute($permissions);
-			$result = $sth->fetchAll(PDO::FETCH_OBJ);
-			if(!$result){
-				//no users correspond to any of the permissions
-				throw new UserNotFoundException($this->lang['user_permission_select_empty']);
-			}
-		
-		}catch(PDOException $db_err){
-		
-			if($this->logger){
-				$this->logger->error('Failed to execute query to select subjects from auth subject role based on permission names.', ['exception' => $db_err]);
-			}
-			throw $db_err;
-		
+		$result = $this->storage->get_users_by_permission($permissions);
+		if(!$result){
+			//no users correspond to any of the permissions
+			throw new UserNotFoundException($this->lang['user_permission_select_empty']);
 		}
 		
 		$user_ids = array();
@@ -1074,33 +724,11 @@ class AccountsManager implements LoggerAwareInterface{
 				throw new DatabaseValidationException($this->lang['account_update_invalid']);
 			}
 		}
-		
-		$update_placeholder = implode(' = ?, ', $columns) . ' = ?';
-		
-		$query = "UPDATE {$this->options['table_users']} SET $update_placeholder WHERE id = :user_id";
-		$sth = $this->db->prepare($query);
-		$sth->bindValue('user_id', $user_id, PDO::PARAM_INT);
-		
-		try{
-		
-			//execute like an array!
-			$sth->execute($user->get_user_data());
-			if($sth->rowCount() < 1){
-				return false;
-			}
-			
+
+		if($this->storage->update_user($user_id, $user->get_user_data(), $columns)){
 			//put the id back into the user
 			$user['id'] = $user_id;
-			
 			return $user;
-		
-		}catch(PDOException $db_err){
-		
-			if($this->logger){
-				$this->logger->error("Failed to execute query to update user $user_id", ['exception' => $db_err]);
-			}
-			throw $db_err;
-		
 		}
 	
 	}
