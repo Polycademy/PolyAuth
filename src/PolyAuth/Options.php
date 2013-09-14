@@ -81,7 +81,7 @@ class Options implements \ArrayAccess{
 				'scope'				=> array(), //if scopes change, it will require everybody to relogin
 				'callback_url'		=> '', //if it is not set (or empty), it will be auto set to the current url in which the code is called, this will be overwritten if passed in directly during login
 				'identifier'		=> array(
-					'api' 		=> 'user/email'
+					'api' 		=> 'user/email',
 					'key'		=> 'email',
 					'type'		=> 'email',
 				), //key to url (expected JSON, but can also be done with other information too...)

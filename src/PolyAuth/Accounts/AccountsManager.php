@@ -239,7 +239,7 @@ class AccountsManager implements LoggerAwareInterface{
 	 */
 	protected function force_activate($user){
 	
-		if($this->storage->force_activate($user['id']){
+		if($this->storage->force_activate($user['id'])){
 			$user['active'] = 1;
 			$user['activationCode'] = null;
 			return true;
