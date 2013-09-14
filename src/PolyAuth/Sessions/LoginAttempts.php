@@ -2,21 +2,20 @@
 
 namespace PolyAuth\Sessions;
 
-use PDO;
-use PDOException;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LoggerAwareInterface;
 use PolyAuth\Options;
+use PolyAuth\Storage\StorageInterface;
 
 class LoginAttempts implements LoggerAwareInterface{
 
-	protected $db;
+	protected $storage;
 	protected $options;
 	protected $logger;
 
-	public function __construct(PDO $db, Options $options, LoggerInterface $logger = null){
+	public function __construct(StorageInterface $storage, Options $options, LoggerInterface $logger = null){
 	
-		$this->db = $db;
+		$this->storage = $storage;
 		$this->options = $options;
 		$this->logger = $logger;
 	
@@ -41,7 +40,7 @@ class LoginAttempts implements LoggerAwareInterface{
 	 * @return false | int
 	 */
 	public function locked_out($identity){
-	
+
 		$lockout_options = $this->options['login_lockout'];
 		
 		if(
@@ -53,51 +52,15 @@ class LoginAttempts implements LoggerAwareInterface{
 				in_array('identity', $lockout_options)
 			)
 		){
-		
-			$query = "
-				SELECT 
-				MAX(lastAttempt) as lastAttempt, 
-				COUNT(*) as attemptNum
-				FROM {$this->options['table_login_attempts']} 
-			";
-			
-			//if we are tracking both, it's an OR, not an AND, because a single ip address may be attacking multiple identities and a single identity may be attacked from multiple ip addresses
-			if(in_array('ipaddress', $lockout_options) AND in_array('identity', $lockout_options)){
-			
-				$query .= "WHERE ipAddress = :ip_address OR identity = :identity";
-			
-			}elseif(in_array('ipaddress', $lockout_options)){
-			
-				$query .= "WHERE ipAddress = :ip_address";
-			
-			}elseif(in_array('identity', $lockout_options)){
-			
-				$query .= "WHERE identity = :identity";
-			
+
+			$row = $this->storage->locked_out($identity, $this->get_ip());
+
+			if(!$row){
+				return false;
 			}
-			
-			$sth = $this->db->prepare($query);
-			$sth->bindValue('ip_address', $this->get_ip(), PDO::PARAM_STR);
-			$sth->bindValue('identity', $identity, PDO::PARAM_STR);
-			
-			try{
-			
-				$sth->execute();
-				$row = $sth->fetch(PDO::FETCH_OBJ);
-				if(!$row){
-					return false;
-				}
-				$number_of_attempts = $row->attemptNum;
-				$last_attempt = $row->lastAttempt;
-			
-			}catch(PDOException $db_err){
-			
-				if($this->logger){
-					$this->logger->error('Failed to execute query to check whether a login attempt was locked out.', ['exception' => $db_err]);
-				}
-				throw $db_err;
-			
-			}
+
+			$number_of_attempts = $row->attemptNum;
+			$last_attempt = $row->lastAttempt;
 			
 			//y = 1.8^(n-1) where n is number of attempts, resulting in exponential timeouts, to prevent brute force attacks
 			$lockout_duration = round(pow(1.8, $number_of_attempts - 1));
@@ -131,26 +94,8 @@ class LoginAttempts implements LoggerAwareInterface{
 	 * @return true
 	 */
 	public function increment($identity){
-	
-		$query = "INSERT {$this->options['table_login_attempts']} (ipAddress, identity, lastAttempt) VALUES (:ip, :identity, :date)";
-		$sth = $this->db->prepare($query);
-		$sth->bindValue('ip', $this->get_ip(), PDO::PARAM_STR);
-		$sth->bindValue('identity', $identity, PDO::PARAM_STR);
-		$sth->bindValue('date', date('Y-m-d H:i:s'), PDO::PARAM_STR);
-		
-		try{
-		
-			$sth->execute();
-			return true;
-		
-		}catch(PDOException $db_err){
-		
-			if($this->logger){
-				$this->logger->error('Failed to execute query to insert a login attempt.', ['exception' => $db_err]);
-			}
-			throw $db_err;
-		
-		}
+
+		return $this->storage->increment_login_attempt($identity, $this->get_ip());
 	
 	}
 	
@@ -179,48 +124,8 @@ class LoginAttempts implements LoggerAwareInterface{
 				in_array('identity', $lockout_options)
 			)
 		){
-		
-			$query = "DELETE FROM {$this->options['table_login_attempts']} ";
-			
-			if($either_or){
-			
-				//this is the most complete clearing, simultaneously clearing any ips and identities
-				$query .= "WHERE ipAddress = :ip_address OR identity = :identity";
-			
-			}elseif(in_array('ipaddress', $lockout_options) AND in_array('identity', $lockout_options)){
-			
-				//this is the most stringent clearing, requiring both ip and identity to be matched
-				$query .= "WHERE ipAddress = :ip_address AND identity = :identity";
-			
-			}elseif(in_array('ipaddress', $lockout_options)){
-			
-				$query .= "WHERE ipAddress = :ip_address";
-			
-			}elseif(in_array('identity', $lockout_options)){
-			
-				$query .= "WHERE identity = :identity";
-			
-			}
-			
-			$sth = $this->db->prepare($query);
-			$sth->bindValue('ip_address', $this->get_ip(), PDO::PARAM_STR);
-			$sth->bindValue('identity', $identity, PDO::PARAM_STR);
-			
-			try{
-			
-				$sth->execute();
-				if($sth->rowCount() >= 1){
-					return true;
-				}
-			
-			}catch(PDOException $db_err){
-				
-				if($this->logger){
-					$this->logger->error('Failed to execute query to clear old login attempts.', ['exception' => $db_err]);
-				}
-				throw $db_err;
-				
-			}
+
+			return $this->storage->clear_login_attempts($identity, $this->get_ip(), $either_or);
 			
 		}
 		

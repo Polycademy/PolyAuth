@@ -703,6 +703,10 @@ class MySQLAdapter implements StorageInterface{
 
 	}
 
+	///////////////////
+	// RBAC INTERNAL //
+	///////////////////
+
 	/**
 	 * Gets an array of permission objects from an array of permission names
 	 *
@@ -734,6 +738,132 @@ class MySQLAdapter implements StorageInterface{
 		return $permissions;
 
 	}
+
+	////////////////////
+	// LOGIN ATTEMPTS //
+	////////////////////
+
+	public function locked_out($identity, $ip_address){
+
+		$lockout_options = $this->options['login_lockout'];
+
+		$query = "
+			SELECT 
+			MAX(lastAttempt) as lastAttempt, 
+			COUNT(*) as attemptNum
+			FROM {$this->options['table_login_attempts']} 
+		";
+		
+		//if we are tracking both, it's an OR, not an AND, because a single ip address may be attacking multiple identities and a single identity may be attacked from multiple ip addresses
+		if(in_array('ipaddress', $lockout_options) AND in_array('identity', $lockout_options)){
+		
+			$query .= "WHERE ipAddress = :ip_address OR identity = :identity";
+		
+		}elseif(in_array('ipaddress', $lockout_options)){
+		
+			$query .= "WHERE ipAddress = :ip_address";
+		
+		}elseif(in_array('identity', $lockout_options)){
+		
+			$query .= "WHERE identity = :identity";
+		
+		}
+		
+		$sth = $this->db->prepare($query);
+		$sth->bindValue('ip_address', $ip_address, PDO::PARAM_STR);
+		$sth->bindValue('identity', $identity, PDO::PARAM_STR);
+		
+		try{
+		
+			$sth->execute();
+			$row = $sth->fetch(PDO::FETCH_OBJ);
+			return $row;
+		
+		}catch(PDOException $db_err){
+		
+			if($this->logger){
+				$this->logger->error('Failed to execute query to check whether a login attempt was locked out.', ['exception' => $db_err]);
+			}
+			throw $db_err;
+		
+		}
+
+	}
+
+	public function increment_login_attempt($identity, $ip_address){
+
+		$query = "INSERT {$this->options['table_login_attempts']} (ipAddress, identity, lastAttempt) VALUES (:ip, :identity, :date)";
+		$sth = $this->db->prepare($query);
+		$sth->bindValue('ip', $ip_address, PDO::PARAM_STR);
+		$sth->bindValue('identity', $identity, PDO::PARAM_STR);
+		$sth->bindValue('date', date('Y-m-d H:i:s'), PDO::PARAM_STR);
+		
+		try{
+		
+			$sth->execute();
+			return true;
+		
+		}catch(PDOException $db_err){
+		
+			if($this->logger){
+				$this->logger->error('Failed to execute query to insert a login attempt.', ['exception' => $db_err]);
+			}
+			throw $db_err;
+		
+		}
+
+	}
+
+	public function clear_login_attempts($identity, $ip_address, $either_or){
+
+		$lockout_options = $this->options['login_lockout'];
+
+		$query = "DELETE FROM {$this->options['table_login_attempts']} ";
+		
+		if($either_or){
+		
+			//this is the most complete clearing, simultaneously clearing any ips and identities
+			$query .= "WHERE ipAddress = :ip_address OR identity = :identity";
+		
+		}elseif(in_array('ipaddress', $lockout_options) AND in_array('identity', $lockout_options)){
+		
+			//this is the most stringent clearing, requiring both ip and identity to be matched
+			$query .= "WHERE ipAddress = :ip_address AND identity = :identity";
+		
+		}elseif(in_array('ipaddress', $lockout_options)){
+		
+			$query .= "WHERE ipAddress = :ip_address";
+		
+		}elseif(in_array('identity', $lockout_options)){
+		
+			$query .= "WHERE identity = :identity";
+		
+		}
+		
+		$sth = $this->db->prepare($query);
+		$sth->bindValue('ip_address', $ip_address, PDO::PARAM_STR);
+		$sth->bindValue('identity', $identity, PDO::PARAM_STR);
+		
+		try{
+		
+			$sth->execute();
+			if($sth->rowCount() >= 1){
+				return true;
+			}
+			return false;
+		
+		}catch(PDOException $db_err){
+			
+			if($this->logger){
+				$this->logger->error('Failed to execute query to clear old login attempts.', ['exception' => $db_err]);
+			}
+			throw $db_err;
+			
+		}
+
+	}
+
+
 
 	//////////////////////
 	// RBAC COMPOSITING //
