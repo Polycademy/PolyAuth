@@ -2,30 +2,29 @@
 
 namespace PolyAuth\AuthStrategies;
 
-use PDO;
-use PDOException;
 use Psr\Log\LoggerInterface;
 use PolyAuth\Options;
+use PolyAuth\Storage\StorageInterface;
 use PolyAuth\Cookies;
 use PolyAuth\Security\Random;
 
 class CookieStrategy implements AuthStrategyInterface{
 
-	protected $db;
+	protected $storage;
 	protected $options;
 	protected $logger;
 	protected $cookies;
 	protected $random;
 	
 	public function __construct(
-		PDO $db, 
+		StorageInterface $storage, 
 		Options $options, 
 		LoggerInterface $logger = null,
 		Cookies $cookies = null, 
 		Random $random = null
 	){
 		
-		$this->db = $db;
+		$this->storage = $storage;
 		$this->options = $options;
 		$this->logger = $logger;
 		$this->cookies = ($cookies) ? $cookies : new Cookies($options);
@@ -63,46 +62,24 @@ class CookieStrategy implements AuthStrategyInterface{
 			$autocode = $autologin['autoCode'];
 			//current time minus duration less/equal autoDate
 			$valid_date = date('Y-m-d H:i:s', time() - $this->options['login_expiration']);
-			
-			// check for expiration
-			if($this->options['login_expiration'] !== 0){
-				$query = "SELECT id FROM {$this->options['table_users']} WHERE id = :id AND autoCode = :autoCode AND autoDate >= :valid_date";
-			}else{
-				$query = "SELECT id FROM {$this->options['table_users']} WHERE id = :id AND autoCode = :autoCode";
-			}
-			
-			$sth = $this->db->prepare($query);
-			$sth->bindValue('id', $id, PDO::PARAM_INT);
-			$sth->bindValue('autoCode', $autocode, PDO::PARAM_STR);
-			$sth->bindValue('valid_date', $valid_date, PDO::PARAM_STR);
-			
-			try{
-			
-				$sth->execute();
-				$row = $sth->fetch(PDO::FETCH_OBJ);
-				if($row){
-					
-					//extend the user's autologin if it is switched on
-					if($this->options['login_expiration_extend']){
-						$this->set_autologin($id);
-					}
-					return $row->id;
-					
-				}else{
+
+			//also check for expiration
+			$row = $this->storage->check_autologin($id, $autocode, $valid_date);
+
+			if($row){
 				
-					//clear the autoCode in the DB, since it failed
-					$this->clear_autologin($id);
-					return false;
-					
+				//extend the user's autologin if it is switched on
+				if($this->options['login_expiration_extend']){
+					$this->set_autologin($id);
 				}
+				return $row->id;
+				
+			}else{
 			
-			}catch(PDOException $db_err){
-			
-				if($this->logger){
-					$this->logger->error("Failed to execute query to autologin.", ['exception' => $db_err]);
-				}
-				throw $db_err;
-			
+				//clear the autoCode in the DB, since it failed
+				$this->clear_autologin($id);
+				return false;
+				
 			}
 		
 		}
@@ -121,36 +98,21 @@ class CookieStrategy implements AuthStrategyInterface{
 	public function set_autologin($id){
 	
 		$autocode = $this->random->generate(20);
-		$autodate = date('Y-m-d H:i:s');
-		
-		$query = "UPDATE {$this->options['table_users']} SET autoCode = :autoCode, autoDate = :autoDate WHERE id = :id";
-		$sth = $this->db->prepare($query);
-		$sth->bindValue('autoCode', $autocode, PDO::PARAM_STR);
-		$sth->bindValue('autoDate', $autodate, PDO::PARAM_STR);
-		$sth->bindValue('id', $id, PDO::PARAM_INT);
-		
-		try{
-		
-			$sth->execute();
-			if($sth->rowCount() >= 1){
-				$autologin = serialize(array(
-					'id'		=> $id,
-					'autoCode'	=> $autocode,
-				));
-				$expiration = ($this->options['login_expiration'] !== 0) ? $this->options['login_expiration'] : (60*60*24*365*2);
-				$this->cookies->set_cookie('autologin', $autologin, $expiration);
-				return true;
-			}else{
-				return false;
-			}
-		
-		}catch(PDOException $db_err){
-		
-			if($this->logger){
-				$this->logger->error("Failed to execute query to setup autologin.", ['exception' => $db_err]);
-			}
-			throw $db_err;
-		
+
+		if($this->storage->set_autologin($id, $autocode)){
+
+			$autologin = serialize(array(
+				'id'		=> $id,
+				'autoCode'	=> $autocode,
+			));
+			$expiration = ($this->options['login_expiration'] !== 0) ? $this->options['login_expiration'] : (60*60*24*365*2);
+			$this->cookies->set_cookie('autologin', $autologin, $expiration);
+			return true;
+
+		}else{
+
+			return false;
+
 		}
 	
 	}
@@ -165,28 +127,7 @@ class CookieStrategy implements AuthStrategyInterface{
 	
 		//clear the cookie to prevent multiple attempts
 		$this->cookies->delete_cookie('autologin');
-	
-		$query = "UPDATE {$this->options['table_users']} SET autoCode = NULL, autoDate = NULL WHERE id = :id";
-		$sth = $this->db->prepare($query);
-		$sth->bindValue('id', $id, PDO::PARAM_INT);
-		
-		try{
-		
-			$sth->execute();
-			if($sth->rowCount() >= 1){
-				return true;
-			}else{
-				return false;
-			}
-			
-		}catch(PDOException $db_err){
-		
-			if($this->logger){
-				$this->logger->error("Failed to execute query to clear autologin.", ['exception' => $db_err]);
-			}
-			throw $db_err;
-			
-		}
+		return $this->storage->clear_autologin($id);
 	
 	}
 	

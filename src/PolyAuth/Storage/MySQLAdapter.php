@@ -923,6 +923,94 @@ class MySQLAdapter implements StorageInterface{
 
 	}
 
+	////////////////
+	// STRATEGIES //
+	////////////////
+
+	public function check_autologin($id, $autocode, $valid_date){
+
+		// check for expiration
+		if($this->options['login_expiration'] !== 0){
+			$query = "SELECT id FROM {$this->options['table_users']} WHERE id = :id AND autoCode = :autoCode AND autoDate >= :valid_date";
+		}else{
+			$query = "SELECT id FROM {$this->options['table_users']} WHERE id = :id AND autoCode = :autoCode";
+		}
+		
+		$sth = $this->db->prepare($query);
+		$sth->bindValue('id', $id, PDO::PARAM_INT);
+		$sth->bindValue('autoCode', $autocode, PDO::PARAM_STR);
+		$sth->bindValue('valid_date', $valid_date, PDO::PARAM_STR);
+		
+		try{
+		
+			$sth->execute();
+			$row = $sth->fetch(PDO::FETCH_OBJ);
+			return $row;
+		
+		}catch(PDOException $db_err){
+		
+			if($this->logger){
+				$this->logger->error("Failed to execute query to autologin.", ['exception' => $db_err]);
+			}
+			throw $db_err;
+		
+		}
+
+	}
+
+	public function set_autologin($id, $autocode){
+
+		$query = "UPDATE {$this->options['table_users']} SET autoCode = :autoCode, autoDate = :autoDate WHERE id = :id";
+		$sth = $this->db->prepare($query);
+		$sth->bindValue('autoCode', $autocode, PDO::PARAM_STR);
+		$sth->bindValue('autoDate', date('Y-m-d H:i:s'), PDO::PARAM_STR);
+		$sth->bindValue('id', $id, PDO::PARAM_INT);
+		
+		try{
+		
+			$sth->execute();
+			if($sth->rowCount() >= 1){
+				return true;
+			}else{
+				return false;
+			}
+		
+		}catch(PDOException $db_err){
+		
+			if($this->logger){
+				$this->logger->error("Failed to execute query to setup autologin.", ['exception' => $db_err]);
+			}
+			throw $db_err;
+		
+		}
+
+	}
+
+	public function clear_autologin($id){
+
+		$query = "UPDATE {$this->options['table_users']} SET autoCode = NULL, autoDate = NULL WHERE id = :id";
+		$sth = $this->db->prepare($query);
+		$sth->bindValue('id', $id, PDO::PARAM_INT);
+		
+		try{
+		
+			$sth->execute();
+			if($sth->rowCount() >= 1){
+				return true;
+			}else{
+				return false;
+			}
+			
+		}catch(PDOException $db_err){
+		
+			if($this->logger){
+				$this->logger->error("Failed to execute query to clear autologin.", ['exception' => $db_err]);
+			}
+			throw $db_err;
+			
+		}
+		
+	}
 
 
 	//////////////////////
