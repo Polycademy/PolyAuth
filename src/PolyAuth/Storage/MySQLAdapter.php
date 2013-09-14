@@ -56,8 +56,8 @@ class MySQLAdapter implements StorageInterface{
 	 */
 	public function register_user(array $data, array $columns){
 
+		$columns = implode(', ', $columns);
 		$insert_placeholders = implode(', ', array_fill(0, count($data), '?'));
-		
 		$query = "INSERT INTO {$this->options['table_users']} ($columns) VALUES ($insert_placeholders)";
 		
 		$sth = $this->db->prepare($query);
@@ -618,6 +618,88 @@ class MySQLAdapter implements StorageInterface{
 			throw $db_err;
 		
 		}
+
+	}
+
+	public function ban_user($user_id){
+
+		$query = "UPDATE {$this->options['table_users']} SET banned = 1 WHERE id = :user_id";
+		$sth = $this->db->prepare($query);
+		$sth->bindValue('user_id', $user_id, PDO::PARAM_INT);
+		
+		try{
+		
+			$sth->execute();
+			if($sth->rowCount() >= 1){
+				return true;
+			}
+			return false;
+		
+		}catch(PDOException $db_err){
+		
+			if($this->logger){
+				$this->logger->error("Failed to execute query to ban user $user_id.", ['exception' => $db_err]);
+			}
+			throw $db_err;
+		
+		}
+
+	}
+
+	public function unban_user($user_id){
+
+		$query = "UPDATE {$this->options['table_users']} SET banned = 0 WHERE id = :user_id";
+		$sth = $this->db->prepare($query);
+		$sth->bindValue('user_id', $user_id, PDO::PARAM_INT);
+		
+		try{
+		
+			$sth->execute();
+			if($sth->rowCount() >= 1){
+				return true;
+			}
+			return false;
+		
+		}catch(PDOException $db_err){
+		
+			if($this->logger){
+				$this->logger->error("Failed to execute query to unban user $user_id.", ['exception' => $db_err]);
+			}
+			throw $db_err;
+		
+		}
+
+	}
+
+	public function validate_columns($table, array $columns){
+
+		$sth = $this->db->prepare("DESCRIBE $table");
+		
+		try{
+		
+			$sth->execute();
+			//will return an numerically indexed array of field names
+			$table_fields = $sth->fetchAll(PDO::FETCH_COLUMN, 0);
+			
+		}catch(PDOException $db_err){
+		
+			if($this->logger){
+				$this->logger->error("Failed to execute query to describe $table.", ['exception' => $db_err]);
+			}
+			throw $db_err;
+			
+		}
+
+		//checks if the $columns values are in the $table_fields values,
+		//if any of the $columns values are not in the $table_fields, 
+		//then they are a non-existent column
+		$difference = array_diff($columns, $table_fields);
+
+		if(!empty($difference)){
+			return false;
+		}
+
+		return true;
 
 	}
 

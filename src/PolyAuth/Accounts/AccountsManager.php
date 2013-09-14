@@ -129,12 +129,9 @@ class AccountsManager implements LoggerAwareInterface{
 		
 		//we need to validate that the columns actually exist
 		$columns = array_keys($data);
-		foreach($columns as $column){
-			if(!$this->validate_column($this->options['table_users'], $column)){
-				throw new DatabaseValidationException($this->lang['account_creation_invalid']);
-			}
+		if(!$this->storage->validate_columns($this->options['table_users'], $columns)){
+			throw new DatabaseValidationException($this->lang['account_creation_invalid']);
 		}
-		$columns = implode(', ', $columns);
 		
 		$last_insert_id = $this->storage->register_user($data, $columns);
 		
@@ -719,10 +716,8 @@ class AccountsManager implements LoggerAwareInterface{
 		
 		//now we have to update all the user's fields
 		$columns = array_keys($user->get_user_data());
-		foreach($columns as $column){
-			if(!$this->validate_column($this->options['table_users'], $column)){
-				throw new DatabaseValidationException($this->lang['account_update_invalid']);
-			}
+		if(!$this->storage->validate_columns($this->options['table_users'], $columns)){
+			throw new DatabaseValidationException($this->lang['account_update_invalid']);
 		}
 
 		if($this->storage->update_user($user_id, $user->get_user_data(), $columns)){
@@ -743,28 +738,13 @@ class AccountsManager implements LoggerAwareInterface{
 	 * @return $user object | boolean
 	 */
 	public function ban_user(UserAccount $user){
-	
-		$query = "UPDATE {$this->options['table_users']} SET banned = 1 WHERE id = :user_id";
-		$sth = $this->db->prepare($query);
-		$sth->bindValue('user_id', $user['id'], PDO::PARAM_INT);
-		
-		try{
-		
-			$sth->execute();
-			if($sth->rowCount() >= 1){
-				$user['banned'] = 1;
-				return $user;
-			}
-			return false;
-		
-		}catch(PDOException $db_err){
-		
-			if($this->logger){
-				$this->logger->error("Failed to execute query to ban user {$user['id']}.", ['exception' => $db_err]);
-			}
-			throw $db_err;
-		
+
+		if($this->storage->ban_user($user['id'])){
+			$user['banned'] = 1;
+			return $user;
 		}
+
+		return false;
 	
 	}
 	
@@ -775,53 +755,12 @@ class AccountsManager implements LoggerAwareInterface{
 	 * @return $user object | boolean
 	 */
 	public function unban_user(UserAccount $user){
-	
-		$query = "UPDATE {$this->options['table_users']} SET banned = 0 WHERE id = :user_id";
-		$sth = $this->db->prepare($query);
-		$sth->bindValue('user_id', $user['id'], PDO::PARAM_INT);
-		
-		try{
-		
-			$sth->execute();
-			if($sth->rowCount() >= 1){
-				$user['banned'] = 0;
-				return $user;
-			}
-			return false;
-		
-		}catch(PDOException $db_err){
-		
-			if($this->logger){
-				$this->logger->error("Failed to execute query to unban user {$user['id']}.", ['exception' => $db_err]);
-			}
-			throw $db_err;
-		
+
+		if($this->storage->unban_user($user['id'])){
+			$user['banned'] = 0;
+			return $user;
 		}
-	
-	}
-	
-	protected function validate_column($table, $column){
-	
-		$sth = $this->db->prepare("DESCRIBE $table");
-		
-		try{
-		
-			$sth->execute();
-			//will return an numerically indexed array of field names
-			$table_fields = $sth->fetchAll(PDO::FETCH_COLUMN, 0);
-			
-		}catch(PDOException $db_err){
-		
-			if($this->logger){
-				$this->logger->error("Failed to execute query to describe $table.", ['exception' => $db_err]);
-			}
-			throw $db_err;
-			
-		}
-		
-		if(in_array($column, $table_fields)){
-			return true;
-		}
+
 		return false;
 	
 	}
