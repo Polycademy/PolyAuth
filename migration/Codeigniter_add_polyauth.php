@@ -16,6 +16,7 @@ use RBAC\Manager\RoleManager;
  * You can also add to the columns of the user_accounts table, or even change the name, just make sure to configure the name properly.
  * Any added columns will simply be extra data that you can submit when registering or getting a user.
  * If table names are changed, make sure to change them in the options too.
+ * Codeigniter 3.0 sets all fields by default to null
  *
  * Of course you can edit the roles and permissions later by constructing your own back end interface, or you can programmatically do it
  *
@@ -32,9 +33,6 @@ class Migration_add_polyauth extends CI_Migration {
 			'password'				=> '$2y$10$EiqipvSt3lnD//nchj4u9OgOTL9R3J4AbZ5bUVVrh.Tq/gmc5xIvS', //default is "password"
 			'passwordChange'		=> '0',
 			'email'					=> 'admin@admin.com',
-			'activationCode'		=> '',
-			'forgottenCode'			=> NULL,
-			'forgottenDate'			=> NULL,
 			'createdOn'				=> date('Y-m-d H:i:s'),
 			'lastLogin'				=> date('Y-m-d H:i:s'),
 			'active'				=> '1',
@@ -82,12 +80,10 @@ class Migration_add_polyauth extends CI_Migration {
 			'username' => array(
 				'type' => 'VARCHAR',
 				'constraint' => '100',
-				'null'	=> TRUE,
 			),
 			'password' => array(
 				'type' => 'VARCHAR',
 				'constraint' => '255',
-				'null'	=> TRUE,
 			),
 			'passwordChange' => array(
 				'type' => 'TINYINT',
@@ -98,30 +94,24 @@ class Migration_add_polyauth extends CI_Migration {
 			'email' => array(
 				'type' => 'VARCHAR',
 				'constraint' => '100',
-				'null'	=> TRUE,
 			),
 			'activationCode' => array(
 				'type' => 'VARCHAR',
 				'constraint' => '40',
-				'null' => TRUE
 			),
 			'forgottenCode' => array(
 				'type' => 'VARCHAR',
 				'constraint' => '40',
-				'null' => TRUE
 			),
 			'forgottenDate' => array(
 				'type' => 'DATETIME',
-				'null' => TRUE
 			),
 			'autoCode' => array(
 				'type' => 'VARCHAR',
 				'constraint' => '40',
-				'null' => TRUE
 			),
 			'autoDate' => array(
 				'type' => 'DATETIME',
-				'null' => TRUE
 			),
 			'createdOn' => array(
 				'type' => 'DATETIME',
