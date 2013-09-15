@@ -61,7 +61,7 @@ interface StorageInterface extends LoggerAwareInterface, RBACStorageInterface{
 	//SessionManager
 	public function get_login_check($identity);
 
-	public function update_last_login($user_id);
+	public function update_last_login($user_id, $ip_address);
 
 	//LoginAttempts
 	public function locked_out($identity, $ip_address);

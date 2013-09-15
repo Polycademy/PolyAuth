@@ -462,6 +462,11 @@ class AccountsManager implements LoggerAwareInterface{
 	//or perhaps provider name with user id??
 	//this would be used for unlinking provider accounts
 	//or perhaps if we could detect revokes?
+	//There a couple of things happening here:
+	//1. User deregisters, all their external providers should be removed -> just $user_id
+	//2. User delinks an external provider, only that provider for that user should be removed -> $user_id & provider_identity
+	//3. Admin removes the ability login with a particular provider, all providers of that identity should be removed -> $provider_identity
+	//4. Admin wants to delete a specific provider regardless of other aspects -> $provider id
 	public function deregister_external_provider(){
 
 	}
@@ -696,6 +701,7 @@ class AccountsManager implements LoggerAwareInterface{
 			$user->set_user_data($new_user_data);
 		}
 		
+		$password_updated = false;
 		if(!empty($user['password'])){
 		
 			if(!empty($user['old_password'])){
@@ -703,6 +709,8 @@ class AccountsManager implements LoggerAwareInterface{
 			}else{
 				$this->change_password($user, $user['password']);
 			}
+
+			$password_updated = true;
 		
 		}
 		
@@ -713,14 +721,18 @@ class AccountsManager implements LoggerAwareInterface{
 		//we never update the id
 		$user_id = $user['id'];
 		unset($user['id']);
-		
-		//now we have to update all the user's fields
+
+		//refresh the ip address to the current user
+		$ip = (!empty($_SERVER['REMOTE_ADDR'])) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1';
+		$data['ipAddress'] = inet_pton($ip);
+
+		//validate if the columns are correct
 		$columns = array_keys($user->get_user_data());
 		if(!$this->storage->validate_columns($this->options['table_users'], $columns)){
 			throw new DatabaseValidationException($this->lang['account_update_invalid']);
 		}
 
-		if($this->storage->update_user($user_id, $user->get_user_data(), $columns)){
+		if($this->storage->update_user($user_id, $user->get_user_data(), $columns) OR $password_updated){
 			//put the id back into the user
 			$user['id'] = $user_id;
 			return $user;

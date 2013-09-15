@@ -8,7 +8,6 @@ class Options implements \ArrayAccess{
 	//session_expiration => expiration of a particular user or anonymous sesion (remembering staying on the page)
 	//cookie_lifetime => expiration of the session cookie (remembering across pages)
 	//login_expiration => expiration of the autologin cookie
-	//make sure your logging handler (if its a stream handler) to actually be a file!
 
 	public $options = array(
 		//table options, see that the migration to be reflected. (RBAC options are not negotiable)
@@ -94,10 +93,10 @@ class Options implements \ArrayAccess{
 			// 	'scope'				=> false, //OAUTH1 does not have scopes, make sure to be false
 			// 	'callback_url'		=> '', //note that we'll add in a custom "provider" query parameter, so that is reserved!
 			// 	'identifier'		=> array(
-			// 		'api'	=> '',
+			// 		'api'	=> 'blah',
 			// 		'key'	=> 'id', //this is the json key
 			// 		'type'	=> 'id', //this the type prefix, all identifiers that are to be federated need the same type, if you have different types, they not will be federated even if you ask it to, in order to prevent confusion between the same values
-			// 	), //twitter id is better than their name handle, they don't provide email
+			// 	), //twitter id is better than their name handle
 			// ),
 		),
 		'external_token_encryption'			=> false, //if this is false, we will not encrypt the token data, otherwise provide a random key, only set this once, if you change this option, you'll need to manually encrypt/decrypt all the database tokens

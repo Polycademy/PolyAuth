@@ -140,7 +140,7 @@ class UserSessions implements LoggerAwareInterface{
 		if($user_id){
 		
 			$this->user = $this->accounts_manager->get_user($user_id);
-			$this->storage->update_last_login($this->user['id']);
+			$this->storage->update_last_login($this->user['id'], $this->get_ip());
 			$this->session_zone->regenerate();
 			$this->set_default_session($user_id, false);
 			
@@ -219,7 +219,7 @@ class UserSessions implements LoggerAwareInterface{
 		if(!empty($this->options['login_lockout'])){
 			$this->login_attempts->clear($this->user[$this->options['login_identity']]);
 		}
-		$this->storage->update_last_login($this->user['id']);
+		$this->storage->update_last_login($this->user['id'], $this->get_ip());
 		
 		$this->session_zone->regenerate();
 		$this->set_default_session($user_id, false);
@@ -567,6 +567,18 @@ class UserSessions implements LoggerAwareInterface{
 		if($user['passwordChange'] === 1){
 			throw new UserPasswordChangeException($this->lang['password_change_required']);
 		}
+		
+	}
+
+	/**
+	 * Helper function to get the ip and format it correctly for insertion.
+	 *
+	 * @return $ip_address binary | string
+	 */
+	protected function get_ip() {
+	
+		$ip_address = (!empty($_SERVER['REMOTE_ADDR'])) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1';
+		return inet_pton($ip_address);
 		
 	}
 	

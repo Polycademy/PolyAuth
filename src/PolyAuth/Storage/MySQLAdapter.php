@@ -406,16 +406,18 @@ class MySQLAdapter implements StorageInterface{
 
 	public function update_external_provider($provider_id, array $new_data){
 
+		//these columns need validating
 		$columns = array_keys($new_data);
 		$update_placeholder = implode(' = ?, ', $columns) . ' = ?';
-		
-		$query = "UPDATE {$this->options['table_external_providers']} SET $update_placeholder WHERE id = :provider_id";
+
+		//bind user_id to the last '?' binding, cannot mix positional with named
+		$query = "UPDATE {$this->options['table_external_providers']} SET $update_placeholder WHERE id = ?";
 		$sth = $this->db->prepare($query);
-		$sth->bindValue('provider_id', $provider_id, PDO::PARAM_INT);
+		$new_data[] = $provider_id;
 
 		try{
 
-			$sth->execute();
+			$sth->execute(array_values($new_data));
 			if($sth->rowCount() >= 1){
 				return true;
 			}
@@ -598,16 +600,23 @@ class MySQLAdapter implements StorageInterface{
 
 	public function update_user($user_id, array $data, array $columns){
 
+		//bind user_id to the last '?' binding, cannot mix positional with named
 		$update_placeholder = implode(' = ?, ', $columns) . ' = ?';
-		
-		$query = "UPDATE {$this->options['table_users']} SET $update_placeholder WHERE id = :user_id";
+		$query = "UPDATE {$this->options['table_users']} SET $update_placeholder WHERE id = ?";
 		$sth = $this->db->prepare($query);
-		$sth->bindValue('user_id', $user_id, PDO::PARAM_INT);
+		$data[] = $user_id;
+
+		// may not be required, since the accounts manager should already inet_pton the ip addresses!
+		//ip addresses may come in as straight strings, we need to pack it if it isn't already packed
+		//ctype_print will check whether the string is printable, binary strings are not printable
+		if(!empty($data['ipAddress']) AND ctype_print($data['ipAddress'])){
+			$data['ipAddress'] = inet_pton($data['ipAddress']);
+		}
 		
 		try{
 		
 			//execute like an array!
-			$sth->execute($data);
+			$sth->execute(array_values($data));
 			if($sth->rowCount() < 1){
 				return false;
 			}
@@ -776,10 +785,11 @@ class MySQLAdapter implements StorageInterface{
 	 * @param $user_id integer
 	 * @return boolean
 	 */
-	public function update_last_login($user_id){
+	public function update_last_login($user_id, $ip_address){
 
-		$query = "UPDATE {$this->options['table_users']} SET lastLogin = :last_login WHERE id = :user_id";
+		$query = "UPDATE {$this->options['table_users']} SET ipAddress = :ip_address, lastLogin = :last_login WHERE id = :user_id";
 		$sth = $this->db->prepare($query);
+		$sth->bindValue('ip_address', $ip_address, PDO::PARAM_STR);
 		$sth->bindValue('last_login', date('Y-m-d H:i:s'), PDO::PARAM_STR);
 		$sth->bindValue('user_id', $user_id, PDO::PARAM_INT);
 		
