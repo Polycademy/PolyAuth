@@ -8,6 +8,7 @@ class Options implements \ArrayAccess{
 	//session_expiration => expiration of a particular user or anonymous sesion (remembering staying on the page)
 	//cookie_lifetime => expiration of the session cookie (remembering across pages)
 	//login_expiration => expiration of the autologin cookie
+	//make sure your logging handler (if its a stream handler) to actually be a file!
 
 	public $options = array(
 		//table options, see that the migration to be reflected. (RBAC options are not negotiable)
@@ -34,6 +35,7 @@ class Options implements \ArrayAccess{
 		'email'								=> false, //make this true to use the emails by PHPMailer, otherwise false if you want to roll your own email solution, watch out for email activation
 		'email_smtp'						=> false,
 		'email_host'						=> '',
+		'email_port'						=> '',
 		'email_auth'						=> false,
 		'email_username'					=> '',
 		'email_password'					=> '',
@@ -51,7 +53,7 @@ class Options implements \ArrayAccess{
 		//rbac options (initial roles from the migration, also who's the default role, and root access role?)
 		'role_default'						=> 'member',
 		//login options (this is the field used to login with, plus login attempts)
-		'login_identity'					=> 'email', //can be email or username, if you are using third party sign in, THIS MUST BE 'email'
+		'login_identity'					=> 'email', //can be email or username, if you are using third party sign in, it's recommended to be 'email'
 		'login_password_complexity'			=> array( //this should allow spaced names...?
 			'min'			=> 8, //('' or false or 8)
 			'max'			=> 32,
@@ -74,31 +76,31 @@ class Options implements \ArrayAccess{
 		'reg_activation'					=> false, //can be email, manual, or false (if doing manual, the activationCode is still generated, but you will need to send the email yourself)
 		//oauth1/2 consumption options
 		'external_federation'				=> true, //to auto federate across providers (duplicate providers will always merge regardless)
-		'external_providers'				=> array( //can be false or empty array
-			'github'		=> array(
-				'key'				=> '',
-				'secret'			=> '',
-				'scope'				=> array(), //if scopes change, it will require everybody to relogin
-				'callback_url'		=> '', //if it is not set (or empty), it will be auto set to the current url in which the code is called, this will be overwritten if passed in directly during login
-				'identifier'		=> array(
-					'api' 		=> 'user/email',
-					'key'		=> 'email',
-					'type'		=> 'email',
-				), //key to url (expected JSON, but can also be done with other information too...)
-			),
-			'twitter'		=> array(
-				'key'				=> '',
-				'secret'			=> '',
-				'scope'				=> false, //OAUTH1 does not have scopes, make sure to be false
-				'callback_url'		=> '', //note that we'll add in a custom "provider" query parameter, so that is reserved!
-				'identifier'		=> array(
-					'api'	=> 'blah',
-					'key'	=> 'id', //this is the json key
-					'type'	=> 'id', //this the type prefix, all identifiers that are to be federated need the same type, if you have different types, they not will be federated even if you ask it to, in order to prevent confusion between the same values
-				), //twitter id is better than their name handle
-			),
+		'external_providers'				=> array( //can be false or empty array, below is an example of OAuth2 + OAuth1
+			// 'github'		=> array(
+			// 	'key'				=> '',
+			// 	'secret'			=> '',
+			// 	'scope'				=> array(), //if scopes change, it will require everybody to relogin
+			// 	'callback_url'		=> '', //if it is not set (or empty), it will be auto set to the current url in which the code is called, this will be overwritten if passed in directly during login
+			// 	'identifier'		=> array(
+			// 		'api' 		=> 'user/email',
+			// 		'key'		=> 'email',
+			// 		'type'		=> 'email',
+			// 	), //key to url (expected JSON, but can also be done with other information too...)
+			// ),
+			// 'twitter'		=> array(
+			// 	'key'				=> '',
+			// 	'secret'			=> '',
+			// 	'scope'				=> false, //OAUTH1 does not have scopes, make sure to be false
+			// 	'callback_url'		=> '', //note that we'll add in a custom "provider" query parameter, so that is reserved!
+			// 	'identifier'		=> array(
+			// 		'api'	=> '',
+			// 		'key'	=> 'id', //this is the json key
+			// 		'type'	=> 'id', //this the type prefix, all identifiers that are to be federated need the same type, if you have different types, they not will be federated even if you ask it to, in order to prevent confusion between the same values
+			// 	), //twitter id is better than their name handle, they don't provide email
+			// ),
 		),
-		'external_token_encryption'			=> '', //if this is false, we will not encrypt the token data, otherwise provide a random key, only set this once, if you change this option, you'll need to manually encrypt/decrypt all the database tokens
+		'external_token_encryption'			=> false, //if this is false, we will not encrypt the token data, otherwise provide a random key, only set this once, if you change this option, you'll need to manually encrypt/decrypt all the database tokens
 		//cache options
 		'cache_directory'					=> '', //this is only relevant to the FileSystemCache
 		'cache_ttl'							=> 3600, //maximum time an item can live in memory, this is only relevant to APCCache

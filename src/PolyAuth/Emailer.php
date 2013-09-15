@@ -108,6 +108,7 @@ class Emailer{
 		if($this->options['email_smtp']){
 			$this->mailer->IsSMTP();
 			$this->mailer->Host = $this->options['email_host'];
+			if($this->options['email_port']) $this->mailer->Port = $this->options['email_port'];
 			if($this->options['email_auth']){
 				$this->mailer->SMTPAuth = true;
 				$this->mailer->Username = $this->options['email_username'];
@@ -129,6 +130,9 @@ class Emailer{
 		if($alt_body) $this->mailer->AltBody = $alt_body;
 		
 		if(!$this->mailer->Send()){
+			if($this->logger){
+				$this->logger->error($this->mailer->ErrorInfo);
+			}
 			return false;
 		}
 		
