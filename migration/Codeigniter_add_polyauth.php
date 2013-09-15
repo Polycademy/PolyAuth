@@ -1,5 +1,7 @@
 <?php defined('BASEPATH') OR exit('No direct script access allowed');
 
+use PolyAuth\Storage\MySQLAdapter;
+use PolyAuth\Options;
 use RBAC\Permission;
 use RBAC\Role\Role;
 use RBAC\Manager\RoleManager;
@@ -95,7 +97,7 @@ class Migration_add_polyauth extends CI_Migration {
 			),
 			'email' => array(
 				'type' => 'VARCHAR',
-				'constraint' => '100'
+				'constraint' => '100',
 				'null'	=> TRUE,
 			),
 			'activationCode' => array(
@@ -260,7 +262,7 @@ class Migration_add_polyauth extends CI_Migration {
 		$this->db->query($create_auth_subject_role);
 		
 		//time to insert the default permission and role data
-		$role_manager = new RoleManager($this->db->conn_id);
+		$role_manager = new RoleManager(new MySQLAdapter($this->db->conn_id, new Options));
 		
 		foreach($default_role_permissions as $role => $permissions_array){
 		
