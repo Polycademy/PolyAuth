@@ -192,7 +192,7 @@ class UserSessions implements LoggerAwareInterface{
 			}
 		}
 
-		$row = $this->storage->get_login_check($identity);
+		$row = $this->storage->get_login_check($data['identity']);
 
 		if($row){
 
