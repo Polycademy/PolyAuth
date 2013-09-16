@@ -296,21 +296,23 @@ class UserSessions implements LoggerAwareInterface{
 	
 	/**
 	 * Checks if the user is logged in and possesses all the passed in parameters.
-	 * The parameters operate on all or nothing except $identities. $identities operates like "has to be at least one of them".
+	 * The parameters operate on all or nothing except $identities and $id. $identities and $id operates like "has to be at least one of them".
 	 * This first checks if the session exists, and if not checks if the user exists in this script's memory.
 	 * 
 	 * @param $permissions array of permission names | string | false
 	 * @param $roles array of role names | string | false
 	 * @param $identities array of user identities | string | false (this must match your login_identity option)
+	 * @param $ids array of user ids | integer | false
 	 * @return boolean
 	 */
-	public function authorized($permissions = false, $roles = false, $identities = false){
+	public function authorized($permissions = false, $roles = false, $identities = false, $ids = false){
 	
 		$this->session_zone->start_session();
 		
 		$permissions = ($permissions) ? (array) $permissions : false;
 		$roles = ($roles) ? (array) $roles : false;
 		$identities = ($identities) ? (array) $identities : false;
+		$ids = ($ids) ? (array) $ids : false;
 
 		//if the session and $this->user don't exist, then the user is not logged in
 		//if one of them exists, then there's a chance that the session data got lost in a single instance of the script
@@ -336,6 +338,11 @@ class UserSessions implements LoggerAwareInterface{
 			return false;
 		}
 		
+		//id check
+		if($ids AND !in_array($user_id, $ids)){
+			return false;
+		}
+
 		//identity check
 		if($identities AND !in_array($row->{$this->options['login_identity']}, $identities)){
 			return false;
@@ -361,7 +368,9 @@ class UserSessions implements LoggerAwareInterface{
 		
 			//we need to acquire role objects first because has_role only accepts objects, not strings
 			$role_objects = $this->rbac->get_roles($roles);
+
 			foreach($role_objects as $role_object){
+
 				if(!$this->user->has_role($role_object)){
 					return false;
 				}
