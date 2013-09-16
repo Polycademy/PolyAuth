@@ -23,7 +23,8 @@
 		"codeception/codeception": "1.6.7"
 	},
 	"suggest": {
-		"ext-apc": "Can provide a faster memory cache for PolyAuth."
+		"ext-apc": "Can provide a faster memory cache for PolyAuth.",
+		"ext-mcrypt": "Required for encryption and decryption."
 	},
 	"config": {
 		"bin-dir": "bin/"
