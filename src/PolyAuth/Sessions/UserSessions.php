@@ -536,8 +536,10 @@ class UserSessions implements LoggerAwareInterface{
 	 */
 	protected function check_inactive(UserAccount $user){
 	
-		if($user['active'] === 0){
+		if($user['active'] == 0){
+
 			$this->login_failure(false, $this->lang['user_inactive']);
+
 		}
 	
 	}
@@ -550,7 +552,7 @@ class UserSessions implements LoggerAwareInterface{
 	 */
 	protected function check_banned(UserAccount $user){
 	
-		if($user['banned'] === 1){
+		if($user['banned'] == 1){
 			$this->login_failure(false, $this->lang['user_banned']);
 		}
 	
@@ -564,7 +566,7 @@ class UserSessions implements LoggerAwareInterface{
 	 */
 	protected function check_password_change(UserAccount $user){
 		
-		if($user['passwordChange'] === 1){
+		if($user['passwordChange'] == 1){
 			throw new UserPasswordChangeException($this->lang['password_change_required']);
 		}
 		
