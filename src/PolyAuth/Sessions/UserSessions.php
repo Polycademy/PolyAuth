@@ -80,7 +80,8 @@ class UserSessions implements LoggerAwareInterface{
 	}
 	
 	/**
-	 * Start the tracking sessions.
+	 * Start the tracking sessions. You should only call this once. However multiple calls to this function
+	 * is idempotent.
 	 * It will:
 	 * 		assign anonymous users an anonymous session, 
 	 *   	attempt autologin, 
@@ -93,24 +94,32 @@ class UserSessions implements LoggerAwareInterface{
 	 */
 	public function start(){
 
+		//if the user property is filled, this means start has already been called
+		//if it has been called, we don't want to do anything here as it can cause a conflict
+		//or overwrite sessions
+		if(!empty($this->user)){
+			return;
+		}
+
 		//this starts the session to allow variables to be read from the session
 		$this->session_zone->start_session();
-		
-		//if the user is not logged in, we're going to reset an anonymous session and attempt autologin
-		if(!$this->authorized()){
-		
-			//beware that this means an anonymous session will never time out
-			$this->set_default_session();
+
+			//if the user is not logged in, we're going to reset an anonymous session and attempt autologin
+			if(!$this->authorized()){
+
+				//beware that this means an anonymous session will never time out
+				$this->set_default_session();
+				
+				if($this->options['login_autologin']){
+					$this->autologin();
+				}
 			
-			if($this->options['login_autologin']){
-				$this->autologin();
+			}else{
+				
+				$this->user = $this->accounts_manager->get_user($this->session_zone['user_id']);
+			
 			}
-		
-		}else{
-		
-			$this->user = $this->accounts_manager->get_user($this->session_zone['user_id']);
-		
-		}
+
 
 		//time out long lived logged in sessions
 		if($this->options['session_expiration'] AND is_numeric($this->session_zone['timeout'])){
