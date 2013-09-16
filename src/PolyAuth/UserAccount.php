@@ -48,13 +48,31 @@ class UserAccount extends Subject implements \ArrayAccess{
 	
 	/**
 	 * Boolean on check on whether this particular user has a particular role.
+	 * Checks based on name.
 	 *
-	 * @param $role object
+	 * @param $role object|string
 	 * @return boolean
 	 */
 	public function has_role($role){
-		$roles = $this->getRoleset()->getRoles();
-		return in_array($role, $roles);
+
+		if($role instanceof Role){
+			$role_name = $role->name;
+		}else{
+			$role_name = $role;
+		}
+
+		$registered_roles = $this->getRoleset()->getRoles();
+
+		foreach($registered_roles as $role_to_be_checked){
+
+			if($role_to_be_checked->name == $role_name){
+				return true;
+			}
+
+		}
+
+		return false;
+
 	}
 	
 	/**
