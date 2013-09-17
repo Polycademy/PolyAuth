@@ -319,7 +319,7 @@ class MySQLAdapter implements StorageInterface{
 		$sth = $this->db->prepare($query);
 		$sth->bindValue('ip_address', $data['ipAddress'], PDO::PARAM_STR);
 		$sth->bindValue('created_on', $data['createdOn'], PDO::PARAM_STR);
-		$sth->bindValue('lastLogin', $data['last_login'], PDO::PARAM_STR);
+		$sth->bindValue('last_login', $data['lastLogin'], PDO::PARAM_STR);
 		$sth->bindValue('active', $data['active'], PDO::PARAM_INT);
 		
 		try{

@@ -245,6 +245,28 @@ class UserSessions implements LoggerAwareInterface{
 		return true;
 	
 	}
+
+	public function external_login($identity){
+
+		$row = $this->storage->get_login_check($identity);
+		$user_id = $row->id;
+		
+		$this->user = $this->accounts_manager->get_user($user_id);
+
+		if(!empty($this->options['login_lockout'])){
+			$this->login_attempts->clear($this->user[$this->options['login_identity']]);
+		}
+		$this->storage->update_last_login($this->user['id'], $this->get_ip());
+		
+		$this->session_zone->regenerate();
+		$this->set_default_session($user_id, false);
+		
+		$this->check_inactive($this->user);
+		$this->check_banned($this->user);
+		
+		return true;
+	
+	}
 	
 	/**
 	 * Login failure should be called when the login did not succeed. This throws the LoginValidationException.
