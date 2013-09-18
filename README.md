@@ -3,7 +3,7 @@ PolyAuth
 
 [![Build Status](https://travis-ci.org/Polycademy/PolyAuth.png?branch=master)](https://travis-ci.org/Polycademy/PolyAuth)
 
-PolyAuth is a PHP authentication and authorisation library that is independent from any frameworks.
+PolyAuth is a PHP authentication and authorisation library that is independent from any frameworks and any databases.
 
 NOTE: This library is not yet ready for prime time! Still need to fix some bugs. If you find any, make sure to tell me on the issues. But it's being actively worked on.
 
@@ -11,7 +11,7 @@ Dependencies
 ------------
 
 - PHP >= 5.4.12
-- PDO + MySQL
+- PDO + MySQL or any storage adapter
 - leighmacdonald/php_rbac
 - ircmaxell/password-compat
 - PHPMailer/PHPMailer
@@ -21,7 +21,7 @@ Dependencies
 Features
 ---------
 
-- User Account Management (includes account bans) - Make sure your identity is unique, if you're using the identity as the display name, don't allow duplicate display names. Of course you can always add an extra field called "displayName" to allow duplicate display names.
+- User Account Management (includes account bans) - Make sure your identity is unique, if you're using the identity as the display name, don't allow duplicate display names. You can mix up usernames and emails, so that emails are identitities and usernames are display names.
 - Role Based Access Control at NIST Level 1
 - Password Encryption based on Bcrypt
 - Automatic Emailing for Activation and Forgotten Identity/Password (can be turned off and used manually (SMTP/mail support))
@@ -43,13 +43,13 @@ Features
 - Authentication Strategy Interface Server Side Implementation - Can be used for HTTP Basic, Cookie, OAuth 1 & 2 Consumer Access Delegation, OAuth 2 Provider, and OpenID. (HTTP Digest is not supported due to its crytographic constraints)
 - Unit tested with Continuous Integration at Travis so you can trust that it works!
 - Optional caching library involving APC or Filesystem. It's also extendable with the caching interface.
+- Supports storage adapters for Database Independent Functionality
 
 To Do
 ------
 
 - Add OAuth consumption, OpenID consumption, Hawk and Oz authentication strategies
 - SQL Migration
-- Storage Interface for Database Independent Functionality, will need to abstract PHPRBAC
 - Add OAuth2 provision
 
 Install with Composer
