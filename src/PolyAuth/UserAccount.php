@@ -4,6 +4,7 @@ namespace PolyAuth;
 
 use RBAC\Subject\Subject;
 use RBAC\Role\RoleSet;
+use RBAC\Role\Role;
 
 class UserAccount extends Subject implements \ArrayAccess{
 
