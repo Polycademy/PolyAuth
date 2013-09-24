@@ -119,7 +119,8 @@ class MySQLAdapter implements StorageInterface{
 	}
 
 	/**
-	 * Checks for duplicate identity, returns true if the identity exists, false if the identity already exist
+	 * Checks for duplicate identity, returns true if the identity exists, false if the identity already exist.
+	 * This can also be used to check if the identity exists in the database.
 	 *
 	 * @param $identity string
 	 * @return boolean - true if duplicate, false if no duplicate

@@ -28,6 +28,13 @@ use OAuth\OAuth1\Signature\Exception\UnsupportedHashAlgorithm;
 use OAuth\OAuth2\Service\Exception\InvalidScopeException;
 use OAuth\OAuth2\Service\Exception\MissingRefreshTokenException;
 
+
+//here's what needs to happen:
+//1. cascading multiple strategies
+//2. pass in providers here and in options
+//3. autologin can cascade easily
+//4. login cannot cascade easily, it requires data to be passed in and is unique to each strategy
+
 //try extending OAuthStrategy to CookieStrategy, to allow independent logins and autologin functionality
 class OAuthConsumeStrategy implements AuthStrategyInterface{
 

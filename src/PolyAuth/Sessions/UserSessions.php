@@ -23,6 +23,7 @@ use PolyAuth\Exceptions\UserExceptions\UserPasswordChangeException;
 use PolyAuth\Exceptions\UserExceptions\UserNotFoundException;
 use PolyAuth\Exceptions\UserExceptions\UserBannedException;
 use PolyAuth\Exceptions\UserExceptions\UserInactiveException;
+use PolyAuth\Exceptions\ValidationExceptions\StrategyValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\PasswordValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\DatabaseValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\LoginValidationException;
@@ -30,7 +31,7 @@ use PolyAuth\Exceptions\ValidationExceptions\SessionValidationException;
 
 class UserSessions implements LoggerAwareInterface{
 
-	protected $strategy;
+	protected $strategies;
 	protected $storage;
 	protected $options;
 	protected $lang;
@@ -44,7 +45,7 @@ class UserSessions implements LoggerAwareInterface{
 	protected $user;
 
 	public function __construct(
-		AuthStrategyInterface $strategy, 
+		$strategies, 
 		StorageInterface $storage, 
 		Options $options, 
 		Language $language, 
@@ -55,8 +56,19 @@ class UserSessions implements LoggerAwareInterface{
 		Cookies $cookies = null,
 		LoginAttempts $login_attempts = null
 	){
-		
-		$this->strategy = $strategy;
+
+		//convert $strategies into an array
+		if(!is_array($strategies)){
+			$strategies = array($strategies);
+		}
+
+		foreach($strategies as $strategy){
+			if(!$strategy instanceof AuthStrategyInterface){
+				throw StrategyValidationException('Authentication strategies need to implement AuthStrategyInterface.');
+			}
+		}
+
+		$this->strategies = $strategies;
 		$this->storage = $storage;
 		$this->options = $options;
 		$this->lang = $language;
