@@ -155,9 +155,13 @@ class UserSessions implements LoggerAwareInterface{
 	 * @return boolean
 	 */
 	protected function autologin(){
-		
-		$user_id = $this->strategy->autologin();
-		
+
+		//the first strategy to provide a user id wins the cake
+		foreach($this->strategies as $strategy){
+			$user_id = $strategy->autologin();
+			if($user_id) break;
+		}
+				
 		if($user_id){
 		
 			$this->user = $this->accounts_manager->get_user($user_id);
@@ -195,21 +199,51 @@ class UserSessions implements LoggerAwareInterface{
 	 * @return boolean
 	 */
 	public function login(array $data = null, $force_login = false){
+
+		//TODO!!
+		//the access code and the access to the user's API should be kept in either the UserAccount or the OAuthStrategy
+		//probably best in the UserAccount, the UserAccount needs to be filled with an object API
+
+		//currently users have to redirect to the provider first, then call login, because it needs the code
+		//that's stupid
+		//we should be able to call login and receive the authorisationUri to redirect
+		//and then be automatically be logged in when the start() and hence autologin is called
+		//IN FACT
+		//login->should get the auth Uri
+		//autologin->should actually do the actual the logging in for Oauth Uri
+		//autologin can do both, do the cookie based autologin, and the real logging in
+
+
+		//each strategy will take the passed in $data as parameters and return either 'identity' and 'password' or 'identity' by itself, only oauth and openid would return 'identity' by itself
+		//and also return 'external' => true!
+		foreach($this->strategies as $key => $strategy){
+			$data = $strategy->login_hook($data);
+			if($data){
+				//strategy key will be kept in case we need to identify which strategy was used
+				$strategy_key = $key;
+				break;
+			}
+		}
 		
-		//the login hook will manipulate the passed in $data and return at least 'identity' and 'password'
-		//in the case of Oauth, the identity and password may be created on the fly, as soon as the third party authenticates
-		$data = $this->strategy->login_hook($data);
-		
-		if(!is_array($data) OR !isset($data['identity']) OR !isset($data['password'])){
+		//if no data or no identity, then fail
+		if(!is_array($data) OR !isset($data['identity'])){
+			$this->login_failure($data, $this->lang['login_unsuccessful']);
+		}
+
+		//if it was not external and didn't have password, then fail
+		if(!isset($data['external']) AND !isset($data['password'])){
 			$this->login_failure($data, $this->lang['login_unsuccessful']);
 		}
 		
-		if(!$force_login AND !empty($this->options['login_lockout'])){
-			//is the current login attempt locked out?
-			$lockout_time = $this->login_attempts->locked_out($data['identity']);
-			//if the lockout_time is true, non-zero integer
-			if($lockout_time){
-				$this->login_failure($data, sprintf($this->lang['login_lockout'], $lockout_time));
+		//we only enforce lockout if it's not an external login attempt
+		if(!isset($data['external'])){
+			if(!$force_login AND !empty($this->options['login_lockout'])){
+				//is the current login attempt locked out?
+				$lockout_time = $this->login_attempts->locked_out($data['identity']);
+				//if the lockout_time is true, non-zero integer
+				if($lockout_time){
+					$this->login_failure($data, sprintf($this->lang['login_lockout'], $lockout_time));
+				}
 			}
 		}
 
@@ -217,18 +251,21 @@ class UserSessions implements LoggerAwareInterface{
 
 		if($row){
 
-			if(password_verify($data['password'], $row->password)){
-			
-				//identity is valid, and password has been verified
-				$user_id = $row->id;
+			if(!isset($data['external'])){
+
+				if(!password_verify($data['password'], $row->password)){
 				
-			}else{
-			
-				//this is only attempt that is considered a real failed login attempt
-				//the third parameter is true in order to implement login throttling
-				$this->login_failure($data, $this->lang['login_password'], true);
-			
+					//this is the only attempt that is considered a real failed login attempt
+					//because the password failed
+					//the third parameter is true in order to implement login throttling
+					$this->login_failure($data, $this->lang['login_password'], true);
+				
+				}
+
 			}
+
+			//if it was external, then there is no password
+			$user_id = $row->id;
 
 		}else{
 
@@ -247,11 +284,15 @@ class UserSessions implements LoggerAwareInterface{
 		
 		$this->check_inactive($this->user);
 		$this->check_banned($this->user);
-		$this->check_password_change($this->user);
+		//external logins dont have passwords
+		if(!isset($data['external'])){
+			$this->check_password_change($this->user);
+		}
 		
 		//if it has passed everything, we're going to call set_autologin to setup persistent login if autologin is boolean true
 		if(!empty($data['autologin']) AND $this->options['login_autologin']){
-			$this->strategy->set_autologin($user_id);
+			//strategy key will identify the particular strategy that was used to actually login
+			$this->strategies[$strategy_key]->set_autologin($user_id);
 		}
 		
 		return true;
