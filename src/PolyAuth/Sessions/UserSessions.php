@@ -116,21 +116,21 @@ class UserSessions implements LoggerAwareInterface{
 		//this starts the session to allow variables to be read from the session
 		$this->session_zone->start_session();
 
-			//if the user is not logged in, we're going to reset an anonymous session and attempt autologin
-			if(!$this->authorized()){
+		//if the user is not logged in, we're going to reset an anonymous session and attempt autologin
+		if(!$this->authorized()){
 
-				//beware that this means an anonymous session will never time out
-				$this->set_default_session();
-				
-				if($this->options['login_autologin']){
-					$this->autologin();
-				}
+			//beware that this means an anonymous session will never time out
+			$this->set_default_session();
 			
-			}else{
-				
-				$this->user = $this->accounts_manager->get_user($this->session_zone['user_id']);
-			
+			if($this->options['login_autologin']){
+				$this->autologin();
 			}
+		
+		}else{
+			
+			$this->user = $this->accounts_manager->get_user($this->session_zone['user_id']);
+		
+		}
 
 
 		//time out long lived logged in sessions
