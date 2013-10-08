@@ -19,7 +19,7 @@ class SessionZone implements \ArrayAccess{
 
 	/**
 	 * Sets a new name for the session. Use this when you have multiple apps on the same domain requiring different sessions.
-	 * It will automatically dd in the cookie prefix. This needs to be called before session_start().
+	 * It will automatically add in the cookie prefix. This needs to be called before session_start().
 	 * A second of doing this is actually using the Options and reinstantiating PolyAuth
 	 * @param  string $name Name of the session
 	 * @return string       Name of the current session
