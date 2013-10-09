@@ -3,19 +3,14 @@
 namespace PolyAuth\AuthStrategies;
 
 use PolyAuth\Storage\StorageInterface;
-use PolyAuth\AuthStrategies\Persistence\PersistenceInterface;
 use PolyAuth\Options;
 use Psr\Log\LoggerInterface;
 use PolyAuth\Cookies;
 use PolyAuth\Security\Random;
 
-/*
-	Every Strategy 
- */
 class CookieStrategy implements StrategyInterface{
 
 	protected $storage;
-	protected $persistence;
 	protected $options;
 	protected $logger;
 	protected $cookies;
@@ -23,7 +18,6 @@ class CookieStrategy implements StrategyInterface{
 	
 	public function __construct(
 		StorageInterface $storage, 
-		PersistenceInterface $persistence, 
 		Options $options, 
 		LoggerInterface $logger = null,
 		Cookies $cookies = null, 
@@ -31,7 +25,6 @@ class CookieStrategy implements StrategyInterface{
 	){
 		
 		$this->storage = $storage;
-		$this->persistence = $persistence;
 		$this->options = $options;
 		$this->logger = $logger;
 		$this->cookies = ($cookies) ? $cookies : new Cookies($options);
@@ -48,7 +41,7 @@ class CookieStrategy implements StrategyInterface{
 	public function setLogger(LoggerInterface $logger){
 		$this->logger = $logger;
 	}
-	
+
 	/**
 	 * Autologin Cookie Strategy, this checks whether the autologin cookie exists, and checks if the cookie's credentials are valid.
 	 * If it is valid, it will return the user id. It may also extend the autologin expiration time.

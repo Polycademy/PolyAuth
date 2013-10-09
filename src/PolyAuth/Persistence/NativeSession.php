@@ -1,21 +1,30 @@
 <?php
 
-namespace PolyAuth\AuthStrategies\Persistence;
+namespace PolyAuth\Persistence;
 
 use PolyAuth\Options;
 
 /**
- * NativeSession implements the native PHP session handler to handle the persistence of server side sessions. 
- * Native sessions are easily extendable, by default it uses file storage. You can use Redis, Memcache or your 
- * own custom implementation.
- * Native sessions are not RESTful, as the server is keeping track of client side sessions. If you're building an API
- * or interacting with a rich client, you should try using Memory instead.
- * Note that if you are implementing the CookieStrategy, you must use NativeSession!
+ * NativeSession implements the native PHP session handler to handle the server side sessions for the currently 
+ * authenticated user. When sessions are not available, such as when they are disabled, this class just fallsback 
+ * onto memory implementation of $_SESSION, which will only be persisted for the lifetime of the PHP process or 
+ * request/response. So this will work even when you're not using cookies and trying to be RESTful. This implementation 
+ * will not work in PHP daemons such as Ratchet. This is because $_SESSION is a global variable for the entire process. 
+ * Therefore all the session operations like login and logout would operate globally. There would need to be a more
+ * fine grained session implementation such as Symfony Sessions.
  */
 class NativeSession implements PersistenceInterface{
 
 	protected $options;
-	
+
+	/**
+	 * This determines whether NativeSession is using memory or native sessions to handle 
+	 * the currently authenticated session. Memory would be used for API related applications 
+	 * whereas native sessions would be used for browser related applications that support cookies.
+	 * @var boolean
+	 */
+	protected $using_sessions = false;
+
 	public function __construct(Options $options){
 
 		$this->options = $options;
@@ -32,7 +41,7 @@ class NativeSession implements PersistenceInterface{
 	 * @param  string $name Name of the session
 	 * @return string       Name of the current session
 	 */
-	public function set_name($name){
+	public function set_session_name($name){
 
 		return session_name($this->options['cookie_prefix'] . $name);
 
@@ -42,7 +51,7 @@ class NativeSession implements PersistenceInterface{
 	 * Gets the current session name.
 	 * @return string Name of the current session
 	 */
-	public function get_name(){
+	public function get_session_name(){
 
 		return session_name();
 
@@ -52,7 +61,7 @@ class NativeSession implements PersistenceInterface{
 	 * Gets the current session id
 	 * @return int Integer of the session id
 	 */
-	public function get_id(){
+	public function get_session_id(){
 
 		return session_id();
 
@@ -62,7 +71,7 @@ class NativeSession implements PersistenceInterface{
 	 * Detects whether the session currently enabled and active.
 	 * @return boolean
 	 */
-	public function is_started(){
+	public function is_session_started(){
 
 		return (session_status() == PHP_SESSION_ACTIVE);
 
@@ -73,10 +82,20 @@ class NativeSession implements PersistenceInterface{
 	 * It will only do this if the session isn't already started.
 	 * Before you want to write data to the session, use this first.
 	 */
-	public function start_session(){
+	public function start(){
 
-		if(!$this->is_started()){
-			session_start();
+		//some strategies will want to ensure that serverside sessions are not set via native implementation because they use cookies
+		//so basically we need some way of strategies preventing the use of native sessions!
+		//OR we can just use a completely abstracted session implementation that doesn't necessarily set cookies.
+		//Kind of similar to Codeigniter
+		//
+
+		//only when sessions haven't been previously started, do we attempt a session start
+		if(!$this->is_session_started()){
+			$this->using_sessions = session_start();
+			if(!isset($_SESSION)){
+				$_SESSION = array();
+			}
 		}
 
 	}
@@ -85,9 +104,11 @@ class NativeSession implements PersistenceInterface{
 	 * Commits the session and closes the file lock.
 	 * After you finish writing data to the session use this.
 	 */
-	public function commit_session(){
+	public function commit(){
 
-		session_write_close();
+		if($this->using_sessions){
+			session_write_close();
+		}
 
 	}
 
@@ -101,9 +122,11 @@ class NativeSession implements PersistenceInterface{
 	 */
 	public function regenerate(){
 
-		$this->start_session();
-		session_regenerate_id(true);
-		$this->commit_session();
+		$this->start();
+		if($this->using_sessions){
+			session_regenerate_id(true);
+		}
+		$this->commit();
 
 	}
 
@@ -115,9 +138,12 @@ class NativeSession implements PersistenceInterface{
 	 */
 	public function destroy(){
 
-		$this->start_session();
-		session_unset();
-		session_destroy();
+		$this->start();
+		if($this->using_sessions){
+			session_unset();
+			session_destroy();
+		}
+		unset($_SESSION);
 
 	}
 

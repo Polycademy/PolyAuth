@@ -21,7 +21,7 @@ use PolyAuth\Accounts\AccountsManager;
 use PolyAuth\Accounts\Rbac;
 
 use PolyAuth\Cookies;
-use PolyAuth\Authentication\Persistence\SessionZone;
+use PolyAuth\Persistence\PersistenceInterface;
 use PolyAuth\Security\LoginAttempts;
 
 use PolyAuth\Exceptions\UserExceptions\UserPasswordChangeException;
@@ -95,6 +95,23 @@ class Authenticator implements LoggerAwareInterface{
 	public function setLogger(LoggerInterface $logger){
 		$this->logger = $logger;
 	}
+
+
+	//THIS NEEDS to a couple things:
+	//Given a array of strategies, if a particular strategy gets used in either autologin or login, this becomes
+	//the preferred strategy. So we will always use that strategy for the duration of the script.
+	//1. Autologin
+	//	COOKIE:
+	//		CookieStrategy needs to acquire the Autologin Cookie, validate it and return the correct user id
+	//		Given the user id, we will instantiate a session for that user and regenerate the session.
+	//2. Login
+	//3. Logout
+	//4. Check authorisation and permissions
+	//5. Get the currently authenticated user
+
+
+
+
 	
 	/**
 	 * Start the tracking sessions. You should only call this once. However multiple calls to this function
@@ -166,7 +183,7 @@ class Authenticator implements LoggerAwareInterface{
 			$user_id = $strategy->autologin();
 			if($user_id) break;
 		}
-				
+		
 		if($user_id){
 		
 			$this->user = $this->accounts_manager->get_user($user_id);
