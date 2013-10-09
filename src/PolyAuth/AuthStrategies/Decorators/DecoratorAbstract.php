@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * DecoratorAbstract allows the creation of flexible nested decorators.
+ * Decorators can be stacked. They can also have methods that overwrite each other.
+ * Decorators can omit methods that parent decorators have defined and/or child decorators have defined.
+ * Methods will cascade to the original child object.
+ * Properties will read and set from the original child object except when your instance has the property defined.
+ */
 abstract class DecoratorAbstract{
 
 	protected $strategy;
