@@ -2,15 +2,20 @@
 
 namespace PolyAuth\AuthStrategies;
 
-use Psr\Log\LoggerInterface;
-use PolyAuth\Options;
 use PolyAuth\Storage\StorageInterface;
+use PolyAuth\AuthStrategies\Persistence\PersistenceInterface;
+use PolyAuth\Options;
+use Psr\Log\LoggerInterface;
 use PolyAuth\Cookies;
 use PolyAuth\Security\Random;
 
-class CookieStrategy implements AuthStrategyInterface{
+/*
+	Every Strategy 
+ */
+class CookieStrategy implements StrategyInterface{
 
 	protected $storage;
+	protected $persistence;
 	protected $options;
 	protected $logger;
 	protected $cookies;
@@ -18,6 +23,7 @@ class CookieStrategy implements AuthStrategyInterface{
 	
 	public function __construct(
 		StorageInterface $storage, 
+		PersistenceInterface $persistence, 
 		Options $options, 
 		LoggerInterface $logger = null,
 		Cookies $cookies = null, 
@@ -25,6 +31,7 @@ class CookieStrategy implements AuthStrategyInterface{
 	){
 		
 		$this->storage = $storage;
+		$this->persistence = $persistence;
 		$this->options = $options;
 		$this->logger = $logger;
 		$this->cookies = ($cookies) ? $cookies : new Cookies($options);

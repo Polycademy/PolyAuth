@@ -2,8 +2,6 @@
 
 namespace PolyAuth\AuthStrategies\Persistence;
 
-use Psr\Log\LoggerAwareInterface;
-
 interface PersistenceInterface extends \ArrayAccess{
 
 	public function is_started();
