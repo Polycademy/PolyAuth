@@ -1,10 +1,18 @@
 <?php
 
-namespace PolyAuth\Sessions;
+namespace PolyAuth\AuthStrategies\Persistence;
 
 use PolyAuth\Options;
 
-class SessionZone implements \ArrayAccess{
+/**
+ * NativeSession implements the native PHP session handler to handle the persistence of server side sessions. 
+ * Native sessions are easily extendable, by default it uses file storage. You can use Redis, Memcache or your 
+ * own custom implementation.
+ * Native sessions are not RESTful, as the server is keeping track of client side sessions. If you're building an API
+ * or interacting with a rich client, you should try using Memory instead.
+ * Note that if you are implementing the CookieStrategy, you must use NativeSession!
+ */
+class NativeSession implements PersistenceInterface{
 
 	protected $options;
 	
@@ -56,7 +64,7 @@ class SessionZone implements \ArrayAccess{
 	 */
 	public function is_started(){
 
-        return (session_status() == PHP_SESSION_ACTIVE);
+		return (session_status() == PHP_SESSION_ACTIVE);
 
 	}
 
@@ -108,8 +116,8 @@ class SessionZone implements \ArrayAccess{
 	public function destroy(){
 
 		$this->start_session();
-        session_unset();
-        session_destroy();
+		session_unset();
+		session_destroy();
 
 	}
 

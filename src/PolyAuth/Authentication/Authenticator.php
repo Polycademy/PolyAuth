@@ -1,6 +1,11 @@
 <?php 
 
-namespace PolyAuth\Sessions;
+/*
+ Authenticator should accept: an array of strategies (that can be wrapped in decorators) and an optional server side persistence object
+ */
+
+
+namespace PolyAuth\Authentication;
 
 use Psr\Log\LoggerInterface;
 use Psr\Log\LoggerAwareInterface;
@@ -16,8 +21,8 @@ use PolyAuth\Accounts\AccountsManager;
 use PolyAuth\Accounts\Rbac;
 
 use PolyAuth\Cookies;
-use PolyAuth\Sessions\SessionZone;
-use PolyAuth\Sessions\LoginAttempts;
+use PolyAuth\Authentication\Persistence\SessionZone;
+use PolyAuth\Security\LoginAttempts;
 
 use PolyAuth\Exceptions\UserExceptions\UserPasswordChangeException;
 use PolyAuth\Exceptions\UserExceptions\UserNotFoundException;
@@ -29,7 +34,7 @@ use PolyAuth\Exceptions\ValidationExceptions\DatabaseValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\LoginValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\SessionValidationException;
 
-class UserSessions implements LoggerAwareInterface{
+class Authenticator implements LoggerAwareInterface{
 
 	protected $strategies;
 	protected $storage;

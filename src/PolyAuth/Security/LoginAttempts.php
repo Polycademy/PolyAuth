@@ -1,6 +1,6 @@
 <?php
 
-namespace PolyAuth\Sessions;
+namespace PolyAuth\Security;
 
 use Psr\Log\LoggerInterface;
 use Psr\Log\LoggerAwareInterface;
