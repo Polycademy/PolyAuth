@@ -52,7 +52,7 @@ class Language implements \ArrayAccess{
 		'role_register_unsuccessful'			=> 'Role failed to be registered.',
 		'role_assignment_unsuccessful'			=> 'Could not assign the role to the specified account.',
 		// Permissions
-		'permission_select_unsuccessful'			=> 'Could not select permissions.',
+		'permission_select_unsuccessful'		=> 'Could not select permissions.',
 		'permission_not_exists'					=> 'Specified permission(s) don\'t exist.',
 		'permission_delete_unsuccessful'		=> 'Unable to delete permission.',
 		'permission_save_unsuccessful'			=> 'Unable to save one of the permissions.',
@@ -63,6 +63,8 @@ class Language implements \ArrayAccess{
 		'email_forgotten_password_subject'		=> 'Forgotten Password PolyAuth',
 		// Session
 		'session_invalid_key'					=> 'You cannot manipulate properties on the session object that have reserved keys.',
+		// Logic
+		'logic_persistence'						=> 'Cannot switch on persistence for sessions without a persistence object implementing PersistenceInterface.',
 	);
 	
 	public function __construct(array $language = null){

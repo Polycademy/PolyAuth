@@ -17,12 +17,10 @@ class Options implements \ArrayAccess{
 		//password options
 		'hash_method'						=> PASSWORD_DEFAULT, //PASSWORD_DEFAULT || PASSWORD_BCRYPT
 		'hash_rounds'						=> 10,
-		//session options
-		'session_handler'					=> null, //SessionHandlerInterface or null (can use EncryptedSessionHandler('abc4345ncu'))
-		'session_save_path'					=> '',
-		'session_cache_limiter'				=> '',
-		'session_cache_expire'				=> '',
+		//session options (used for internal session handling)
+		'session_save_path'					=> '', //for filesystem persistence
 		'session_expiration'				=> 43200, //expiration of a single session (set to 0 for infinite)
+		'session_gc_probability'			=> '1', //probability of running the session garbage collection (percentage change to one decimal place)
 		//cookie options
 		'cookie_domain'						=> '',
 		'cookie_path'						=> '/',
@@ -111,51 +109,10 @@ class Options implements \ArrayAccess{
 			$this->set_options($options);
 		}
 		
-		//this should only run once at startup (should create this as a singleton)
-		if($this->options['session_handler'] !== null){
-			$this->set_session_handler($this->options['session_handler']);
-		}
-		
-		$this->set_session_and_cookie_settings();
-		
 	}
 	
 	public function set_options(array $options){
 		$this->options = array_merge($this->options, $options);
-	}
-	
-	protected function set_session_handler(\SessionHandlerInterface $session_handler = null){
-		
-		session_set_save_handler($session_handler, true);		
-	
-	}
-	
-	protected function set_session_and_cookie_settings(){
-	
-		$session_name = ini_get('session.name');
-		$session_name = $this->options['cookie_prefix'] . $session_name;
-		ini_set('session.name', $session_name);
-		
-		session_set_cookie_params(
-			$this->options['cookie_lifetime'],
-			$this->options['cookie_path'],
-			$this->options['cookie_domain'],
-			$this->options['cookie_secure'],
-			$this->options['cookie_httponly']
-		);
-
-		if(!empty($this->options['session_save_path'])){
-			session_save_path($this->options['session_save_path']);
-		}
-
-		if(!empty($this->options['session_cache_limiter'])){
-			session_cache_limiter($this->options['session_cache_limiter']);
-		}
-
-		if(!empty($this->options['session_cache_expire'])){
-			session_cache_expire($this->options['session_cache_expire']);
-		}
-	
 	}
 	
 	public function offsetSet($offset, $value) {

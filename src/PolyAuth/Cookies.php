@@ -12,6 +12,9 @@ class Cookies{
 	public function __construct(Options $options){
 	
 		$this->options = $options;
+
+		ob_start();
+		register_shutdown_function(array(&$this, 'flush_cookies'));
 		
 	}
 	
@@ -75,6 +78,15 @@ class Cookies{
 		}
 		
 		return $value;
+		
+	}
+
+	/**
+	 * Flushes the cookies that were in the output buffer.
+	 */
+	public function flush_cookies(){
+
+		ob_flush();
 		
 	}
 

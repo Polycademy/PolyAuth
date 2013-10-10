@@ -1,6 +1,6 @@
 <?php
 
-namespace PolyAuth\Caching;
+namespace PolyAuth\Sessions\Persistence;
 
 use Stash\Driver\FileSystem;
 use Stash\Pool;
@@ -11,6 +11,7 @@ class FileSystemCache{
 	protected $cache;
 	protected $namespace;
 
+	//needs to accept the encrypt mechanism! then it will encrypt information
 	public function __construct(Pool $cache = null, FileSystem $driver = null, Options $options = null){
 	
 		$options = ($options) ? $options : new Options;
