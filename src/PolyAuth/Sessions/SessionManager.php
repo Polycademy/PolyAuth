@@ -198,23 +198,6 @@ class SessionManager implements \ArrayAccess{
 
 	}
 
-	protected function generate_session_id(){
-
-		return $this->random->generate(mt_rand(20, 40));
-
-	}
-
-	//called on every call to start(), given propabilities similar to how PHP does it
-	//this runs it on the persistence layer
-	protected function run_gc(){
-
-		//runs some probabilities
-		if((mt_rand(0, 1000)/10) <= $this->options['session_gc_probability']){
-			$this->persistence->purge();
-		}
-
-	}
-
 	/**
 	 * Gets all the data in the session zone.
 	 * If the session expired in between calling start and calling get_all, 
@@ -298,6 +281,23 @@ class SessionManager implements \ArrayAccess{
 		$session_data = $this->get_all();
 		unset($session_data[$offset]);
 		$this->persistence->set($this->session_id, $session_data, $this->session_cache_expiration);
+
+	}
+
+	protected function generate_session_id(){
+
+		return $this->random->generate(mt_rand(20, 40));
+
+	}
+
+	//called on every call to start(), given propabilities similar to how PHP does it
+	//this runs it on the persistence layer
+	protected function run_gc(){
+
+		//runs some probabilities
+		if((mt_rand(0, 1000)/10) <= $this->options['session_gc_probability']){
+			$this->persistence->purge();
+		}
 
 	}
 
