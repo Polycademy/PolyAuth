@@ -1,12 +1,12 @@
 <?php
 
-namespace PolyAuth\Persistence;
+namespace PolyAuth\Sessions;
 
 use PolyAuth\Options;
 use PolyAuth\Language;
-use PolyAuth\Security\Random;
 use PolyAuth\Sessions\Persistence\MemoryPersistence;
 use PolyAuth\Sessions\Persistence\PersistenceAbstract;
+use PolyAuth\Security\Random;
 
 use Stash\Item;
 
@@ -54,9 +54,8 @@ class SessionManager implements \ArrayAccess{
 
 	protected $options;
 	protected $lang;
-	protected $random;
-	protected $memory;
 	protected $persistence;
+	protected $random;
 
 	protected $session_id = false;
 	protected $session_cache_expiration;
@@ -65,17 +64,16 @@ class SessionManager implements \ArrayAccess{
 	public function __construct(
 		Options $options, 
 		Language $language, 
-		Random $random, 
 		PersistenceAbstract $persistence = null, 
+		Random $random = null, 
 		$lock_ttl = false, 
 		$session_cache_expiration = false
 	){
 
 		$this->options = $options;
 		$this->lang = $language;
-		$this->random = $random;
-		$this->memory = $memory;
-		$this->persistence = ($persistence) ? $persistence : new MemoryPersistence;
+		$this->persistence = ($persistence) ? $persistence : new MemoryPersistence();
+		$this->random = ($random) ? $random : new Random();
 
 		if($session_cache_expiration !== false){
 			$this->session_cache_expiration = $session_cache_expiration;

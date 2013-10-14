@@ -48,7 +48,7 @@ Features
 To Do
 ------
 
-- Add OAuth consumption, OpenID consumption, Hawk and Oz authentication strategies
+- Add OAuth consumption, OpenID consumption, and Hawk authentication strategies
 - SQL Migration
 - Add OAuth2 provision
 
@@ -58,6 +58,11 @@ Install with Composer
 ```
 "polycademy/polyauth": "*"
 ```
+
+Testing
+-------
+
+Use --defer-flush with Codeception
 
 Notes
 -----
