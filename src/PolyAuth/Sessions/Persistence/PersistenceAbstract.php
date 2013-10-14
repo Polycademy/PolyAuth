@@ -2,56 +2,28 @@
 
 namespace PolyAuth\Sessions\Persistence;
 
-use Stash\Driver\FileSystem;
-use Stash\Pool;
-use PolyAuth\Options;
-
-class FileSystemCache{
+abstract class PersistenceAbstract{
 
 	protected $cache;
 	protected $namespace;
-
-	//needs to accept the encrypt mechanism! then it will encrypt information
-	public function __construct(Pool $cache = null, FileSystem $driver = null, Options $options = null){
-	
-		$options = ($options) ? $options : new Options;
-		if(!empty($options['cache_directory'])){
-			$driver = ($driver) ? $driver : new FileSystem(array('path' => $options['cache_directory']));
-		}else{
-			$driver = ($driver) ? $driver : new FileSystem;
-		}
-		$cache = ($cache) ? $cache : new Pool;
-		$cache->setDriver($driver);
-		$this->cache = $cache;
-		$this->namespace = 'PolyAuth/';
-	
-	}
 	
 	/**
 	 * Gets an item in the cache.
 	 */
-	public function get($key, $invalidation = false){
+	public function get($key, $invalidation = 0, $arg1 = null, $arg2 = null){
 	
 		$item = $this->cache->getItem($this->namespace . $key);
-		if($invalidation){
-			return $item->get($invalidation);
-		}else{
-			return $item->get();
-		}
+		return $item->get($invalidation, $arg1, $arg2);
 	
 	}
 	
 	/**
 	 * Sets the item in the cache. Expiration is optional, and can be time in seconds, a datetime object or negative.
 	 */
-	public function set($key, $value, $expiration = false){
+	public function set($key, $value, $expiration = null){
 	
 		$item = $this->cache->getItem($this->namespace . $key);
-		if($expiration){
-			return $item->set($value, $expiration);
-		}else{
-			return $item->set($value);
-		}
+		return $item->set($value, $expiration);
 	
 	}
 	
@@ -69,10 +41,10 @@ class FileSystemCache{
 	/**
 	 * Locks an item in the cache to prevent cache stampede. Works with invalidation parameter in $this->get
 	 */
-	public function lock($key){
+	public function lock($key, $ttl = null){
 	
 		$item = $this->cache->getItem($this->namespace . $key);
-		return $item->lock();
+		return $item->lock($ttl);
 	
 	}
 	

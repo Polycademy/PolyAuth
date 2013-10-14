@@ -5,12 +5,31 @@ namespace PolyAuth\Persistence;
 use PolyAuth\Options;
 use PolyAuth\Language;
 use PolyAuth\Security\Random;
-use PolyAuth\Sessions\Memory;
-use PolyAuth\Sessions\Persistence\PersistenceInterface;
+use PolyAuth\Sessions\Persistence\Memory;
+use PolyAuth\Sessions\Persistence\PersistenceAbstract;
+
+use Stash\Item;
 
 use PolyAuth\Exceptions\LogicExceptions\LogicPersistenceException;
 
-// THIS GETS INJECTED INTO AUTHSTRATEGY!
+/**
+ * PLAN B:
+ * new Authenticator(new CookieStrategy(new SessionManager(new Persistence)))
+ * OR
+ * new Authenticator(new CompositeStrategy(new CookieStrategy(new SessionManager(new Persistence)), new HTTPBasicStrategy, new OAuthProviderStrategy))
+ */
+
+/**
+ * This class can be used as a singleton, or shared, or individualised. IT DOES NOT MATTER.
+ * Memory sessions will never be shared! Not between processes, and not between auth strategies (this is because a single auth strategy gets used in the process)
+ * In the case of daemon, memory can be shared, but only when the class is shared. And it's for the duration of that session! But it's unlikely, since a client will elect
+ * to use only one auth strategy for authentication for the duration of the session.
+ */
+
+
+
+// THIS GETS INJECTED INTO AUTHSTRATEGY! This will be a singleton. The same SessionManager will be set for all of the strategies so they can share sessions. Then some of them will use persistence and some will use memory.
+//This means that the persistence can get shared. But never the memory.
 
 /**
  * SessionManager by default will persist sessions in memory. It allows an optional long term persistence 
@@ -29,45 +48,32 @@ class SessionManager implements \ArrayAccess{
 	protected $memory;
 	protected $persistence;
 
-	protected $use_persistence = false;
 	protected $session_id = false;
 
 	public function __construct(
 		Options $options, 
 		Language $language, 
 		Random $random, 
-		Memory $memory, 
-		PersistenceInterface $persistence = null
+		PersistenceAbstract $persistence = null
 	){
 
 		$this->options = $options;
 		$this->lang = $language;
 		$this->random = $random;
 		$this->memory = $memory;
-		$this->persistence = $persistence;
+		$this->persistence = ($persistence) ? $persistence : new Memory;
 
 	}
 
-	//this would be toggled in the start() function of the auth strategies, not in the constructor
-	//it would be dependent on the autologin and login of the auth strategies
 	/**
-	 * When toggled true, this will make subsequent session operations store first on the memory, and then on persistence.
-	 * @param  [type] $toggle [description]
-	 * @return [type]         [description]
+	 * Starts the session tracking or starts a new session. Called at startup. 
+	 * The authentication strategy checks if they have the relevant container of the session id, 
+	 * and if they do they pass in a session id to start().
+	 * This does not set the new or old session onto the client. The auth strategy will do that.
+	 * @param  Boolean $session_id       Tracked session id
+	 * @return String  $this->session_id New session id         
 	 */
-	public function use_persistence($toggle){
-
-		if($toggle AND !$this->persistence){
-			throw new LogicPersistenceException('Cannot switch on persistence for sessions without a persistence object implementing PersistenceInterface.');
-		}
-		$this->use_persistence = $toggle;
-	
-	}
-
-	//everytime the session id doesn't exist (either never existed or stale), we call this $this->start()
 	public function start($session_id = false){
-
-		//this should open the file lock, if it has been closed before?
 
 		//if session has already started, no need to start the session again!
 		if($this->session_id){
@@ -81,92 +87,104 @@ class SessionManager implements \ArrayAccess{
 
 			//generate a random unique session id with a range between 20 to 40
 			$this->session_id  = $this->generate_session_id();
-			//setup an empty session into the memory
-			if($this->use_persistence){
-				$this->persistence->set($this->session_id, array(), $this->options['session_expiration']);
-			}else{
-				$this->memory->set($this->session_id, array());
-			}
+			$this->persistence->set($this->session_id, array(), $this->options['session_expiration']);
 
 		}else{
 
-			if($this->use_persistence){
-
-				if($this->persistence->exists($session_id)){
-					$this->session_id = $session_id;
-				}else{
-					return $this->start();
-				}
-
+			if($this->persistence->exists($session_id)){
+				$this->session_id = $session_id;
 			}else{
-
-				if($this->memory->exists($session_id)){
-					$this->session_id = $session_id;
-				}else{
-					return $this->start();
-				}
-
+				return $this->start();
 			}
 
 		}
 		
-		return true;
+		return $this->session_id;
 
 	}
 
-	//get's the id of the session
-	public function get_session_id(){
+	/**
+	 * Finishes the session handling. This basically logs out the person. But also destroys
+	 * all mentions of the session. The start() will have to be called again to begin tracking.
+	 * Any client handling needs to be done by the authentication strategy.
+	 * @return String Old session id
+	 */
+	public function finish(){
 
-		return ($this->session_id) ? $this->session_id : false;
+		$session_id = $this->session_id; 
+
+		$this->persistence->clear($session_id);
+
+		$this->session_id = false;
+
+		return $session_id;
 
 	}
 
-	//regenerates the session id, but keeps the session data
-	public function regenerate_session_id(){
+	/**
+	 * Regenerates the session id while keeping the old session data.
+	 * This works even if the session has expired, it will create a new session with empty array as data.
+	 * This should be used whenever: 
+	 * 1. the role or permissions of the current user was changed programmatically.
+	 * 2. the user logs in or logs out to prevent session fixation.
+	 * This returns the new session id, a follow up function should be used to pass this back to the client.
+	 * @return String New Session ID
+	 */
+	public function regenerate(){
 
 		//session hasn't been started, cannot regenerate_session_id!
 		if(!$this->session_id){
 			return false;
 		}
 
-		//open up a lock (because we're modifying sessions)
 		if($this->use_persistence){
 
-			//get the old data
-			$old_session_data = $this->persistence->get($this->session_id);
+			//if the session has expired, this will get the old value
+			$old_session_data = $this->persistence->get($this->session_id, Item::SP_OLD);
 
-			//if the session has expired, old data will equal empty array
+			//now to really check if it has expired, we are going to refresh the session with an empty array
+			//concurrent requests will get the old session data with 240 second ttl
 			if(!$this->persistence->exists($this->session_id)){
+				$this->persistence->lock($this->session_id, 240);
 				$old_session_data = array();
 			}
-
-			//concurrent requests will get the old session data
-			$this->persistence->lock($this->session_id);
-			//clear the previous data (if it existed)
+			
+			//this will clear the old session, and clear the lock?
 			$this->persistence->clear($this->session_id);
-			//generate the new session id and assign it
+			//set a new session with the old session data or empty array
 			$this->session_id = $this->generate_session_id();
-			//add it to the new persistence
 			$this->persistence->set($this->session_id, $old_session_data, $this->options['session_expiration']);
 			
 		}else{
 
-			//get the old data
-			$old_session_data = $this->memory->get($this->session_id);
+			//if the session has expired, this will get the old value
+			$old_session_data = $this->memory->get($this->session_id, Item::SP_OLD);
 
-			//if the session has expired, old data will equal empty array
 			if(!$this->memory->exists($this->session_id)){
+				$this->memory->lock($this->session_id, 240);
 				$old_session_data = array();
 			}
 
-			//clear the previous data (if it existed)
+			//reset the session with a new session id and the old session data or empty array
 			$this->memory->clear($this->session_id);
-			//generate the new session id and assign it
 			$this->session_id = $this->generate_session_id();
-			//add it to the new memory
 			$this->memory->set($this->session_id, $old_session_data);
 
 		}
+
+		//return the new session_id, a follow up function needs to be called to put this new session id
+		//into the cookies/headers.. etc
+		return $this->session_id;
+
+	}
+
+	/**
+	 * Gets the current session id
+	 * @return String
+	 */
+	public function get_session_id(){
+
+		return ($this->session_id) ? $this->session_id : false;
 
 	}
 
@@ -189,65 +207,17 @@ class SessionManager implements \ArrayAccess{
 
 	}
 
-
-	//CONTINUE...
-
-
-
-	/**
-	 * Commits the session and closes the file lock.
-	 * After you finish writing data to the session use this.
-	 */
-	public function commit(){
-
-		if($this->using_sessions){
-			session_write_close();
-		}
-
-	}
-
-	/**
-	 * Regenerates the session id, and removes the previous session file on the disk.
-	 * Remember session data is preserved, so you can carry on through a shopping cart for example.
-	 * Use this when:
-	 * 1. the role or permissions of the current user was changed programmatically.
-	 * 2. the user logs in or logs out (to prevent session fixation) -> (done automatically)
-	 * This may cause warning errors in 5.4.X where X is lower than 11. Make sure to update your PHP.
-	 */
-	public function regenerate(){
-
-		$this->start();
-		if($this->using_sessions){
-			session_regenerate_id(true);
-		}
-		$this->commit();
-
-	}
-
-	/**
-	 * Destroys the session and clears the session data.
-	 * Use this for logging out.
-	 * The cookies will still be left, you'll need to delete them manually.
-	 * The file lock is automatically destroyed.
-	 */
-	public function destroy(){
-
-		$this->start();
-		if($this->using_sessions){
-			session_unset();
-			session_destroy();
-		}
-		unset($_SESSION);
-
-	}
-
 	/**
 	 * Gets all the data in the session zone
 	 * @return array Session zone data
 	 */
 	public function get_all(){
 
-		return $_SESSION;
+		if($this->use_persistence){
+			return $this->persistence->get($this->session_id);
+		}else{
+			return $this->memory->get($this->session_id);
+		}
 
 	}
 

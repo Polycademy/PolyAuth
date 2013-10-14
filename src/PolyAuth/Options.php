@@ -18,8 +18,8 @@ class Options implements \ArrayAccess{
 		'hash_method'						=> PASSWORD_DEFAULT, //PASSWORD_DEFAULT || PASSWORD_BCRYPT
 		'hash_rounds'						=> 10,
 		//session options (used for internal session handling)
-		'session_save_path'					=> '', //for filesystem persistence
-		'session_expiration'				=> 43200, //expiration of a single session (set to 0 for infinite)
+		'session_save_path'					=> '', //for filesystem persistence, leave empty for default session save path
+		'session_expiration'				=> 43200, //expiration of a single session (set to null for infinite)
 		'session_gc_probability'			=> '1', //probability of running the session garbage collection (percentage change to one decimal place)
 		//cookie options
 		'cookie_domain'						=> '',
@@ -98,9 +98,6 @@ class Options implements \ArrayAccess{
 			// ),
 		),
 		'external_token_encryption'			=> false, //if this is false, we will not encrypt the token data, otherwise provide a random key, only set this once, if you change this option, you'll need to manually encrypt/decrypt all the database tokens
-		//cache options
-		'cache_directory'					=> '', //this is only relevant to the FileSystemCache
-		'cache_ttl'							=> 3600, //maximum time an item can live in memory, this is only relevant to APCCache
 	);
 	
 	public function __construct(array $options = null){
