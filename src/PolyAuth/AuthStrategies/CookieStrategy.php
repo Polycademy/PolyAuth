@@ -4,34 +4,42 @@ namespace PolyAuth\AuthStrategies;
 
 use PolyAuth\Storage\StorageInterface;
 use PolyAuth\Options;
-use Psr\Log\LoggerInterface;
+use PolyAuth\Sessions\SessionManager;
 use PolyAuth\Cookies;
 use PolyAuth\Security\Random;
+use Psr\Log\LoggerInterface;
 
 //this strategy will inject SessionManager (and provide methods to manipulate the session data)
+//provide a function to get the session() directly, and pass that into the Authenticator!
+//also there needs to be a function that tests whether this si the correct srtatetgy to use
 
+//Cookie strategy is vulnerable to CSRF. But not XSS when you have HTTPONLY.
+//Authorisation Header is not vulnerable to CSRF. But it is vulnerable to XSS!
 
 class CookieStrategy implements StrategyInterface{
 
 	protected $storage;
 	protected $options;
-	protected $logger;
+	protected $session_manager;
 	protected $cookies;
 	protected $random;
+	protected $logger;
 	
 	public function __construct(
 		StorageInterface $storage, 
 		Options $options, 
-		LoggerInterface $logger = null,
+		SessionManager $session_manager, 
 		Cookies $cookies = null, 
-		Random $random = null
+		Random $random = null, 
+		LoggerInterface $logger = null
 	){
 		
 		$this->storage = $storage;
 		$this->options = $options;
-		$this->logger = $logger;
+		$this->session_manager = $session_manager;
 		$this->cookies = ($cookies) ? $cookies : new Cookies($options);
 		$this->random = ($random) ? $random : new Random;
+		$this->logger = $logger;
 		
 	}
 	

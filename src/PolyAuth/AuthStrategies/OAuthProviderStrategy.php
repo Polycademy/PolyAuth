@@ -25,3 +25,14 @@
  * Regardless of whether it's 3 legged or 2 legged. The clients should still be registered against the server!
  * That way the client is always authenticated on every request!
  */
+
+//THESE ARE THE THINGS THAT WOULD INDICATE OAUTH2 request:
+//1. Authorization: OAuth ##### -> NOT STANDARD!
+//2. Authorization: Bearer #### -> STANDARD
+//3. ?access_token=####
+//4. Authorization: Mac ... blah blah (support MAC later...) 
+//5. Post body is also possible, but that's a stupid way of doing things!
+
+//http://tools.ietf.org/html/rfc6750#section-2.3
+
+//Also session ids are the access tokens.
