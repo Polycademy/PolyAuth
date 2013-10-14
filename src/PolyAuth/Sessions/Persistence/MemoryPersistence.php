@@ -5,7 +5,7 @@ namespace PolyAuth\Sessions\Persistence;
 use Stash\Driver\Ephemeral;
 use Stash\Pool;
 
-class Memory extends PersistenceAbstract{
+class MemoryPersistence extends PersistenceAbstract{
 
 	public function __construct(Ephemeral $driver = null, Pool $cache = null){
 	

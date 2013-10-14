@@ -19,8 +19,9 @@ class Options implements \ArrayAccess{
 		'hash_rounds'						=> 10,
 		//session options (used for internal session handling)
 		'session_save_path'					=> '', //for filesystem persistence, leave empty for default session save path
-		'session_expiration'				=> 43200, //expiration of a single session (set to null for infinite)
-		'session_gc_probability'			=> '1', //probability of running the session garbage collection (percentage change to one decimal place)
+		'session_expiration'				=> 43200, //expiration of a single session (client side and server side) (set to 0 for infinite)
+		'session_cache_expiration'			=> 43200, //expiration of the session data cache (set to 0 for infinite), this is reset everytime you manipulate the session 
+		'session_gc_probability'			=> '1', //probability of running the session garbage collection (percentage chance to one decimal place)
 		//cookie options
 		'cookie_domain'						=> '',
 		'cookie_path'						=> '/',

@@ -32,7 +32,7 @@ use PolyAuth\Exceptions\ValidationExceptions\StrategyValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\PasswordValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\DatabaseValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\LoginValidationException;
-use PolyAuth\Exceptions\ValidationExceptions\SessionValidationException;
+use PolyAuth\Exceptions\SessionExceptions\SessionValidationException;
 
 class Authenticator implements LoggerAwareInterface{
 

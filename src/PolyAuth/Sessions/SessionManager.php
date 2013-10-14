@@ -5,12 +5,12 @@ namespace PolyAuth\Persistence;
 use PolyAuth\Options;
 use PolyAuth\Language;
 use PolyAuth\Security\Random;
-use PolyAuth\Sessions\Persistence\Memory;
+use PolyAuth\Sessions\Persistence\MemoryPersistence;
 use PolyAuth\Sessions\Persistence\PersistenceAbstract;
 
 use Stash\Item;
 
-use PolyAuth\Exceptions\LogicExceptions\LogicPersistenceException;
+use PolyAuth\Exceptions\SessionExceptions\SessionExpireException;
 
 /**
  * PLAN B:
@@ -40,6 +40,25 @@ use PolyAuth\Exceptions\LogicExceptions\LogicPersistenceException;
  * This session manager does not automatically set the cookie, it gives back the id via $this->get_id().
  * The auth strategy would be one that determines whether to set the cookie or not.
  */
+
+
+//Problem:
+//When the session id expires. For cookie based sessions, you can recreate a new one, and just keep going.
+//For Oauth, this an access token. These are long lived sessions ids. The strategy needs the ability to set these
+//options directly for the session manager. Which would be a different new session manager.
+//Also you don't just recreate the session id and keep going, the access token is invalid, it needs to return
+//a 401 or something and ask the client to recreate an access token by using their credentials or refresh token!
+//I think we need to separate the "recreation of the session" from the starting of the session
+//Also regenerate only makes sense for CookieStrategy, not for any of the others!
+//We can do this by making start() return false.
+//But the problem is for the get or get_all... they all use locks.
+//How would you lock things if the session expired.
+//I think the point is, in Cookies, if the session expired restart it and return the data. Or just return empty array or null
+//In others, if the session expired... well too bad.
+//But others such as HTTPBasic's token is not an access token, it's the credentials everytime! Well in that case
+//the token never expires, because HTTP Basic will just request a new session every time! they'll call start()!
+
+
 class SessionManager implements \ArrayAccess{
 
 	protected $options;
@@ -49,19 +68,30 @@ class SessionManager implements \ArrayAccess{
 	protected $persistence;
 
 	protected $session_id = false;
+	protected $session_cache_expiration;
+	protected $lock_ttl;
 
 	public function __construct(
 		Options $options, 
 		Language $language, 
 		Random $random, 
-		PersistenceAbstract $persistence = null
+		PersistenceAbstract $persistence = null, 
+		$lock_ttl = false;
 	){
 
 		$this->options = $options;
 		$this->lang = $language;
 		$this->random = $random;
 		$this->memory = $memory;
-		$this->persistence = ($persistence) ? $persistence : new Memory;
+		$this->persistence = ($persistence) ? $persistence : new MemoryPersistence;
+
+		if($this->options['session_cache_expiration'] === 0){
+			$this->session_cache_expiration = null;
+		}else{
+			$this->session_cache_expiration = $this->options['session_cache_expiration'];
+		}
+
+		$this->lock_ttl = ($lock_ttl) ? $lock_ttl : 240;
 
 	}
 
@@ -87,14 +117,14 @@ class SessionManager implements \ArrayAccess{
 
 			//generate a random unique session id with a range between 20 to 40
 			$this->session_id  = $this->generate_session_id();
-			$this->persistence->set($this->session_id, array(), $this->options['session_expiration']);
+			$this->persistence->set($this->session_id, array(), $this->session_cache_expiration);
 
 		}else{
 
 			if($this->persistence->exists($session_id)){
 				$this->session_id = $session_id;
 			}else{
-				return $this->start();
+				throw new SessionExpireException($this->lang['session_expire']);
 			}
 
 		}
@@ -112,11 +142,8 @@ class SessionManager implements \ArrayAccess{
 	public function finish(){
 
 		$session_id = $this->session_id; 
-
 		$this->persistence->clear($session_id);
-
 		$this->session_id = false;
-
 		return $session_id;
 
 	}
@@ -128,6 +155,7 @@ class SessionManager implements \ArrayAccess{
 	 * 1. the role or permissions of the current user was changed programmatically.
 	 * 2. the user logs in or logs out to prevent session fixation.
 	 * This returns the new session id, a follow up function should be used to pass this back to the client.
+	 * This function only really make sense for CookieStrategy, you shouldn't call this with the other strategies
 	 * @return String New Session ID
 	 */
 	public function regenerate(){
@@ -137,40 +165,22 @@ class SessionManager implements \ArrayAccess{
 			return false;
 		}
 
-		if($this->use_persistence){
+		//if the session has expired, this will get the old value
+		$old_session_data = $this->persistence->get($this->session_id, Item::SP_OLD);
 
-			//if the session has expired, this will get the old value
-			$old_session_data = $this->persistence->get($this->session_id, Item::SP_OLD);
-
-			//now to really check if it has expired, we are going to refresh the session with an empty array
-			//concurrent requests will get the old session data with 240 second ttl
-			if(!$this->persistence->exists($this->session_id)){
-				$this->persistence->lock($this->session_id, 240);
-				$old_session_data = array();
-			}
-			
-			//this will clear the old session, and clear the lock?
-			$this->persistence->clear($this->session_id);
-			//set a new session with the old session data or empty array
-			$this->session_id = $this->generate_session_id();
-			$this->persistence->set($this->session_id, $old_session_data, $this->options['session_expiration']);
-			
-		}else{
-
-			//if the session has expired, this will get the old value
-			$old_session_data = $this->memory->get($this->session_id, Item::SP_OLD);
-
-			if(!$this->memory->exists($this->session_id)){
-				$this->memory->lock($this->session_id, 240);
-				$old_session_data = array();
-			}
-
-			//reset the session with a new session id and the old session data or empty array
-			$this->memory->clear($this->session_id);
-			$this->session_id = $this->generate_session_id();
-			$this->memory->set($this->session_id, $old_session_data);
-
+		//now to really check if it has expired, we are going to refresh the session with an empty array
+		//concurrent requests will get the old session data with 240 second ttl
+		if(!$this->persistence->exists($this->session_id)){
+			$this->persistence->lock($this->session_id, $this->lock_ttl);
+			$old_session_data = array();
 		}
+		
+		//this will clear the old session, and clear the lock?
+		$this->persistence->clear($this->session_id);
+
+		//set a new session with the old session data or empty array
+		$this->session_id = $this->generate_session_id();
+		$this->persistence->set($this->session_id, $old_session_data, $this->session_cache_expiration);
 
 		//return the new session_id, a follow up function needs to be called to put this new session id
 		//into the cookies/headers.. etc
@@ -198,84 +208,44 @@ class SessionManager implements \ArrayAccess{
 	//this runs it on the persistence layer
 	protected function run_gc(){
 
-		if($this->use_persistence){
-			//runs some probabilities
-			if((mt_rand(0, 1000)/10) <= $this->options['session_gc_probability']){
-				$this->persistence->purge();
-			}
+		//runs some probabilities
+		if((mt_rand(0, 1000)/10) <= $this->options['session_gc_probability']){
+			$this->persistence->purge();
 		}
 
 	}
 
 	/**
-	 * Gets all the data in the session zone
+	 * Gets all the data in the session zone.
+	 * If the session expired in between calling start and calling get_all, 
+	 * it will regenerate cache by locking the session, calling start() which 
+	 * will set a new session and call itself to get the new session data.
+	 * Concurrent functions will just get the old session data if has been locked
 	 * @return array Session zone data
 	 */
 	public function get_all(){
 
-		if($this->use_persistence){
-			return $this->persistence->get($this->session_id);
-		}else{
-			return $this->memory->get($this->session_id);
+		$session_data = $this->persistence->get($this->session_id);
+
+		if(!$this->persistence->exists($this->session_id)){
+			throw new SessionExpireException($this->lang['session_expire']);
 		}
+
+		return $session_data;
 
 	}
 
 	/**
-	 * Clears all the data in the session zone.
+	 * Clears all the session data except the keys passed into the array.
+	 * It also resets the expiration.
 	 * @param  array $except Array of keys to except from deletion
 	 */
-	public function clear_all(array $except){
+	public function clear_all(array $except = array()){
 
-		$filtered = array_intersect_key($_SESSION, array_flip($except));
-		$_SESSION = $filtered;
+		$session_data = $this->get_all();
+		$filtered = array_intersect_key($session_data, array_flip($except));
+		$this->persistence->set($this->session_id, $filtered, $this->session_cache_expiration);
 	
-	}
-
-	/**
-	 * Gets a flash "read once" value. It will destroy the value once it has been read.
-	 * @return mixed Value of the flash data
-	 */
-	public function get_flash($key){
-
-		if(isset($_SESSION['__flash'][$key])){
-			$value = $_SESSION['__flash'][$key];
-			unset($_SESSION['__flash'][$key]);
-			return $value;
-		}
-		return null;
-
-	}
-
-	/**
-	 * Sets a flash "read once" value
-	 * @param string $key   Key of the flash value
-	 * @param mixed  $value Data of the flash value
-	 */
-	public function set_flash($key, $value){
-
-		$_SESSION['__flash'][$key] = $value;
-
-	}
-
-	/**
-	 * Detects whether a flash value is set without deleting the old flash value
-	 * @param  string  $key Key of the flash value
-	 * @return boolean
-	 */
-	public function has_flash($key){
-
-		return isset($_SESSION['__flash'][$key]);
-
-	}
-
-	/**
-	 * Clears all the flash values
-	 */
-	public function clear_flash(){
-
-		unset($_SESSION['__flash']);
-
 	}
 
 	/**
@@ -285,7 +255,8 @@ class SessionManager implements \ArrayAccess{
 	 */
 	public function offsetGet($offset) {
 
-		return isset($_SESSION[$offset]) ? $_SESSION[$offset] : null;
+		$session_data = $this->get_all();
+		return isset($session_data[$offset]) ? $session_data[$offset] : null;
 
 	}
 	
@@ -296,11 +267,13 @@ class SessionManager implements \ArrayAccess{
 	 */
 	public function offsetSet($offset, $value) {
 
+		$session_data = $this->get_all();
 		if (is_null($offset)) {
-			$_SESSION[] = $value;
+			$session_data[] = $value;
 		} else {
-			$_SESSION[$offset] = $value;
+			$session_data[$offset] = $value;
 		}
+		$this->persistence->set($this->session_id, $session_data, $this->session_cache_expiration);
 
 	}
 	
@@ -311,7 +284,8 @@ class SessionManager implements \ArrayAccess{
 	 */
 	public function offsetExists($offset) {
 
-		return isset($_SESSION[$offset]);
+		$session_data = $this->get_all();
+		return isset($session_data[$offset]);
 
 	}
 	
@@ -321,7 +295,9 @@ class SessionManager implements \ArrayAccess{
 	 */
 	public function offsetUnset($offset) {
 
-		unset($_SESSION[$offset]);
+		$session_data = $this->get_all();
+		unset($session_data[$offset]);
+		$this->persistence->set($this->session_id, $session_data, $this->session_cache_expiration);
 
 	}
 

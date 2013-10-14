@@ -63,8 +63,7 @@ class Language implements \ArrayAccess{
 		'email_forgotten_password_subject'		=> 'Forgotten Password PolyAuth',
 		// Session
 		'session_invalid_key'					=> 'You cannot manipulate properties on the session object that have reserved keys.',
-		// Logic
-		'logic_persistence'						=> 'Cannot switch on persistence for sessions without a persistence object implementing PersistenceInterface.',
+		'session_expire'						=> 'Session id or token has expired.'
 	);
 	
 	public function __construct(array $language = null){
