@@ -13,52 +13,43 @@ use Stash\Item;
 use PolyAuth\Exceptions\SessionExceptions\SessionExpireException;
 
 /**
- * PLAN B:
- * new Authenticator(new CookieStrategy(new SessionManager(new Persistence)))
- * OR
- * new Authenticator(new CompositeStrategy(new CookieStrategy(new SessionManager(new Persistence)), new HTTPBasicStrategy, new OAuthProviderStrategy))
+ * SessionManager manages the server side part of sessions. Sessions in PolyAuth refer to the state 
+ * in which a client is using the current system. Therefore every time a client is using the system, 
+ * they possess a session. Sessions doesn't necessarily mean that the client is authenticated or 
+ * authorised, even an anonymous guest will have a session. Sessions are required for the server to 
+ * remember a client connection's access level and any associated meta data. In a practical sense this is 
+ * basically a session ID and an array of session data. The session ID will be created upon the creation 
+ * of a new session, this session ID will be passed to the client to remember as a token. As long as the 
+ * client remembers this session ID, then this will be the key that unlocks a persisted and non-expired 
+ * session data. This SessionManager by default persists the session in memory. The session data and id 
+ * would be unique to each process and each instance. This is useful for authentication strategies that 
+ * are stateless and so abide by the RESTful request response model. For example HTTP Basic or OAuth. This 
+ * means that the session data will only be valid for the life of the process, or operations between request 
+ * to response. In certain strategies, the session id will not only unlock persisted non-expired session 
+ * data, but will also authenticate the connection's request. For example clients that use HTTP Basic will 
+ * usually not try to remember the session id, however OAuth clients will need to remember the session id as
+ * the "access token". This "access token" would authenticate the OAuth request, and also provide access 
+ * to prior persisted non-expired session data. SessionManager can optionally become a stateful server side 
+ * session manager. Persistence dependencies can be passed into the constructor, and so session data will 
+ * now be persisted by a third party that lives longer than the RESTful request response cycle. This tends 
+ * to be used by authentication strategies that do not have a rich client. The archetypical pattern is the 
+ * cookie based authentication. A browser that does not have any javascript will not be able to manage a 
+ * client session a web application system. Servers compensate by hooking into the cookie header transport 
+ * standard. This means the session id can be passed between the client and the server via the cookie headers. 
+ * The session data will be persisted through multiple request response cycles on the server. Now SessionManager 
+ * provides flexibility, in that if you want to have server side persisted sessions, you can have it, just make 
+ * sure the client remembers the session id regardless of what kind of authentication strategy. However if you're 
+ * going with the RESTful stateless architecture, then the default implementation of memory persisted sessions 
+ * is suitable, and the client will the be the system that persists the session data between request response 
+ * cycles. To use this class, you can instantiate one and share among all the authentication strategies, or you 
+ * can instantiate one SessionManager for each authentication strategy. Just remember that memory persisted 
+ * session data is unique on each instance and each request response cycle. This means that memory data cannot 
+ * be shared across requests, and cannot be shared across multiple instances. The second limitation is not really 
+ * a limitation, unless you're running a daemon. Non-memory persisted session data do not have this problem. As 
+ * long as the right session id is used, and it hasn't been expired, then session data can be persisted!
+ * The SessionManager does not specify how the session id is to be passed back to the client. The authentication 
+ * strategy will determine this.
  */
-
-/**
- * This class can be used as a singleton, or shared, or individualised. IT DOES NOT MATTER.
- * Memory sessions will never be shared! Not between processes, and not between auth strategies (this is because a single auth strategy gets used in the process)
- * In the case of daemon, memory can be shared, but only when the class is shared. And it's for the duration of that session! But it's unlikely, since a client will elect
- * to use only one auth strategy for authentication for the duration of the session.
- */
-
-
-
-// THIS GETS INJECTED INTO AUTHSTRATEGY! This will be a singleton. The same SessionManager will be set for all of the strategies so they can share sessions. Then some of them will use persistence and some will use memory.
-//This means that the persistence can get shared. But never the memory.
-
-/**
- * SessionManager by default will persist sessions in memory. It allows an optional long term persistence 
- * object to passed in to be used in order to persist the session data beyond memory. This is not automatically 
- * used unless until you explicitly set $this->use_persistence(true). The authentication strategy will set this.
- * Authentication strategies will have default settings for whether they use persistence, for example the 
- * CookieStrategy will by default persist sessions using the $persistence passed in
- * This session manager does not automatically set the cookie, it gives back the id via $this->get_id().
- * The auth strategy would be one that determines whether to set the cookie or not.
- */
-
-
-//Problem:
-//When the session id expires. For cookie based sessions, you can recreate a new one, and just keep going.
-//For Oauth, this an access token. These are long lived sessions ids. The strategy needs the ability to set these
-//options directly for the session manager. Which would be a different new session manager.
-//Also you don't just recreate the session id and keep going, the access token is invalid, it needs to return
-//a 401 or something and ask the client to recreate an access token by using their credentials or refresh token!
-//I think we need to separate the "recreation of the session" from the starting of the session
-//Also regenerate only makes sense for CookieStrategy, not for any of the others!
-//We can do this by making start() return false.
-//But the problem is for the get or get_all... they all use locks.
-//How would you lock things if the session expired.
-//I think the point is, in Cookies, if the session expired restart it and return the data. Or just return empty array or null
-//In others, if the session expired... well too bad.
-//But others such as HTTPBasic's token is not an access token, it's the credentials everytime! Well in that case
-//the token never expires, because HTTP Basic will just request a new session every time! they'll call start()!
-
-
 class SessionManager implements \ArrayAccess{
 
 	protected $options;
@@ -76,7 +67,8 @@ class SessionManager implements \ArrayAccess{
 		Language $language, 
 		Random $random, 
 		PersistenceAbstract $persistence = null, 
-		$lock_ttl = false;
+		$lock_ttl = false, 
+		$session_cache_expiration = false
 	){
 
 		$this->options = $options;
@@ -85,10 +77,14 @@ class SessionManager implements \ArrayAccess{
 		$this->memory = $memory;
 		$this->persistence = ($persistence) ? $persistence : new MemoryPersistence;
 
-		if($this->options['session_cache_expiration'] === 0){
-			$this->session_cache_expiration = null;
+		if($session_cache_expiration !== false){
+			$this->session_cache_expiration = $session_cache_expiration;
 		}else{
-			$this->session_cache_expiration = $this->options['session_cache_expiration'];
+			if($this->options['session_cache_expiration'] === 0){
+				$this->session_cache_expiration = null;
+			}else{
+				$this->session_cache_expiration = $this->options['session_cache_expiration'];
+			}
 		}
 
 		$this->lock_ttl = ($lock_ttl) ? $lock_ttl : 240;
@@ -96,10 +92,11 @@ class SessionManager implements \ArrayAccess{
 	}
 
 	/**
-	 * Starts the session tracking or starts a new session. Called at startup. 
-	 * The authentication strategy checks if they have the relevant container of the session id, 
-	 * and if they do they pass in a session id to start().
-	 * This does not set the new or old session onto the client. The auth strategy will do that.
+	 * Starts the session tracking or starts a new session. Called at startup.
+	 * Every time this is called, it calles the garbage collector to potentially purge 
+	 * expired sessions. If a session id is passed in, and it has expired, then it will throw 
+	 * SessionExpireException. This will be caught by the authentication strategy and the
+	 * strategy will determine what to do next.
 	 * @param  Boolean $session_id       Tracked session id
 	 * @return String  $this->session_id New session id         
 	 */
