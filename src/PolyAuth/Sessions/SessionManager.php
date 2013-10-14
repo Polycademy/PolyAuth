@@ -155,11 +155,6 @@ class SessionManager implements \ArrayAccess{
 	 */
 	public function regenerate(){
 
-		//session hasn't been started, cannot regenerate_session_id!
-		if(!$this->session_id){
-			return false;
-		}
-
 		//if the session has expired, this will get the old value
 		$old_session_data = $this->persistence->get($this->session_id, Item::SP_OLD);
 
