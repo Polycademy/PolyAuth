@@ -8,6 +8,9 @@ use Psr\Log\LoggerInterface;
 use PolyAuth\Cookies;
 use PolyAuth\Security\Random;
 
+//this strategy will inject SessionManager (and provide methods to manipulate the session data)
+
+
 class CookieStrategy implements StrategyInterface{
 
 	protected $storage;
