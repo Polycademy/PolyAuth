@@ -25,6 +25,8 @@ use PolyAuth\Exceptions\ValidationExceptions\DatabaseValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\LoginValidationException;
 use PolyAuth\Exceptions\SessionExceptions\SessionValidationException;
 
+use Symfony\Component\HttpFoundation\Request;
+
 class Authenticator{
 
 	protected $strategy;
@@ -59,6 +61,11 @@ class Authenticator{
 		$this->login_attempts = ($login_attempts) ? $login_attempts : new LoginAttempts($storage, $options);
 	
 	}
+
+
+
+
+
 
 
 	//THIS NEEDS to a couple things:

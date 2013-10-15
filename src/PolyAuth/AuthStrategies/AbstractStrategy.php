@@ -2,6 +2,8 @@
 
 namespace PolyAuth\AuthStrategies;
 
+use Symfony\Component\HttpFoundation\Request;
+
 abstract class AbstractStrategy{
 
 	/**
@@ -13,6 +15,31 @@ abstract class AbstractStrategy{
 		return $this->session_manager;
 
 	}
+
+	/**
+	 * Establishes a Symfony request object. This augments the request object with the Authorization 
+	 * header since it's not available by default.
+	 * @return Object
+	 */
+	public function get_request(){
+
+		$headers = getallheaders();
+
+		$request = Request::createFromGlobals();
+		if(isset($headers['Authorization'])){
+			$request->headers->set('Authorization', $headers['Authorization']);
+		}
+
+		return $request;
+
+	}
+
+	/**
+	 * This will return an HTTPFoundation response object which contains what PolyAuth wants to 
+	 * return to the client. However the end developer can further modify the response object,
+	 * or reconstruct it differently.
+	 */
+	abstract public get_response();
 
 	/**
 	 * Start_session will find the relevant session id/token and the transport method, and start
@@ -37,11 +64,11 @@ abstract class AbstractStrategy{
 	 * Certain strategies may use login hook to create the random account on the fly such as Oauth or OpenId.
 	 * PolyAuth will create any corresponding server session data.
 	 */
-	abstract public function login_hook($data);
+	abstract public function login($data);
 	
 	/**
 	 * Destroy any client session data. PolyAuth will destroy the corresponding server session data.
 	 */
-	abstract public function logout_hook();
+	abstract public function logout();
 
 }
