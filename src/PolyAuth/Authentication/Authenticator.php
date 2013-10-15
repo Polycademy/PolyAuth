@@ -6,7 +6,7 @@ use PolyAuth\Options;
 use PolyAuth\Language;
 use PolyAuth\Storage\StorageInterface;
 
-use PolyAuth\AuthStrategies\StrategyInterface;
+use PolyAuth\AuthStrategies\AbstractStrategy;
 
 use PolyAuth\UserAccount;
 use PolyAuth\Accounts\AccountsManager;
@@ -27,7 +27,7 @@ use PolyAuth\Exceptions\SessionExceptions\SessionValidationException;
 
 class Authenticator{
 
-	protected $strategies;
+	protected $strategy;
 	protected $storage;
 	protected $options;
 	protected $lang;
@@ -39,7 +39,7 @@ class Authenticator{
 	protected $user;
 
 	public function __construct(
-		$strategies, 
+		AbstractStrategy $strategy, 
 		StorageInterface $storage, 
 		Options $options, 
 		Language $language, 
@@ -49,18 +49,7 @@ class Authenticator{
 		LoginAttempts $login_attempts = null
 	){
 
-		//convert $strategies into an array
-		if(!is_array($strategies)){
-			$strategies = array($strategies);
-		}
-
-		foreach($strategies as $strategy){
-			if(!$strategy instanceof AuthStrategyInterface){
-				throw StrategyValidationException('Authentication strategies need to implement AuthStrategyInterface.');
-			}
-		}
-
-		$this->strategies = $strategies;
+		$this->strategy = $strategy;
 		$this->storage = $storage;
 		$this->options = $options;
 		$this->lang = $language;
