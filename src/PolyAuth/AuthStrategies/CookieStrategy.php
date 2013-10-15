@@ -8,29 +8,33 @@ use PolyAuth\Sessions\SessionManager;
 use PolyAuth\Cookies;
 use PolyAuth\Security\Random;
 
-//Cookie strategy is vulnerable to CSRF. But not XSS when you have HTTPONLY.
-//Authorisation Header is not vulnerable to CSRF. But it is vulnerable to XSS!
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\Cookie;
 
 class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 
 	protected $storage;
 	protected $options;
 	protected $session_manager;
-	protected $cookies;
+	protected $request;
+	protected $response;
 	protected $random;
 	
 	public function __construct(
 		StorageInterface $storage, 
 		Options $options, 
 		SessionManager $session_manager, 
-		Cookies $cookies = null, 
+		Request $request = null, 
+		Response $response = null, 
 		Random $random = null, 
 	){
 		
 		$this->storage = $storage;
 		$this->options = $options;
 		$this->session_manager = $session_manager;
-		$this->cookies = ($cookies) ? $cookies : new Cookies($options);
+		$this->request = ($request) ? $request : $this->get_request();
+		$this->response = ($response) ? $response : new Response;
 		$this->random = ($random) ? $random : new Random;
 		
 	}
@@ -218,6 +222,14 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 		$this->cookies->delete_cookie('autologin');
 		return;
 	
+	}
+
+	public function get_response(){
+
+		//this cookie strategy will most likely just output COOKIES!
+		//As in the cookie header...
+		//As in using $response->header->setCookie or ->clearCookie
+
 	}
 
 }

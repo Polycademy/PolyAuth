@@ -51,6 +51,8 @@ To Do
 - Add OAuth consumption, OpenID consumption, and Hawk authentication strategies
 - SQL Migration
 - Add OAuth2 provision
+//Cookie strategy is vulnerable to CSRF. But not XSS when you have HTTPONLY.
+//Authorisation Header is not vulnerable to CSRF. But it is vulnerable to XSS!
 
 Install with Composer
 ---------------------
