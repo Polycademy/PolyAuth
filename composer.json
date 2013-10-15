@@ -17,7 +17,8 @@
 		"phpmailer/phpmailer": "5.2.7",
 		"psr/log": "1.0.0",
 		"tedivm/stash": "0.10.5",
-		"lusitanian/oauth": "0.2.3"
+		"lusitanian/oauth": "0.2.3",
+		"symfony/http-foundation": "2.3.6"
 	},
 	"require-dev": {
 		"codeception/codeception": "1.7.0.2"

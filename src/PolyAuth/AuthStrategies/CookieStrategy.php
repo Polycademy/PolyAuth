@@ -82,7 +82,7 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 	//and this is stored not in the session manager, but in the UserAccounts table
 	//In OAuthProvision
 	//Starting a session would indicate a use of the "access token". This will come in via the
-	//the transport (Header Authorization) and query parameter
+	//the transport (Header Authorization) and/or query parameter
 	//Autologin would be the request for an access token using an "auth code" or "refresh token". This always comes in via a post request. According to section 6 (http://tools.ietf.org/html/draft-ietf-oauth-v2-31#section-6), there can be additional client authentication at the same time.
 	//This would then send back the access token for the client to use.
 	//Login hook would be used in order to process the client credentials and resource owner credentials (determined based on options). Or just resource owner credentials. 3 legged would lead to auth code. 2 legged would lead to access token (skip auth code). Can't decide automatically, use manual options to decide.
