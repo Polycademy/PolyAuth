@@ -1,8 +1,7 @@
 <?php
 
-namespace PolyAuth\AuthStrategies;
+namespace PolyAuth\Authentication\AuthStrategies;
 
-use PolyAuth\AuthStrategies\StrategyInterface;
 use PolyAuth\Exceptions\ValidationExceptions\StrategyValidationException;
 
 class CompositeStrategy extends AbstractStrategy{

@@ -1,6 +1,6 @@
 <?php
 
-namespace PolyAuth\AuthStrategies\Decorators;
+namespace PolyAuth\Authentication\AuthStrategies\Decorators;
 
 class TwoFactorDecorator extends AbstractDecorator{
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace PolyAuth\AuthStrategies;
+namespace PolyAuth\Authentication\AuthStrategies\Decorators;
 
 use PolyAuth\Options;
 use PolyAuth\Language;

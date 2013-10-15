@@ -1,5 +1,7 @@
 <?php
 
+namespace PolyAuth\Authentication\AuthStrategies\Decorators;
+
 /**
  * DecoratorAbstract allows the creation of flexible nested decorators.
  * Decorators can be stacked. They can also have methods that overwrite each other.

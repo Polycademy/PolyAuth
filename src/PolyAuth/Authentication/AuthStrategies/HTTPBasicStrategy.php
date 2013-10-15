@@ -1,6 +1,6 @@
 <?php
 
-namespace PolyAuth\AuthStrategies;
+namespace PolyAuth\Authentication\AuthStrategies;
 
 use PolyAuth\Options;
 use PolyAuth\Storage\StorageInterface;

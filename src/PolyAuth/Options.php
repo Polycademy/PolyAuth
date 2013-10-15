@@ -63,6 +63,7 @@ class Options implements \ArrayAccess{
 			'diffidentity'	=> false,
 			'unique'		=> false, //number of unique characters ('' or false or 4) ('' defaults to 4)
 		), //can be an array or empty array
+		//LOGIN AUTOLOGIN, EXPIRATION AND EXPIRATION_EXTEND needs to be moved to a particular class options!
 		'login_autologin'					=> true, //allowing remember me or not
 		'login_expiration'					=> 86500, // autologin expiration (seconds). Set to zero for no expiration
 		'login_expiration_extend'			=> true, //allowing whether autologin extends the login_expiration
