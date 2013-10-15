@@ -3,13 +3,15 @@
 namespace PolyAuth;
 
 use Psr\Log\LoggerInterface;
+use Psr\Log\LoggerAwareInterface;
 use PolyAuth\Options;
 use PolyAuth\Language;
 use PolyAuth\UserAccount;
-use PolyAuth\EmailException;
+use PolyAuth\Exceptions\EmailException;
 
-//this class handles the sending of emails
-class Emailer{
+class Emailer implements LoggerAwareInterface{
+
+	use \PolyAuth\LoggerTrait;
 
 	protected $options;
 	protected $lang;

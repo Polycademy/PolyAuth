@@ -6,7 +6,7 @@ use Stash\Driver\FileSystem;
 use Stash\Pool;
 use PolyAuth\Options;
 
-class FileSystemPersistence extends PersistenceAbstract{
+class FileSystemPersistence extends AbstractPersistence{
 
 	//needs to accept the encrypt mechanism! then it will encrypt information
 	public function __construct(FileSystem $driver = null, Pool $cache = null, Options $options = null){

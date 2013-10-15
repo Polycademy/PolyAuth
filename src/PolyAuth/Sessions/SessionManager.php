@@ -4,8 +4,8 @@ namespace PolyAuth\Sessions;
 
 use PolyAuth\Options;
 use PolyAuth\Language;
+use PolyAuth\Sessions\Persistence\AbstractPersistence;
 use PolyAuth\Sessions\Persistence\MemoryPersistence;
-use PolyAuth\Sessions\Persistence\PersistenceAbstract;
 use PolyAuth\Security\Random;
 
 use Stash\Item;
@@ -64,7 +64,7 @@ class SessionManager implements \ArrayAccess{
 	public function __construct(
 		Options $options, 
 		Language $language, 
-		PersistenceAbstract $persistence = null, 
+		AbstractPersistence $persistence = null, 
 		Random $random = null, 
 		$lock_ttl = false, 
 		$session_cache_expiration = false

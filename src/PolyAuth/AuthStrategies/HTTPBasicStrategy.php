@@ -2,7 +2,6 @@
 
 namespace PolyAuth\AuthStrategies;
 
-use Psr\Log\LoggerInterface;
 use PolyAuth\Options;
 use PolyAuth\Storage\StorageInterface;
 
@@ -15,31 +14,18 @@ class HTTPStrategy implements AuthStrategyInterface{
 
 	protected $storage;
 	protected $options;
-	protected $logger;
 	protected $realm;
 	
 	public function __construct(
 		StorageInterface $storage, 
 		Options $options, 
-		LoggerInterface $logger = null,
 		$realm = false
 	){
 		
 		$this->storage = $storage;
 		$this->options = $options;
-		$this->logger = $logger;
 		$this->realm = ($realm) ? $realm : $options['login_realm'];
 		
-	}
-	
-	/**
-	 * Sets a logger instance on the object
-	 *
-	 * @param LoggerInterface $logger
-	 * @return null
-	 */
-	public function setLogger(LoggerInterface $logger){
-		$this->logger = $logger;
 	}
 	
 	/**

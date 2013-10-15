@@ -2,7 +2,7 @@
 
 namespace PolyAuth\AuthStrategies\Decorators;
 
-class TwoFactorDecorator extends DecoratorAbstract{
+class TwoFactorDecorator extends AbstractDecorator{
 
 	public function __construct($strategy){
 		$this->strategy = $strategy;

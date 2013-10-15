@@ -2,8 +2,6 @@
 
 namespace PolyAuth\AuthStrategies;
 
-use Psr\Log\LoggerInterface;
-
 use PolyAuth\Options;
 use PolyAuth\Language;
 use PolyAuth\Storage\StorageInterface;
@@ -36,12 +34,11 @@ use OAuth\OAuth2\Service\Exception\MissingRefreshTokenException;
 //4. login cannot cascade easily, it requires data to be passed in and is unique to each strategy
 
 //try extending OAuthStrategy to CookieStrategy, to allow independent logins and autologin functionality
-class OAuthClientStrategy extends DecoratorAbstract{
+class OAuthClientStrategy extends AbstractDecorator{
 
 	protected $storage;
 	protected $options;
 	protected $language;
-	protected $logger;
 	protected $cookies;
 	protected $random;
 	protected $accounts_manager;
@@ -53,7 +50,6 @@ class OAuthClientStrategy extends DecoratorAbstract{
 		StorageInterface $storage, 
 		Options $options,
 		Language $language, 
-		LoggerInterface $logger = null,
 		Cookies $cookies = null, 
 		Random $random = null,
 		AccountsManager $accounts_manager = null,
@@ -64,26 +60,13 @@ class OAuthClientStrategy extends DecoratorAbstract{
 		$this->storage = $storage;
 		$this->options = $options;
 		$this->language = $language;
-		$this->logger = $logger;
 		$this->cookies = ($cookies) ? $cookies : new Cookies($options);
 		$this->random = ($random) ? $random : new Random;
-		$this->accounts_manager = ($accounts_manager) ? $accounts_manager : new AccountsManager($storage, $options, $language, $logger);
+		$this->accounts_manager = ($accounts_manager) ? $accounts_manager : new AccountsManager($storage, $options, $language);
 		$this->uri_factory = ($uri_factory) ? $uri_factory : new UriFactory;
 		$this->service_factory = ($service_factory) ? $service_factory : new ServiceFactory;
 
 		$this->providers = $this->setup_providers($this->options['external_providers']);
-		
-	}
-
-	/**
-	 * Sets a logger instance on the object
-	 *
-	 * @param LoggerInterface $logger
-	 * @return null
-	 */
-	public function setLogger(LoggerInterface $logger){
-		
-		$this->logger = $logger;
 		
 	}
 

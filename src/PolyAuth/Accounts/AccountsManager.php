@@ -2,9 +2,6 @@
 
 namespace PolyAuth\Accounts;
 
-use Psr\Log\LoggerInterface;
-use Psr\Log\LoggerAwareInterface;
-
 use PolyAuth\Options;
 use PolyAuth\Language;
 use PolyAuth\Storage\StorageInterface;
@@ -25,12 +22,11 @@ use PolyAuth\Exceptions\ValidationExceptions\DatabaseValidationException;
 use PolyAuth\Exceptions\UserExceptions\UserDuplicateException;
 use PolyAuth\Exceptions\UserExceptions\UserNotFoundException;
 
-class AccountsManager implements LoggerAwareInterface{
+class AccountsManager{
 
 	protected $storage;
 	protected $options;
 	protected $lang;
-	protected $logger;
 	protected $rbac;
 	protected $password_complexity;
 	protected $random;
@@ -42,7 +38,6 @@ class AccountsManager implements LoggerAwareInterface{
 		StorageInterface $storage, 
 		Options $options, 
 		Language $language, 
-		LoggerInterface $logger = null, 
 		Rbac $rbac = null, 
 		PasswordComplexity $password_complexity = null, 
 		Random $random = null, 
@@ -54,24 +49,13 @@ class AccountsManager implements LoggerAwareInterface{
 		$this->storage = $storage;
 		$this->options = $options;
 		$this->lang = $language;
-		$this->logger = $logger;
-		$this->rbac  = ($rbac) ? $rbac : new Rbac($storage, $language, $logger);
+		$this->rbac  = ($rbac) ? $rbac : new Rbac($storage, $language);
 		$this->password_complexity = ($password_complexity) ? $password_complexity : new PasswordComplexity($options, $language);
 		$this->random = ($random) ? $random : new Random;
 		$this->encryption = ($encryption) ? $encryption : new Encryption();
-		$this->emailer = ($emailer) ? $emailer : new Emailer($options, $language, $logger);
-		$this->login_attempts = ($login_attempts) ? $login_attempts : new LoginAttempts($storage, $options, $logger);
+		$this->emailer = ($emailer) ? $emailer : new Emailer($options, $language);
+		$this->login_attempts = ($login_attempts) ? $login_attempts : new LoginAttempts($storage, $options);
 		
-	}
-	
-	/**
-	 * Sets a logger instance on the object
-	 *
-	 * @param LoggerInterface $logger
-	 * @return null
-	 */
-	public function setLogger(LoggerInterface $logger){
-		$this->logger = $logger;
 	}
 	
 	/**

@@ -2,9 +2,17 @@
 
 namespace PolyAuth\AuthStrategies;
 
-use Psr\Log\LoggerAwareInterface;
+interface AuthStrategyInterface{
 
-interface AuthStrategyInterface extends LoggerAwareInterface{
+	/**
+	 * 
+	 */
+	public function detect_relevance();
+
+	/**
+	 * 
+	 */
+	public function start_session();
 
 	/**
 	 * Autologin method. Use this to determine how to log the user in automatically.

@@ -1,26 +1,17 @@
 <?php 
 
-/*
- Authenticator should accept: an array of strategies (that can be wrapped in decorators) and an optional server side persistence object
- */
-
-
 namespace PolyAuth\Authentication;
-
-use Psr\Log\LoggerInterface;
-use Psr\Log\LoggerAwareInterface;
 
 use PolyAuth\Options;
 use PolyAuth\Language;
 use PolyAuth\Storage\StorageInterface;
 
-use PolyAuth\AuthStrategies\AuthStrategyInterface;
+use PolyAuth\AuthStrategies\StrategyInterface;
 
 use PolyAuth\UserAccount;
 use PolyAuth\Accounts\AccountsManager;
 use PolyAuth\Accounts\Rbac;
 
-use PolyAuth\Cookies;
 use PolyAuth\Persistence\PersistenceInterface;
 use PolyAuth\Security\LoginAttempts;
 
@@ -34,18 +25,16 @@ use PolyAuth\Exceptions\ValidationExceptions\DatabaseValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\LoginValidationException;
 use PolyAuth\Exceptions\SessionExceptions\SessionValidationException;
 
-class Authenticator implements LoggerAwareInterface{
+class Authenticator{
 
 	protected $strategies;
 	protected $storage;
 	protected $options;
 	protected $lang;
-	protected $logger;
 	protected $encryption;
 	protected $accounts_manager;
 	protected $rbac;
 	protected $session_zone;
-	protected $cookies;
 	protected $login_attempts;
 	protected $user;
 
@@ -54,11 +43,9 @@ class Authenticator implements LoggerAwareInterface{
 		StorageInterface $storage, 
 		Options $options, 
 		Language $language, 
-		LoggerInterface $logger = null, 
 		AccountsManager $accounts_manager = null, 
 		Rbac $rbac = null,
 		SessionZone $session_zone = null, 
-		Cookies $cookies = null,
 		LoginAttempts $login_attempts = null
 	){
 
@@ -77,23 +64,11 @@ class Authenticator implements LoggerAwareInterface{
 		$this->storage = $storage;
 		$this->options = $options;
 		$this->lang = $language;
-		$this->logger = $logger;
-		$this->accounts_manager = ($accounts_manager) ? $accounts_manager : new AccountsManager($storage, $options, $language, $logger);
-		$this->rbac = ($rbac) ? $rbac : new Rbac($storage, $language, $logger);
+		$this->accounts_manager = ($accounts_manager) ? $accounts_manager : new AccountsManager($storage, $options, $language);
+		$this->rbac = ($rbac) ? $rbac : new Rbac($storage, $language);
 		$this->session_zone = ($session_zone) ? $session_zone : new SessionZone($options);
-		$this->cookies = ($cookies) ? $cookies : new Cookies($options);
-		$this->login_attempts = ($login_attempts) ? $login_attempts : new LoginAttempts($storage, $options, $logger);
+		$this->login_attempts = ($login_attempts) ? $login_attempts : new LoginAttempts($storage, $options);
 	
-	}
-	
-	/**
-	 * Sets a logger instance on the object
-	 *
-	 * @param LoggerInterface $logger
-	 * @return null
-	 */
-	public function setLogger(LoggerInterface $logger){
-		$this->logger = $logger;
 	}
 
 
@@ -385,10 +360,6 @@ class Authenticator implements LoggerAwareInterface{
 		
 		//perform any custom authentication functions
 		$this->strategy->logout_hook();
-		
-		//delete the php session cookie and autologin cookie
-		$this->cookies->delete_cookie($this->session_zone->get_name());
-		$this->cookies->delete_cookie('autologin');
 		
 		//this calls session_destroy() and session_unset()
 		$this->session_zone->destroy();

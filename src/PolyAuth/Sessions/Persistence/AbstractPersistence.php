@@ -2,7 +2,7 @@
 
 namespace PolyAuth\Sessions\Persistence;
 
-abstract class PersistenceAbstract{
+abstract class AbstractPersistence{
 
 	protected $cache;
 	protected $namespace;

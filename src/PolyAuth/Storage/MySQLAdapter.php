@@ -21,6 +21,8 @@ use RBAC\DataStore\Adapter\PDOMySQLAdapter;
  */
 class MySQLAdapter implements StorageInterface{
 
+	use \PolyAuth\LoggerTrait;
+
 	protected $db;
 	protected $options;
 	protected $logger;
@@ -33,19 +35,6 @@ class MySQLAdapter implements StorageInterface{
 		$this->logger = $logger;
 		$this->rbac_storage = new PDOMySQLAdapter($db, $logger);
 
-	}
-
-	/**
-	 * Sets a logger instance on the object
-	 *
-	 * @param LoggerInterface $logger
-	 * @return null
-	 */
-	public function setLogger(LoggerInterface $logger){
-
-		$this->logger = $logger;
-		$this->rbac_storage = new PDOMySQLADapter($this->db, $logger);
-	
 	}
 
 	//////////////////////

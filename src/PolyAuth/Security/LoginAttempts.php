@@ -9,6 +9,8 @@ use PolyAuth\Storage\StorageInterface;
 
 class LoginAttempts implements LoggerAwareInterface{
 
+	use \PolyAuth\LoggerTrait;
+
 	protected $storage;
 	protected $options;
 	protected $logger;
@@ -19,16 +21,6 @@ class LoginAttempts implements LoggerAwareInterface{
 		$this->options = $options;
 		$this->logger = $logger;
 	
-	}
-	
-	/**
-	 * Sets a logger instance on the object
-	 *
-	 * @param LoggerInterface $logger
-	 * @return null
-	 */
-	public function setLogger(LoggerInterface $logger){
-		$this->logger = $logger;
 	}
 	
 	/**

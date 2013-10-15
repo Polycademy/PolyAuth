@@ -7,7 +7,6 @@ use PolyAuth\Options;
 use PolyAuth\Sessions\SessionManager;
 use PolyAuth\Cookies;
 use PolyAuth\Security\Random;
-use Psr\Log\LoggerInterface;
 
 //this strategy will inject SessionManager (and provide methods to manipulate the session data)
 //provide a function to get the session() directly, and pass that into the Authenticator!
@@ -23,7 +22,6 @@ class CookieStrategy implements StrategyInterface{
 	protected $session_manager;
 	protected $cookies;
 	protected $random;
-	protected $logger;
 	
 	public function __construct(
 		StorageInterface $storage, 
@@ -31,7 +29,6 @@ class CookieStrategy implements StrategyInterface{
 		SessionManager $session_manager, 
 		Cookies $cookies = null, 
 		Random $random = null, 
-		LoggerInterface $logger = null
 	){
 		
 		$this->storage = $storage;
@@ -39,19 +36,58 @@ class CookieStrategy implements StrategyInterface{
 		$this->session_manager = $session_manager;
 		$this->cookies = ($cookies) ? $cookies : new Cookies($options);
 		$this->random = ($random) ? $random : new Random;
-		$this->logger = $logger;
 		
 	}
-	
+
 	/**
-	 * Sets a logger instance on the object
-	 *
-	 * @param LoggerInterface $logger
-	 * @return null
+	 * This function is used by the composite strategy to detect if this strategy 
+	 * is relevant to the client connection.
+	 * @return Boolean
 	 */
-	public function setLogger(LoggerInterface $logger){
-		$this->logger = $logger;
+	public function detect_relevance(){
+
+		$session_cookie = $this->cookies->get_cookie('session');
+		$autologin_cookie = $this->cookies->get_cookie('autologin');
+
+		//CookieStrategy would be relevant if there was a session or autologin cookie
+		if($session_cookie OR $autologin_cookie){
+			return true;
+		}
+
+		return false;
+
 	}
+
+	public function start_session(){
+
+		$session_cookie = $this->cookies->get_cookie('session');
+
+		if($session_cookie){
+
+			//get the ID
+			$this->session_manager->start($session_cookie);
+
+		}else{
+
+			//start a new session
+			$this->session_manager->start();
+
+		}
+
+	}
+
+	public function 
+
+	//The authenticator first asks if the session is available before attempting an autologin.
+	//To do this, we have to have a start function in this class.
+	//The start function will check if the client connection has the relevant session id and transport.
+	//If they do, it will attempt to start a session with that session id.
+	//If they don't it will attempt to start a session without any session id.
+	//A session will get started.
+	//The authorised function can now interrogate the session data to see if a user exists and is not anonymous.
+	//If they are anonymous. (This can happen if the session id was invalid/expired or session was started normally).
+
+
 
 	/**
 	 * Autologin Cookie Strategy, this checks whether the autologin cookie exists, and checks if the cookie's credentials are valid.
@@ -163,6 +199,9 @@ class CookieStrategy implements StrategyInterface{
 	 */
 	public function logout_hook(){
 	
+		//delete the php session cookie and autologin cookie
+		$this->cookies->delete_cookie('session');
+		$this->cookies->delete_cookie('autologin');
 		return;
 	
 	}
