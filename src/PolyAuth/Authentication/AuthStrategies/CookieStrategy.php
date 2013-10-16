@@ -221,7 +221,8 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 	public function login($data){
 		
 		//we need to do some actually logging in here... this is because different auth strategies have different routines for logging in
-		//
+		//move the majority of the functionality into the here
+		//the Authenticator moves the $data here!
 
 		return $data;
 
