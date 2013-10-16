@@ -58,7 +58,7 @@ class SessionManager implements \ArrayAccess{
 	protected $random;
 
 	protected $session_id = false;
-	protected $session_cache_expiration;
+	protected $session_expiration;
 	protected $lock_ttl;
 
 	public function __construct(
@@ -66,8 +66,8 @@ class SessionManager implements \ArrayAccess{
 		Language $language, 
 		AbstractPersistence $persistence = null, 
 		Random $random = null, 
-		$lock_ttl = false, 
-		$session_cache_expiration = false
+		$session_expiration = false,
+		$lock_ttl = false
 	){
 
 		$this->options = $options;
@@ -75,13 +75,13 @@ class SessionManager implements \ArrayAccess{
 		$this->persistence = ($persistence) ? $persistence : new MemoryPersistence();
 		$this->random = ($random) ? $random : new Random();
 
-		if($session_cache_expiration !== false){
-			$this->session_cache_expiration = $session_cache_expiration;
+		if($session_expiration !== false){
+			$this->session_expiration = $session_expiration;
 		}else{
-			if($this->options['session_cache_expiration'] === 0){
-				$this->session_cache_expiration = null;
+			if($this->options['session_expiration'] === 0){
+				$this->session_expiration = null;
 			}else{
-				$this->session_cache_expiration = $this->options['session_cache_expiration'];
+				$this->session_expiration = $this->options['session_expiration'];
 			}
 		}
 
@@ -112,11 +112,13 @@ class SessionManager implements \ArrayAccess{
 
 			//generate a random unique session id with a range between 20 to 40
 			$this->session_id  = $this->generate_session_id();
-			$this->persistence->set($this->session_id, array(), $this->session_cache_expiration);
+			$this->persistence->set($this->session_id, array(), $this->session_expiration);
 
 		}else{
 
 			if($this->persistence->exists($session_id)){
+				//resets the expiration upon starting the same session again, sequential requests will keep the session alive
+				$this->persistence->set($session_id, $this->persistence->get($session_id), $this->session_expiration);
 				$this->session_id = $session_id;
 			}else{
 				throw new SessionExpireException($this->lang['session_expire']);
@@ -170,7 +172,7 @@ class SessionManager implements \ArrayAccess{
 
 		//set a new session with the old session data or empty array
 		$this->session_id = $this->generate_session_id();
-		$this->persistence->set($this->session_id, $old_session_data, $this->session_cache_expiration);
+		$this->persistence->set($this->session_id, $old_session_data, $this->session_expiration);
 
 		//return the new session_id, a follow up function needs to be called to put this new session id
 		//into the cookies/headers.. etc
@@ -217,7 +219,7 @@ class SessionManager implements \ArrayAccess{
 
 		$session_data = $this->get_all();
 		$filtered = array_intersect_key($session_data, array_flip($except));
-		$this->persistence->set($this->session_id, $filtered, $this->session_cache_expiration);
+		$this->persistence->set($this->session_id, $filtered, $this->session_expiration);
 	
 	}
 
@@ -246,7 +248,7 @@ class SessionManager implements \ArrayAccess{
 		} else {
 			$session_data[$offset] = $value;
 		}
-		$this->persistence->set($this->session_id, $session_data, $this->session_cache_expiration);
+		$this->persistence->set($this->session_id, $session_data, $this->session_expiration);
 
 	}
 	
@@ -270,7 +272,7 @@ class SessionManager implements \ArrayAccess{
 
 		$session_data = $this->get_all();
 		unset($session_data[$offset]);
-		$this->persistence->set($this->session_id, $session_data, $this->session_cache_expiration);
+		$this->persistence->set($this->session_id, $session_data, $this->session_expiration);
 
 	}
 

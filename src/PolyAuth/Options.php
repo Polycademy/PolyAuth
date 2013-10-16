@@ -19,16 +19,9 @@ class Options implements \ArrayAccess{
 		'hash_rounds'						=> 10,
 		//session options (used for internal session handling)
 		'session_save_path'					=> '', //for filesystem persistence, leave empty for default session save path
-		'session_expiration'				=> 43200, //expiration of a single session (client side and server side) (set to 0 for infinite)
-		'session_cache_expiration'			=> 43200, //expiration of the session data cache (set to 0 for infinite), this is reset everytime you manipulate the session 
+		'session_strict_expiration'			=> 43200, //this is the expiration of a session id, regardless of how many times its used, and 
+		'session_soft_expiration'			=> 43200, //expiration of a single session (client side and server side) (set to 0 for infinite), this gets reset everytime the session is modified
 		'session_gc_probability'			=> '1', //probability of running the session garbage collection (percentage chance to one decimal place)
-		//cookie options
-		'cookie_domain'						=> '',
-		'cookie_path'						=> '/',
-		'cookie_prefix'						=> 'polyauth_',
-		'cookie_secure'						=> false,
-		'cookie_httponly'					=> true,
-		'cookie_lifetime'					=> 0, //for when the browser is closed (how long should the session cookies should be remembered for) (0 means the cookie dies as soon as the browser closes)
 		//email options (email data should be passed in as a string, end user manages their own stuff)
 		'email'								=> false, //make this true to use the emails by PHPMailer, otherwise false if you want to roll your own email solution, watch out for email activation
 		'email_smtp'						=> false,
@@ -63,13 +56,10 @@ class Options implements \ArrayAccess{
 			'diffidentity'	=> false,
 			'unique'		=> false, //number of unique characters ('' or false or 4) ('' defaults to 4)
 		), //can be an array or empty array
-		//LOGIN AUTOLOGIN, EXPIRATION AND EXPIRATION_EXTEND needs to be moved to a particular class options!
-		'login_autologin'					=> true, //allowing remember me or not
-		'login_expiration'					=> 86500, // autologin expiration (seconds). Set to zero for no expiration
-		'login_expiration_extend'			=> true, //allowing whether autologin extends the login_expiration
 		'login_lockout'						=> array('ipaddress', 'identity'), //lockout tracking, can use both or one of them or false
 		'login_lockout_cap'					=> 172800, //cap on the lockout time in seconds (0 means no cap) 48 hrs
 		'login_forgot_expiration'			=> 0, //how long before the temporary password expires in seconds!
+		//THIS NEEDS TO BE MOVED INTO HTTP STRATEGY
 		'login_realm'						=> 'Protected by PolyAuth Realm', //only relevant to HTTP auth
 		//registration options
 		'reg_activation'					=> false, //can be email, manual, or false (if doing manual, the activationCode is still generated, but you will need to send the email yourself)

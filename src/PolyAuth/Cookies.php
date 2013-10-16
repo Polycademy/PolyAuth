@@ -41,6 +41,7 @@ class Cookies{
 	
 	public function delete_cookie($name = ''){
 	
+		$name = $this->options['cookie_prefix'] . $name;
 		unset($_COOKIE[$name]);
 		return $this->set_cookie($name, '', '');
 		

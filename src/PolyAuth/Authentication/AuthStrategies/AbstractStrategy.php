@@ -21,7 +21,7 @@ abstract class AbstractStrategy{
 	 * header since it's not available by default.
 	 * @return Object
 	 */
-	public function get_request(){
+	protected function get_request(){
 
 		$headers = getallheaders();
 
