@@ -23,9 +23,9 @@ use PolyAuth\Exceptions\ValidationExceptions\StrategyValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\PasswordValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\DatabaseValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\LoginValidationException;
-use PolyAuth\Exceptions\SessionExceptions\SessionValidationException;
+use PolyAuth\Exceptions\ValidationExceptions\SessionValidationException;
 
-use Symfony\Component\HttpFoundation\Request;
+//THERES NO LONGER A SUCH THING AS LOGIN_TIMEOUT!
 
 class Authenticator{
 

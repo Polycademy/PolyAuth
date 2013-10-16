@@ -10,8 +10,6 @@ use PolyAuth\Security\Random;
 
 use Stash\Item;
 
-use PolyAuth\Exceptions\SessionExceptions\SessionExpireException;
-
 /**
  * SessionManager manages the server side part of sessions. Sessions in PolyAuth refer to the state 
  * in which a client is using the current system. Therefore every time a client is using the system, 
@@ -64,9 +62,9 @@ class SessionManager implements \ArrayAccess{
 	public function __construct(
 		Options $options, 
 		Language $language, 
-		AbstractPersistence $persistence = null, 
+		AbstractPersistence $persistence = null,
+		$session_expiration = false, 
 		Random $random = null, 
-		$session_expiration = false,
 		$lock_ttl = false
 	){
 
@@ -88,9 +86,8 @@ class SessionManager implements \ArrayAccess{
 	/**
 	 * Starts the session tracking or starts a new session. Called at startup.
 	 * Every time this is called, it calles the garbage collector to potentially purge 
-	 * expired sessions. If a session id is passed in, and it has expired, then it will throw 
-	 * SessionExpireException. This will be caught by the authentication strategy and the
-	 * strategy will determine what to do next.
+	 * expired sessions. If a session id is passed in, and it has expired, then it will 
+	 * restart a new session
 	 * @param  Boolean $session_id       Tracked session id
 	 * @return String  $this->session_id New session id         
 	 */
@@ -114,10 +111,10 @@ class SessionManager implements \ArrayAccess{
 
 			if($this->persistence->exists($session_id)){
 				//resets the expiration upon starting the same session again, sequential requests will keep the session alive
-				$this->persistence->set($session_id, $this->persistence->get($session_id), $this->session_expiration);
 				$this->session_id = $session_id;
+				$this->persistence->set($this->session_id, $this->persistence->get($this->session_id), $this->session_expiration);
 			}else{
-				throw new SessionExpireException($this->lang['session_expire']);
+				return $this->start();
 			}
 
 		}
@@ -194,19 +191,13 @@ class SessionManager implements \ArrayAccess{
 
 	/**
 	 * Gets all the data in the session zone.
-	 * If the session expired in between calling start and calling get_all, 
-	 * it will regenerate cache by locking the session, calling start() which 
-	 * will set a new session and call itself to get the new session data.
-	 * Concurrent functions will just get the old session data if has been locked
+	 * The session cannot expire at this point, this is because on each new request,
+	 * $this->start() is called which refreshes the session expiration.
 	 * @return array Session zone data
 	 */
 	public function get_all(){
 
 		$session_data = $this->persistence->get($this->session_id);
-
-		if(!$this->persistence->exists($this->session_id)){
-			throw new SessionExpireException($this->lang['session_expire']);
-		}
 
 		return $session_data;
 
