@@ -3,9 +3,9 @@
 namespace PolyAuth\Authentication\AuthStrategies;
 
 use PolyAuth\Storage\StorageInterface;
-use PolyAuth\Options;
 use PolyAuth\Sessions\SessionManager;
 use PolyAuth\Security\Random;
+use PolyAuth\Exceptions\SessionExceptions\SessionExpireException;
 
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Cookie;
@@ -53,6 +53,11 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 
 	}
 
+	/**
+	 * Detects if CookieStrategy is relevant to the current request.
+	 * Tests for the existence of a session cookie or an autologin cookie.
+	 * @return Boolean
+	 */
 	public function detect_relevance(){
 
 		$session_cookie = $this->request->cookies->get('session');
@@ -66,6 +71,17 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 
 	}
 
+	/**
+	 * Starts the session tracking for Cookie strategy.
+	 * It first gets the session cookie. If the cookie exists, it attempts to 
+	 * start the session with the session cookie's session id. If it doesn't exist 
+	 * it will start a new anonymous session. This is all handled by the SessionManager.
+	 * After the session is started, it will reset the session cookie with the new/old 
+	 * session id, and reset the expiration of the cookie. The expiration of the server 
+	 * session is also reset in the SessionManager. This means the session lifetime
+	 * can be refreshed each time the user accesses the system.
+	 * @return Void
+	 */
 	public function start_session(){
 
 		$session_cookie = $this->request->cookies->get('session');
@@ -204,7 +220,15 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 	 */
 	public function login($data){
 		
+		//we need to do some actually logging in here... this is because different auth strategies have different routines for logging in
+		//
+
 		return $data;
+
+
+		//THE STRATEGY's LOGIN function returns either boolean OR the UserAccount object
+		//It should also decide whether to set the autologin
+		//It should alkso decide whether to do a regeneration of the session! (only done on CookieStrategy!)
 		
 	}
 	
@@ -215,10 +239,23 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 	 * @return null
 	 */
 	public function logout(){
+
+		//this will be called if there any failures in logging in, you need to make sure to delete all the potential stuff
+		//like an access token or autocode
 	
 		//delete the php session cookie and autologin cookie
 		$this->response->header->clearCookie('session');
-		$this->response->header->clearCookie('autologin');
+
+		//if autologin was passed in via the request, we're going to clear it from the response and server
+		//otherwise just clear it from the response
+		$autologin = $this->request->cookies->get('autologin');
+		if($autologin){
+			$id = unserialize($autologin)['id'];
+			$this->clear_autologin($id);
+		}else{
+			$this->response->header->clearCookie('autologin');
+		}
+
 		return;
 	
 	}

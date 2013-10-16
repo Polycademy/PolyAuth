@@ -54,11 +54,6 @@ abstract class AbstractStrategy{
 	abstract public function autologin();
 	
 	/**
-	 * This should setup a persistent autologin method to go with the autologin function. It can be a stub.
-	 */
-	abstract public function set_autologin($user_id);
-	
-	/**
 	 * Login hook is called just before the manual login. This modifies the $data variable must return the $data variable.
 	 * Modify the $data variable to fill it with ['identity'] AND ['password'].
 	 * Certain strategies may use login hook to create the random account on the fly such as Oauth or OpenId.
