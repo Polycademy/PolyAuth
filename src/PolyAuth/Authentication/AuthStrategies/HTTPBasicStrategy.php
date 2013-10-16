@@ -18,13 +18,12 @@ class HTTPStrategy implements AuthStrategyInterface{
 	
 	public function __construct(
 		StorageInterface $storage, 
-		Options $options, 
-		$realm = false
+		SessionManager $session_manager, 
+		$realm = false 
 	){
 		
 		$this->storage = $storage;
-		$this->options = $options;
-		$this->realm = ($realm) ? $realm : $options['login_realm'];
+		$this->realm = ($realm) ? $realm : 'Protected by PolyAuth Realm';
 		
 	}
 	

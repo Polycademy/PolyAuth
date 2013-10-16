@@ -78,11 +78,7 @@ class SessionManager implements \ArrayAccess{
 		if($session_expiration !== false){
 			$this->session_expiration = $session_expiration;
 		}else{
-			if($this->options['session_expiration'] === 0){
-				$this->session_expiration = null;
-			}else{
-				$this->session_expiration = $this->options['session_expiration'];
-			}
+			$this->session_expiration = $this->options['session_expiration'];
 		}
 
 		$this->lock_ttl = ($lock_ttl) ? $lock_ttl : 240;
@@ -187,6 +183,12 @@ class SessionManager implements \ArrayAccess{
 	public function get_session_id(){
 
 		return ($this->session_id) ? $this->session_id : false;
+
+	}
+
+	public function get_session_expiration(){
+
+		return $this->session_expiration;
 
 	}
 
