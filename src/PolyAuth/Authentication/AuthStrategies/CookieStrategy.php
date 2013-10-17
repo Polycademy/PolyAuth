@@ -7,6 +7,11 @@ use PolyAuth\Sessions\SessionManager;
 use PolyAuth\Security\Random;
 use PolyAuth\Exceptions\SessionExceptions\SessionExpireException;
 
+use PolyAuth\Options;
+use PolyAuth\Language;
+use PolyAuth\Accounts\AccountsManager;
+use PolyAuth\UserAccount;
+
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\Response;
@@ -18,14 +23,18 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 	protected $cookie_options;
 	protected $request;
 	protected $response;
+	protected $accounts_manager;
 	protected $random;
 	
 	public function __construct(
 		StorageInterface $storage, 
+		Options $options,
+		Language $language, 
 		SessionManager $session_manager, 
 		array $cookie_options = array(), 
 		Request $request = null, 
 		Response $response = null, 
+		AccountsManager $accounts_manager = null, 
 		Random $random = null
 	){
 		
@@ -33,6 +42,7 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 		$this->session_manager = $session_manager;
 		$this->request = ($request) ? $request : $this->get_request();
 		$this->response = ($response) ? $response : new Response;
+		$this->accounts_manager = ($accounts_manager) ? $accounts_manager : new AccountsManager($storage, $options, $language);
 		$this->random = ($random) ? $random : new Random;
 
 		//default cookie options
@@ -113,10 +123,10 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 
 	/**
 	 * Autologin Cookie Strategy, this checks whether the autologin cookie exists, and checks if the 
-	 * cookie's credentials are valid. If it is valid, it will return the user id. It may also extend the  
+	 * cookie's credentials are valid. If it is valid, it will return a new user id. It may also extend the  
 	 * autologin expiration time. If it is invalid, it will clear the autologin details in the database, 
 	 * and also delete the autologin cookie.
-	 * @return Integer | Boolean $user_Id
+	 * @return Integer | Boolean
 	 */
 	public function autologin(){
 
@@ -143,9 +153,11 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 				if($this->cookie_options['autologin_expiration_extend']){
 					$this->set_autologin($id);
 				}
+
 				//refresh the session
 				$this->regenerate_cookie_session();
-				return $row->id;
+
+				return $this->accounts_manager->get_user($row->id);
 				
 			}else{
 			
@@ -220,28 +232,21 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 	/**
 	 * Login hook, this will manipulate the $data array passed in and return it.
 	 * The cookie strategy won't do anything in this case. It's a simple stub.
-	 *
-	 * @param $data array
-	 * @return $data array
 	 */
-	public function login($data, $force_login){
+	public function login(array $data, $user_id){
 
-		
+		//THIS NEEDS TO DO THE MAJORITY OF THE WORK IN AUTHENTICATION
+		//TO KEEP IT CONSISTENT WITH OAUTH
+		//which has 3 different flows to contend with!
 
+		$this->regenerate_cookie_session();
 
+		//if it has passed everything, we're going to call set_autologin to setup persistent login if autologin is boolean true
+		if(!empty($data['autologin']) AND $this->options['login_autologin']){
+			$this->set_autologin($user_id);
+		}
 
-
-		
-		//we need to do some actually logging in here... this is because different auth strategies have different routines for logging in
-		//move the majority of the functionality into the here
-		//the Authenticator moves the $data here!
-
-		return $data;
-
-
-		//THE STRATEGY's LOGIN function returns either boolean OR the UserAccount object
-		//It should also decide whether to set the autologin
-		//It should alkso decide whether to do a regeneration of the session! (only done on CookieStrategy!)
+		return true;
 		
 	}
 	

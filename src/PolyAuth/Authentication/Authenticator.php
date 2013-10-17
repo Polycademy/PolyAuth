@@ -82,41 +82,17 @@ class Authenticator{
 		//if the user is not logged in, we're going to reset an anonymous session and attempt autologin
 		if(!$this->logged_in()){
 
-			$this->set_default_session();
+			//create an anonymous user
+			$this->set_session_state();
+			//if autologin works, it would overwrite the anonymous user
 			$this->autologin();
-		
+
 		}else{
 			
 			$this->user = $this->accounts_manager->get_user($this->strategy->get_session()['user_id']);
 		
 		}
 	
-	}
-
-	protected function logged_in(){
-
-		$session = $this->strategy->get_session();
-
-		//if user id doesn't exist in the session and $this->user's id doesn't exist then the user is not logged in
-		if(empty($session['user_id']) AND $session['user_id'] !== 0){
-			if(!$this->user instanceof UserAccount OR (empty($this->user['id']) AND $this->user['id'] !== 0)){
-				return false;
-			}else{
-				$user_id = $this->user['id'];
-			}
-		}else{
-			$user_id = $session['user_id'];
-		}
-
-		//check if the user id actually exists in the database
-		$row = $this->storage->get_user($user_id);
-
-		if(!$row){
-			return false;
-		}
-
-		return true;
-
 	}
 	
 	/**
@@ -130,12 +106,13 @@ class Authenticator{
 	 */
 	protected function autologin(){
 
-		$user_id = $this->strategy->autologin();
+		$user = $this->strategy->autologin();
 		
-		if($user_id){
-		
-			$this->user = $this->accounts_manager->get_user($user_id);
-			$this->set_default_session($user_id, false);
+		if($user){
+
+			//user is now logged in
+			$this->set_session_state($user);
+
 			$this->storage->update_last_login($this->user['id'], $this->get_ip());
 			
 			//final checks before we proceed (inactive or banned would logout the user)
@@ -176,56 +153,38 @@ class Authenticator{
 			$this->strategy->switch_context($strategy);
 		}
 
-		$user_account = $this->strategy->login($data, $force_login);
-		
-
-
-
-
-
-
-
-
-
-
-
-		//if no data or no identity, then fail
-		if(!is_array($data) OR !isset($data['identity'])){
-			$this->login_failure($data, $this->lang['login_unsuccessful']);
-		}
-
-		//if it was not external and didn't have password, then fail
-		if(!isset($data['external']) AND !isset($data['password'])){
-			$this->login_failure($data, $this->lang['login_unsuccessful']);
-		}
-		
-		//we only enforce lockout if it's not an external login attempt
-		if(!isset($data['external'])){
-			if(!$force_login AND !empty($this->options['login_lockout'])){
-				//is the current login attempt locked out?
-				$lockout_time = $this->login_attempts->locked_out($data['identity']);
-				//if the lockout_time is true, non-zero integer
-				if($lockout_time){
-					$this->login_failure($data, sprintf($this->lang['login_lockout'], $lockout_time));
-				}
+		if(!$force_login AND !empty($this->options['login_lockout'])){
+			//is the current login attempt locked out?
+			$lockout_time = $this->login_attempts->locked_out($data['identity']);
+			//if the lockout_time is true, non-zero integer
+			if($lockout_time){
+				$this->login_failure($data, sprintf($this->lang['login_lockout'], $lockout_time));
 			}
+		}
+
+		//THIS CURRENT FUNCTION IS INCORRECT, you need to do most of the authentication in the CookieStrategy
+		//it will need to return different states to call the different login_failures...?
+		//
+		//STARTING HERE
+
+
+
+		if(!isset($data['identity']) OR !isset($data['password'])){
+			$this->login_failure($data, $this->lang['login_unsuccessful']);
 		}
 
 		$row = $this->storage->get_login_check($data['identity']);
 
 		if($row){
 
-			if(!isset($data['external'])){
 
-				if(!password_verify($data['password'], $row->password)){
-				
-					//this is the only attempt that is considered a real failed login attempt
-					//because the password failed
-					//the third parameter is true in order to implement login throttling
-					$this->login_failure($data, $this->lang['login_password'], true);
-				
-				}
-
+			if(!password_verify($data['password'], $row->password)){
+			
+				//this is the only attempt that is considered a real failed login attempt
+				//because the password failed
+				//the third parameter is true in order to implement login throttling
+				$this->login_failure($data, $this->lang['login_password'], true);
+			
 			}
 
 			//if it was external, then there is no password
@@ -236,50 +195,22 @@ class Authenticator{
 			$this->login_failure($data, $this->lang['login_identity']);
 
 		}
-		
-		$this->user = $this->accounts_manager->get_user($user_id);
-		if(!empty($this->options['login_lockout'])){
-			$this->login_attempts->clear($this->user[$this->options['login_identity']]);
-		}
-		$this->storage->update_last_login($this->user['id'], $this->get_ip());
-		
-		$this->session_zone->regenerate();
-		$this->set_default_session($user_id, false);
-		
-		$this->check_inactive($this->user);
-		$this->check_banned($this->user);
-		//external logins dont have passwords
-		if(!isset($data['external'])){
-			$this->check_password_change($this->user);
-		}
-		
-		//if it has passed everything, we're going to call set_autologin to setup persistent login if autologin is boolean true
-		if(!empty($data['autologin']) AND $this->options['login_autologin']){
-			//strategy key will identify the particular strategy that was used to actually login
-			$this->strategies[$strategy_key]->set_autologin($user_id);
-		}
-		
-		return true;
-	
-	}
 
-	public function external_login($identity){
-
-		$row = $this->storage->get_login_check($identity);
-		$user_id = $row->id;
+		//ENDING HERE
 		
-		$this->user = $this->accounts_manager->get_user($user_id);
+		$this->set_session_state($this->accounts_manager->get_user($user_id));
 
 		if(!empty($this->options['login_lockout'])){
 			$this->login_attempts->clear($this->user[$this->options['login_identity']]);
 		}
+
 		$this->storage->update_last_login($this->user['id'], $this->get_ip());
-		
-		$this->session_zone->regenerate();
-		$this->set_default_session($user_id, false);
-		
+
 		$this->check_inactive($this->user);
 		$this->check_banned($this->user);
+		$this->check_password_change($this->user);
+
+		$this->strategy->login($data, $user_id);
 		
 		return true;
 	
@@ -447,138 +378,61 @@ class Authenticator{
 	 * Gets the current session manager if you want granular control.
 	 * @return $this->session_zone object
 	 */
-	public function get_session_zone(){
+	public function get_session(){
 		
-		return $this->session_zone;
+		//don't remove the user_id
+		return $this->strategy->get_session();
 	
 	}
 
-	/**
-	 * Gets all the properties that are in the session
-	 * @return mixed
-	 */
-	public function get_properties(){
+	protected function logged_in(){
 
-		$this->session_zone->start_session();
-		$value = $this->session_zone->get_all();
-		$this->session_zone->commit_session();
-		return $value;
+		$session = $this->strategy->get_session();
 
-	}
-
-	/**
-	 * Clears all the properties except the reserved ones
-	 */
-	public function clear_properties(){
-
-		$this->session_zone->start_session();
-		$this->session_zone->clear_all(array('user_id', 'anonymous', 'timeout'));
-		$this->session_zone->commit_session();
-
-	}
-
-	/**
-	 * Gets a session property. Flash data is deleted after it is read once.
-	 * @param  string  $key		identifier of the session data
-	 * @param  boolean $flash	whether it's a flash data or not
-	 * @return mixed			session data
-	 */
-	public function get_property($key, $flash = false){
-
-		$this->session_zone->start_session();
-
-		if($flash){
-			$value = $this->session_zone->get_flash($key);
+		//if user id doesn't exist in the session and $this->user's id doesn't exist then the user is not logged in
+		if(empty($session['user_id']) AND $session['user_id'] !== 0){
+			if(!$this->user instanceof UserAccount OR (empty($this->user['id']) AND $this->user['id'] !== 0)){
+				return false;
+			}else{
+				$user_id = $this->user['id'];
+			}
 		}else{
-			$value = $this->session_zone[$key];
+			$user_id = $session['user_id'];
 		}
 
-		$this->session_zone->commit_session();
+		//check if the user id actually exists in the database
+		$row = $this->storage->get_user($user_id);
 
-		return $value;
+		if(!$row){
+			return false;
+		}
+
+		return true;
 
 	}
-	
-	/**
-	 * Updates/inserts the session with custom properties.
-	 * You cannot use reserved keys such as 'user_id', 'anonymous' or 'timeout'
-	 * You cannot use custom session data unless you are using cookie based authentication.
-	 * Otherwise each request is unique and stateless.
-	 *
-	 * @param boolean $flash sets a read-once value
-	 */
-	public function set_property($key, $value, $flash = false){
-		
-		if($key == 'user_id' OR $key == 'anonymous' OR $key == 'timeout'){
-			throw new SessionValidationException($this->lang['session_invalid_key']);
-		}
 
-		$this->session_zone->start_session();
+	protected function set_session_state(UserAccount $user = null){
 
-		if($flash){
-			$this->session_zone->set_flash($key, $value);
+		$session = $this->strategy->get_session;
+
+		if(!$user){
+			$session['user_id'] = false;
+			$this->user = $this->get_anonymous_user_account();
 		}else{
-			$this->session_zone[$key] = $value;
+			$session['user_id'] = $user['id'];
+			$this->user = $user;
 		}
-		
-		$this->session_zone->commit_session();
-	
-	}
-	
-	/**
-	 * Delete custom properties on the session.
-	 * You cannot use reserved keys such as 'user_id', 'anonymous' or 'timeout'
-	 */
-	public function delete_property($key, $flash = false){
-	
-		if($key == 'user_id' OR $key == 'anonymous' OR $key == 'timeout'){
-			throw new SessionValidationException($this->lang['session_invalid_key']);
-		}
-		
-		$this->session_zone->start_session();
-		
-		if($flash){
-			$this->session_zone->get_flash($key);
-		}else{
-			unset($this->session_zone[$key]);
-		}
-		
-		$this->session_zone->commit_session();
-	
-	}
-
-	/**
-	 * Does the session have a particular property? Useful mainly for flash values so you don't lose it.
-	 * @param  string  $key   Name of the value
-	 * @return boolean
-	 */
-	public function has_flash_property($key){
-
-		$this->session_zone->start_session();
-
-		$value = $this->session_zone->has_flash($key);
-
-		$this->session_zone->commit_session();
-
-		return $value;
 
 	}
 	
-	/**
-	 * Sets up an anonymous or non-anonymous session.
-	 * If no parameters are set it will set a anonymous session.
-	 *
-	 * @param $user_id integer | false
-	 * @param $anonymous boolean
-	 */
-	protected function set_default_session($user_id = false, $anonymous = true){
-	
-		$this->session_zone->start_session();
-		$this->session_zone['user_id'] = $user_id;
-		$this->session_zone['anonymous'] = $anonymous;
-		$this->session_zone['timeout'] = time();
-		$this->session_zone->commit_session();
-	
+	protected function get_anonymous_user_account(){
+
+		$anonymous_user = new UserAccount(false);
+		$anonymous_user->set_user_data(array(
+			'anonymous'	=> true
+		));
+		return $anonymous_user;
+
 	}
 	
 	/**

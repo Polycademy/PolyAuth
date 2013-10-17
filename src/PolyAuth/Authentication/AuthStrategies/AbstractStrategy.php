@@ -52,7 +52,7 @@ abstract class AbstractStrategy{
 	 * Certain strategies may use login hook to create the random account on the fly such as Oauth or OpenId.
 	 * PolyAuth will create any corresponding server session data.
 	 */
-	abstract public function login($data, $force_login);
+	abstract public function login(array $data);
 	
 	/**
 	 * Destroy any client session data. PolyAuth will destroy the corresponding server session data.
