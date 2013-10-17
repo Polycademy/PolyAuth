@@ -9,7 +9,7 @@ namespace PolyAuth\Authentication\AuthStrategies\Decorators;
  * Methods will cascade to the original child object.
  * Properties will read and set from the original child object except when your instance has the property defined.
  */
-abstract class DecoratorAbstract{
+abstract class AbstractDecorator{
 
 	protected $strategy;
 

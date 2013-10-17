@@ -141,9 +141,6 @@ class SessionManager implements \ArrayAccess{
 	/**
 	 * Regenerates the session id while keeping the old session data.
 	 * This works even if the session has expired, it will create a new session with empty array as data.
-	 * This should be used whenever: 
-	 * 1. the role or permissions of the current user was changed programmatically.
-	 * 2. the user logs in or logs out to prevent session fixation.
 	 * This returns the new session id, a follow up function should be used to pass this back to the client.
 	 * This function only really make sense for CookieStrategy, you shouldn't call this with the other strategies
 	 * @return String New Session ID

@@ -119,6 +119,10 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 	 * @return Integer | Boolean $user_Id
 	 */
 	public function autologin(){
+
+		if(!$this->cookie_options['autologin']){
+			return false;
+		}
 	
 		$autologin = $this->request->cookies->get('autologin');
 		
@@ -139,6 +143,8 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 				if($this->cookie_options['autologin_expiration_extend']){
 					$this->set_autologin($id);
 				}
+				//refresh the session
+				$this->regenerate_cookie_session();
 				return $row->id;
 				
 			}else{
@@ -218,7 +224,13 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 	 * @param $data array
 	 * @return $data array
 	 */
-	public function login($data){
+	public function login($data, $force_login){
+
+		
+
+
+
+
 		
 		//we need to do some actually logging in here... this is because different auth strategies have different routines for logging in
 		//move the majority of the functionality into the here
@@ -289,6 +301,35 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 		);
 
 		return $this->response->prepare($this->request);
+
+	}
+
+	/**
+	 * Regenerates the session id on the server and on the cookies. This is only ever
+	 * used inside the CookieStrategy. Other strategies do not need to regenerate 
+	 * session ids. To help prevent session fixation. This is called on logging in through
+	 * either normal login or autologin.
+	 * @return Void
+	 */
+	protected function regenerate_cookie_session(){
+
+		$new_session_id = $this->session_manager->regenerate();
+
+		if($this->cookies_options['session_expiration']){
+			$expiration = time() + $cookie_options['session_expiration'];
+		}else{
+			$expiration = 0;
+		}
+
+		$this->response->header->setCookie(new Cookie(
+			'session',
+			$new_session_id,
+			$expiration, 
+			$this->cookie_options['cookie_path'], 
+			$this->cookie_options['cookie_domain'], 
+			$this->cookie_options['cookie_secure'], 
+			$this->cookie_options['cookie_httponly']
+		));
 
 	}
 

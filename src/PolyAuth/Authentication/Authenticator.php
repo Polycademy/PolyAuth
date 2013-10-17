@@ -2,18 +2,17 @@
 
 namespace PolyAuth\Authentication;
 
-use PolyAuth\Options;
-use PolyAuth\Language;
-use PolyAuth\Storage\StorageInterface;
 
 use PolyAuth\AuthStrategies\AbstractStrategy;
-
-use PolyAuth\UserAccount;
+use PolyAuth\Storage\StorageInterface;
+use PolyAuth\Options;
+use PolyAuth\Language;
 use PolyAuth\Accounts\AccountsManager;
 use PolyAuth\Accounts\Rbac;
-
-use PolyAuth\Persistence\PersistenceInterface;
 use PolyAuth\Security\LoginAttempts;
+
+use PolyAuth\UserAccount;
+
 
 use PolyAuth\Exceptions\UserExceptions\UserPasswordChangeException;
 use PolyAuth\Exceptions\UserExceptions\UserNotFoundException;
@@ -33,10 +32,8 @@ class Authenticator{
 	protected $storage;
 	protected $options;
 	protected $lang;
-	protected $encryption;
 	protected $accounts_manager;
 	protected $rbac;
-	protected $session_zone;
 	protected $login_attempts;
 	protected $user;
 
@@ -47,7 +44,6 @@ class Authenticator{
 		Language $language, 
 		AccountsManager $accounts_manager = null, 
 		Rbac $rbac = null,
-		SessionZone $session_zone = null, 
 		LoginAttempts $login_attempts = null
 	){
 
@@ -62,28 +58,6 @@ class Authenticator{
 	
 	}
 
-
-
-
-
-
-
-	//THIS NEEDS to a couple things:
-	//Given a array of strategies, if a particular strategy gets used in either autologin or login, this becomes
-	//the preferred strategy. So we will always use that strategy for the duration of the script.
-	//1. Autologin
-	//	COOKIE:
-	//		CookieStrategy needs to acquire the Autologin Cookie, validate it and return the correct user id
-	//		Given the user id, we will instantiate a session for that user and regenerate the session.
-	//2. Login
-	//3. Logout
-	//4. Check authorisation and permissions
-	//5. Get the currently authenticated user
-
-
-
-
-	
 	/**
 	 * Start the tracking sessions. You should only call this once. However multiple calls to this function
 	 * is idempotent.
@@ -99,43 +73,50 @@ class Authenticator{
 	 */
 	public function start(){
 
-		//if the user property is filled, this means start has already been called
-		//if it has been called, we don't want to do anything here as it can cause a conflict
-		//or overwrite sessions
 		if(!empty($this->user)){
 			return;
 		}
 
-		//this starts the session to allow variables to be read from the session
-		$this->session_zone->start_session();
+		$this->strategy->start_session();
 
 		//if the user is not logged in, we're going to reset an anonymous session and attempt autologin
-		if(!$this->authorized()){
+		if(!$this->logged_in()){
 
-			//beware that this means an anonymous session will never time out
 			$this->set_default_session();
-			
-			if($this->options['login_autologin']){
-				$this->autologin();
-			}
+			$this->autologin();
 		
 		}else{
 			
-			$this->user = $this->accounts_manager->get_user($this->session_zone['user_id']);
+			$this->user = $this->accounts_manager->get_user($this->strategy->get_session()['user_id']);
 		
 		}
+	
+	}
 
+	protected function logged_in(){
 
-		//time out long lived logged in sessions
-		if($this->options['session_expiration'] AND is_numeric($this->session_zone['timeout'])){
-			$time_to_live = time() - $this->session_zone['timeout'];
-			if($time_to_live > $this->options['session_expiration']){
-				$this->logout();
+		$session = $this->strategy->get_session();
+
+		//if user id doesn't exist in the session and $this->user's id doesn't exist then the user is not logged in
+		if(empty($session['user_id']) AND $session['user_id'] !== 0){
+			if(!$this->user instanceof UserAccount OR (empty($this->user['id']) AND $this->user['id'] !== 0)){
+				return false;
+			}else{
+				$user_id = $this->user['id'];
 			}
+		}else{
+			$user_id = $session['user_id'];
 		}
 
-		$this->session_zone->commit_session();
-	
+		//check if the user id actually exists in the database
+		$row = $this->storage->get_user($user_id);
+
+		if(!$row){
+			return false;
+		}
+
+		return true;
+
 	}
 	
 	/**
@@ -149,18 +130,13 @@ class Authenticator{
 	 */
 	protected function autologin(){
 
-		//the first strategy to provide a user id wins the cake
-		foreach($this->strategies as $strategy){
-			$user_id = $strategy->autologin();
-			if($user_id) break;
-		}
+		$user_id = $this->strategy->autologin();
 		
 		if($user_id){
 		
 			$this->user = $this->accounts_manager->get_user($user_id);
-			$this->storage->update_last_login($this->user['id'], $this->get_ip());
-			$this->session_zone->regenerate();
 			$this->set_default_session($user_id, false);
+			$this->storage->update_last_login($this->user['id'], $this->get_ip());
 			
 			//final checks before we proceed (inactive or banned would logout the user)
 			$this->check_inactive($this->user);
@@ -191,33 +167,28 @@ class Authenticator{
 	 * @param $force_login boolean
 	 * @return boolean
 	 */
-	public function login(array $data = null, $force_login = false){
+	public function login(array $data, $force_login = false, $strategy = false){
 
-		//TODO!!
-		//the access code and the access to the user's API should be kept in either the UserAccount or the OAuthStrategy
-		//probably best in the UserAccount, the UserAccount needs to be filled with an object API
-
-		//currently users have to redirect to the provider first, then call login, because it needs the code
-		//that's stupid
-		//we should be able to call login and receive the authorisationUri to redirect
-		//and then be automatically be logged in when the start() and hence autologin is called
-		//IN FACT
-		//login->should get the auth Uri
-		//autologin->should actually do the actual the logging in for Oauth Uri
-		//autologin can do both, do the cookie based autologin, and the real logging in
-
-
-		//each strategy will take the passed in $data as parameters and return either 'identity' and 'password' or 'identity' by itself, only oauth and openid would return 'identity' by itself
-		//and also return 'external' => true!
-		foreach($this->strategies as $key => $strategy){
-			$data = $strategy->login_hook($data);
-			if($data){
-				//strategy key will be kept in case we need to identify which strategy was used
-				$strategy_key = $key;
-				break;
-			}
+		//this only works with composite strategy,
+		//this is mainly used in case you know the context will default the first strategy
+		//but you want to login via a different strategy in the composite strategy
+		if($strategy){
+			$this->strategy->switch_context($strategy);
 		}
+
+		$user_account = $this->strategy->login($data, $force_login);
 		
+
+
+
+
+
+
+
+
+
+
+
 		//if no data or no identity, then fail
 		if(!is_array($data) OR !isset($data['identity'])){
 			$this->login_failure($data, $this->lang['login_unsuccessful']);

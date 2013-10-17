@@ -27,6 +27,8 @@ use OAuth\OAuth2\Service\Exception\InvalidScopeException;
 use OAuth\OAuth2\Service\Exception\MissingRefreshTokenException;
 
 
+//GET authorisation uri
+
 //here's what needs to happen:
 //1. cascading multiple strategies
 //2. pass in providers here and in options

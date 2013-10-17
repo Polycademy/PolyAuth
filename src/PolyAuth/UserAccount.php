@@ -6,6 +6,17 @@ use RBAC\Subject\Subject;
 use RBAC\Role\RoleSet;
 use RBAC\Role\Role;
 
+/**
+ * Will Contain
+ *
+ * ->api->github/facebook/..etc->request
+ * ->api->polyauth->resource_owner
+ * ->api->polyauth->access_token
+ *
+ * ->authorized($permissions/$scope (in array), $roles, $user_id/$user_identity, $resource_owner_id){
+ * }
+ */
+
 class UserAccount extends Subject implements \ArrayAccess{
 
 	protected $user_data = array();

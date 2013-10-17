@@ -35,13 +35,6 @@ abstract class AbstractStrategy{
 	}
 
 	/**
-	 * This will return an HTTPFoundation response object which contains what PolyAuth wants to 
-	 * return to the client. However the end developer can further modify the response object,
-	 * or reconstruct it differently.
-	 */
-	abstract public get_response();
-
-	/**
 	 * Start_session will find the relevant session id/token and the transport method, and start
 	 * the session tracking
 	 */
@@ -55,15 +48,22 @@ abstract class AbstractStrategy{
 	
 	/**
 	 * Login hook is called just before the manual login. This modifies the $data variable must return the $data variable.
-	 * Modify the $data variable to fill it with ['identity'] AND ['password'].
+	 * Modify the $data variable to fill it with ['identity'] AND ['password'] AND ['autologin'].
 	 * Certain strategies may use login hook to create the random account on the fly such as Oauth or OpenId.
 	 * PolyAuth will create any corresponding server session data.
 	 */
-	abstract public function login($data);
+	abstract public function login($data, $force_login);
 	
 	/**
 	 * Destroy any client session data. PolyAuth will destroy the corresponding server session data.
 	 */
 	abstract public function logout();
+
+	/**
+	 * This will return an HTTPFoundation response object which contains what PolyAuth wants to 
+	 * return to the client. However the end developer can further modify the response object,
+	 * or reconstruct it differently.
+	 */
+	abstract public get_response();
 
 }
