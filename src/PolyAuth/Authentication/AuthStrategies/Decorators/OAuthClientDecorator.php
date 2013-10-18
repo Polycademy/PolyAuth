@@ -218,7 +218,7 @@ class OAuthClientStrategy extends AbstractDecorator{
 			}
 
 			//we'll use this in order to determine which provider redirected to us
-			$uri->addToQuery('provider_id', $provider_name);
+			$uri->addToQuery('provider', $provider_name);
 			$callback_url = $uri->getAbsoluteUri();
 
 			//setup the credentials of each one
