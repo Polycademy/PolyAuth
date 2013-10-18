@@ -25,7 +25,8 @@
 	},
 	"suggest": {
 		"ext-apc": "Can provide a faster memory cache for PolyAuth.",
-		"ext-mcrypt": "Required for encryption and decryption."
+		"ext-mcrypt": "Required for encryption and decryption.",
+		"ext-SimpleXML": "Required for authentication responses to be encoded in XML format."
 	},
 	"config": {
 		"bin-dir": "bin/"

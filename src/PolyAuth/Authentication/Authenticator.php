@@ -168,7 +168,6 @@ class Authenticator{
 		//STARTING HERE
 
 
-
 		if(!isset($data['identity']) OR !isset($data['password'])){
 			$this->login_failure($data, $this->lang['login_unsuccessful']);
 		}
@@ -385,6 +384,18 @@ class Authenticator{
 	
 	}
 
+	public function get_response(){
+
+		return $this->strategy->get_response();
+
+	}
+
+	public function get_strategy(){
+
+		return $this->strategy;
+
+	}
+
 	protected function logged_in(){
 
 		$session = $this->strategy->get_session();
@@ -417,7 +428,7 @@ class Authenticator{
 
 		if(!$user){
 			$session['user_id'] = false;
-			$this->user = $this->get_anonymous_user_account();
+			$this->user = $this->create_anonymous_user_account();
 		}else{
 			$session['user_id'] = $user['id'];
 			$this->user = $user;
@@ -425,7 +436,7 @@ class Authenticator{
 
 	}
 	
-	protected function get_anonymous_user_account(){
+	protected function create_anonymous_user_account(){
 
 		$anonymous_user = new UserAccount(false);
 		$anonymous_user->set_user_data(array(

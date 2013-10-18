@@ -278,37 +278,6 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 	
 	}
 
-	public function get_response(){
-
-		//this cookie strategy will most likely just output COOKIES!
-		//As in the cookie header...
-		//As in using $response->header->setCookie or ->clearCookie
-		
-		
-		//this dynamically adds a strategy array property to the response object (hopefully not overwriting anything)
-		//end developers can quickly check what the response object contains, and decide what to do with it
-		//there are 3 options:
-		//->send() or sendHeaders() or sendContent()
-		//extract the response's object properties and build a response yourself
-		//continue using the response object throughout the application, and augment it until you're ready to 
-		//to output to it to the client in your controllers
-		//one option is to check the strategy array, and if it's just headers, one can add whatever headers they want
-		//to add, and write sendHeaders(), and then just continue doing their work, until sending content
-		//in fact you can just call header() after calling sendHeaders() and that would overwrite any headers we set
-		//as long as no content has been echoed, it's fine!
-		//however for OAuth provider, often there will be content as well, the end developer would have to decide how
-		//and when to output these, we recommend of course to do it immediately after you call $authenticator->start()
-		$this->response->strategy = array(
-			'type'		=> 'cookie',
-			'headers'	=> true,
-			'content'	=> false,
-			'redirect'	=> false
-		);
-
-		return $this->response->prepare($this->request);
-
-	}
-
 	/**
 	 * Regenerates the session id on the server and on the cookies. This is only ever
 	 * used inside the CookieStrategy. Other strategies do not need to regenerate 
