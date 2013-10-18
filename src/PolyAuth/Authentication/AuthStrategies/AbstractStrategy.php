@@ -106,8 +106,9 @@ abstract class AbstractStrategy{
 			and all the content from ->getContent() and the status code from ->getStatusCode().
 
 			Most importantly, make sure to buffer your output beforehand. Sending headers is fairly easy, you can
-			overwrite headers even after you have written ->sendHeaders(), but after you send content, then you cannot
-			do anything more.
+			overwrite headers even after you have ran ->sendHeaders(), even the status code! The header() replaces 
+			by default, even the initial declaration. The http_ response_ code can replace the status code aswell.
+			But after you send content, then you cannot do anything more.
 		 */
 
 	}

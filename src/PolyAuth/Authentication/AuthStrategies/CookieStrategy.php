@@ -19,6 +19,8 @@ use Symfony\Component\HttpFoundation\Response;
 class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 
 	protected $storage;
+	protected $options;
+	protected $lang;
 	protected $session_manager;
 	protected $cookie_options;
 	protected $request;
@@ -39,6 +41,8 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 	){
 		
 		$this->storage = $storage;
+		$this->options = $options;
+		$this->lang = $language;
 		$this->session_manager = $session_manager;
 		$this->request = ($request) ? $request : $this->get_request();
 		$this->response = ($response) ? $response : new Response;
@@ -109,7 +113,7 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 		}
 
 		//this resets the session cookie regardless of it being a new or old session, this refreshes the session cookie's lifetime
-		$this->response->header->setCookie(new Cookie(
+		$this->response->headers->setCookie(new Cookie(
 			'session',
 			$session_id,
 			$expiration, 
@@ -195,7 +199,7 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 			$expiration = ($this->cookie_options['autologin_expiration'] !== 0) ? $this->cookie_options['autologin_expiration'] : (60*60*24*365*2);
 			
 			//set the new autologin cookie!
-			$this->response->header->setCookie(new Cookie(
+			$this->response->headers->setCookie(new Cookie(
 				'autologin', 
 				$autologin, 
 				time() + $expiration, 
@@ -224,45 +228,67 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 	public function clear_autologin($id){
 	
 		//clear the cookie to prevent multiple attempts
-		$this->response->header->clearCookie('autologin');
+		$this->response->headers->clearCookie('autologin');
 		return $this->storage->clear_autologin($id);
 	
 	}
-	
-	/**
-	 * Login hook, this will manipulate the $data array passed in and return it.
-	 * The cookie strategy won't do anything in this case. It's a simple stub.
-	 */
-	public function login(array $data, $user_id){
 
-		//THIS NEEDS TO DO THE MAJORITY OF THE WORK IN AUTHENTICATION
-		//TO KEEP IT CONSISTENT WITH OAUTH
-		//which has 3 different flows to contend with!
+	public function login(array $data){
 
-		$this->regenerate_cookie_session();
+		if(!isset($data['identity']) OR !isset($data['password'])){
 
-		//if it has passed everything, we're going to call set_autologin to setup persistent login if autologin is boolean true
+			return array(
+				'data'		=> $data,
+				'message'	=> $this->lang['login_unsuccessful'],
+				'throttle'	=> false
+			);
+
+		}
+
+		$row = $this->storage->get_login_check($data['identity']);
+
+		if($row){
+
+			if(!password_verify($data['password'], $row->password)){
+
+				//because the password failed, we are going to throttle the login attempt
+				return array(
+					'data'		=> $data,
+					'message'	=> $this->lang['login_password'],
+					'throttle'	=> true
+				);
+			
+			}
+
+			//if it was external, then there is no password
+			$user_id = $row->id;
+
+		}else{
+
+			return array(
+				'data'		=> $data,
+				'message'	=> $this->lang['login_identity'],
+				'throttle'	=> false
+			);
+
+		}
+
 		if(!empty($data['autologin']) AND $this->options['login_autologin']){
 			$this->set_autologin($user_id);
 		}
 
-		return true;
+		$this->regenerate_cookie_session();
+
+		$user = $this->accounts_manager->get_user($user_id);
+
+		return $user;
 		
 	}
 	
-	/**
-	 * Logout hook, will perform any necessary custom actions when logging out.
-	 * The cookie strategy won't do anything in this case.
-	 *
-	 * @return null
-	 */
 	public function logout(){
-
-		//this will be called if there any failures in logging in, you need to make sure to delete all the potential stuff
-		//like an access token or autocode
 	
 		//delete the php session cookie and autologin cookie
-		$this->response->header->clearCookie('session');
+		$this->response->headers->clearCookie('session');
 
 		//if autologin was passed in via the request, we're going to clear it from the response and server
 		//otherwise just clear it from the response
@@ -271,10 +297,13 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 			$id = unserialize($autologin)['id'];
 			$this->clear_autologin($id);
 		}else{
-			$this->response->header->clearCookie('autologin');
+			$this->response->headers->clearCookie('autologin');
 		}
 
-		return;
+		//clears the server session information
+		$this->session_manager->finish();
+
+		return true;
 	
 	}
 
@@ -295,7 +324,7 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 			$expiration = 0;
 		}
 
-		$this->response->header->setCookie(new Cookie(
+		$this->response->headers->setCookie(new Cookie(
 			'session',
 			$new_session_id,
 			$expiration, 

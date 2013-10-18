@@ -20,6 +20,7 @@ use RBAC\Role\Role;
 class UserAccount extends Subject implements \ArrayAccess{
 
 	protected $user_data = array();
+	protected $api; //should contain the object!
 
 	public function __construct($subject_id = false, RoleSet $role_set = null){
 		if($subject_id){
@@ -141,6 +142,95 @@ class UserAccount extends Subject implements \ArrayAccess{
 	 */
 	public function get_user_data(){
 		return $this->user_data;
+	}
+
+	
+	/**
+	 * Checks if the user is logged in and possesses all the passed in parameters.
+	 * The parameters operate on all or nothing except $identities and $id. $identities and $id operates like "has to be at least one of them".
+	 * This first checks if the session exists, and if not checks if the user exists in this script's memory.
+	 * 
+	 * @param $permissions array of permission names | string | false
+	 * @param $roles array of role names | string | false
+	 * @param $identities array of user identities | string | false (this must match your login_identity option)
+	 * @param $ids array of user ids | integer | false
+	 * @return boolean
+	 */
+	public function authorized($permissions = false, $roles = false, $identities = false, $ids = false){
+	
+		$this->session_zone->start_session();
+		
+		$permissions = ($permissions) ? (array) $permissions : false;
+		$roles = ($roles) ? (array) $roles : false;
+		$identities = ($identities) ? (array) $identities : false;
+		$ids = ($ids) ? (array) $ids : false;
+
+		//if the session and $this->user don't exist, then the user is not logged in
+		//if one of them exists, then there's a chance that the session data got lost in a single instance of the script
+		//also compensates for if the user id is actually a zero
+		if(empty($this->session_zone['user_id']) AND $this->session_zone['user_id'] !== 0){
+			if(!$this->user instanceof UserAccount OR empty($this->user['id'])){
+				return false;
+			}else{
+				$user_id = $this->user['id'];
+			}
+		}else{
+			$user_id = $this->session_zone['user_id'];
+		}
+
+		//we finished reading from the session, commit it!
+		$this->session_zone->commit_session();
+		
+		//check if the user id actually exists (this may be redundant, but better safe than sorry)
+		$row = $this->storage->get_user($user_id);
+
+		//does the id exist?
+		if(!$row){
+			return false;
+		}
+		
+		//id check
+		if($ids AND !in_array($user_id, $ids)){
+			return false;
+		}
+
+		//identity check
+		if($identities AND !in_array($row->{$this->options['login_identity']}, $identities)){
+			return false;
+		}
+		
+		//reset the user variable if it does not exist, this is possible if the developer not use $this->start()
+		if(!$this->user instanceof UserAccount OR empty($this->user['id'])){
+			$this->user = $this->accounts_manager->get_user($user_id);
+		}
+		
+		if($permissions){
+		
+			//check if the user has all the permissions
+			foreach($permissions as $permission_name){
+				if(!$this->user->has_permission($permission_name)){
+					return false;
+				}
+			}
+		
+		}
+		
+		if($roles){
+		
+			//we need to acquire role objects first because has_role only accepts objects, not strings
+			$role_objects = $this->rbac->get_roles($roles);
+
+			foreach($role_objects as $role_object){
+
+				if(!$this->user->has_role($role_object)){
+					return false;
+				}
+			}
+		
+		}
+		
+		return true;
+	
 	}
 	
 	public function offsetSet($offset, $value) {

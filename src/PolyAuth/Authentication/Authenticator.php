@@ -24,8 +24,6 @@ use PolyAuth\Exceptions\ValidationExceptions\DatabaseValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\LoginValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\SessionValidationException;
 
-//THERES NO LONGER A SUCH THING AS LOGIN_TIMEOUT!
-
 class Authenticator{
 
 	protected $strategy;
@@ -94,41 +92,6 @@ class Authenticator{
 		}
 	
 	}
-	
-	/**
-	 * Autologin cycles through all of the authentication strategies to check if at least one of the autologins worked.
-	 * As soon as one of them works, it breaks the loop, and then updates the last login, and sets the session parameters.
-	 * The user_id gets set the passed back user id. The anonymous becomes false, and the timeout is refreshed.
-	 * This checks for password change and banned status and will throw appropriate exceptions.
-	 * It will assign the user account to the $this->user variable.
-	 *
-	 * @return boolean
-	 */
-	protected function autologin(){
-
-		$user = $this->strategy->autologin();
-		
-		if($user){
-
-			//user is now logged in
-			$this->set_session_state($user);
-
-			$this->storage->update_last_login($this->user['id'], $this->get_ip());
-			
-			//final checks before we proceed (inactive or banned would logout the user)
-			$this->check_inactive($this->user);
-			$this->check_banned($this->user);
-			$this->check_password_change($this->user);
-			
-			return true;
-		
-		}else{
-		
-			return false;
-		
-		}
-	
-	}
 
 	/**
 	 * Manually logs in the user, given a $data array of input parameters.
@@ -162,42 +125,15 @@ class Authenticator{
 			}
 		}
 
-		//THIS CURRENT FUNCTION IS INCORRECT, you need to do most of the authentication in the CookieStrategy
-		//it will need to return different states to call the different login_failures...?
-		//
-		//STARTING HERE
+		$user = $this->strategy->login($data);
 
-
-		if(!isset($data['identity']) OR !isset($data['password'])){
-			$this->login_failure($data, $this->lang['login_unsuccessful']);
+		//if the user returned was not UserAccount, that means it failed to login
+		if(!$user instanceof UserAccount){
+			$this->login_failure($user['data'], $user['message'], $user['throttle']);
 		}
 
-		$row = $this->storage->get_login_check($data['identity']);
-
-		if($row){
-
-
-			if(!password_verify($data['password'], $row->password)){
-			
-				//this is the only attempt that is considered a real failed login attempt
-				//because the password failed
-				//the third parameter is true in order to implement login throttling
-				$this->login_failure($data, $this->lang['login_password'], true);
-			
-			}
-
-			//if it was external, then there is no password
-			$user_id = $row->id;
-
-		}else{
-
-			$this->login_failure($data, $this->lang['login_identity']);
-
-		}
-
-		//ENDING HERE
-		
-		$this->set_session_state($this->accounts_manager->get_user($user_id));
+		//set the user
+		$this->set_session_state($user);
 
 		if(!empty($this->options['login_lockout'])){
 			$this->login_attempts->clear($this->user[$this->options['login_identity']]);
@@ -209,44 +145,10 @@ class Authenticator{
 		$this->check_banned($this->user);
 		$this->check_password_change($this->user);
 
-		$this->strategy->login($data, $user_id);
-		
 		return true;
 	
 	}
-	
-	/**
-	 * Login failure should be called when the login did not succeed. This throws the LoginValidationException.
-	 * However it also increments the login attempts and calls the logout hook.
-	 * You can pass the third parameter to prevent it from incrementing the login attempts.
-	 * The third parameter should be true when the attempt is a real login attempt.
-	 * The only attempt that should be throttled is ones where the attempt
-	 * was one with a real identity but the wrong password. Other attempts will not be considered.
-	 *
-	 * @param $data anything
-	 * @param $message string
-	 * @param $throttle boolean
-	 * @throw Exception LoginValidationException
-	 */
-	protected function login_failure($data, $message, $throttle = false){
-	
-		$exception = new LoginValidationException($message);
-		
-		//if the identity does not exist, there's no point throttling, even on ip addresses
-		//this would be the equivalent of an attacker trying to login with no username/email
-		//or it could just be a user that forgot to enter the username
-		//at any case, it's not a threat
-		if(!empty($data['identity']) AND $throttle AND !empty($this->options['login_lockout'])){
-			$this->login_attempts->increment($data['identity']);
-		}
-		
-		//everytime the user fails to login, we log him out completely, this could have ramifications if users login after they are already logged in
-		$this->logout();
-		
-		throw $exception;
-	
-	}
-	
+
 	/**
 	 * Logout, this will destroy all the previous session data and recreate an anonymous session.
 	 * It is possible to call this without calling $this->start().
@@ -256,106 +158,16 @@ class Authenticator{
 	public function logout(){
 		
 		//perform any custom authentication functions
-		$this->strategy->logout_hook();
-		
-		//this calls session_destroy() and session_unset()
-		$this->session_zone->destroy();
+		$this->strategy->logout();
+
 		//clears the current user
 		$this->user = null;
 		
-		//start a new session anonymous session
-		$this->set_default_session();
+		//start a new session that would anonymous
+		$this->start();
 	
 	}
-	
-	/**
-	 * Checks if the user is logged in and possesses all the passed in parameters.
-	 * The parameters operate on all or nothing except $identities and $id. $identities and $id operates like "has to be at least one of them".
-	 * This first checks if the session exists, and if not checks if the user exists in this script's memory.
-	 * 
-	 * @param $permissions array of permission names | string | false
-	 * @param $roles array of role names | string | false
-	 * @param $identities array of user identities | string | false (this must match your login_identity option)
-	 * @param $ids array of user ids | integer | false
-	 * @return boolean
-	 */
-	public function authorized($permissions = false, $roles = false, $identities = false, $ids = false){
-	
-		$this->session_zone->start_session();
-		
-		$permissions = ($permissions) ? (array) $permissions : false;
-		$roles = ($roles) ? (array) $roles : false;
-		$identities = ($identities) ? (array) $identities : false;
-		$ids = ($ids) ? (array) $ids : false;
 
-		//if the session and $this->user don't exist, then the user is not logged in
-		//if one of them exists, then there's a chance that the session data got lost in a single instance of the script
-		//also compensates for if the user id is actually a zero
-		if(empty($this->session_zone['user_id']) AND $this->session_zone['user_id'] !== 0){
-			if(!$this->user instanceof UserAccount OR empty($this->user['id'])){
-				return false;
-			}else{
-				$user_id = $this->user['id'];
-			}
-		}else{
-			$user_id = $this->session_zone['user_id'];
-		}
-
-		//we finished reading from the session, commit it!
-		$this->session_zone->commit_session();
-		
-		//check if the user id actually exists (this may be redundant, but better safe than sorry)
-		$row = $this->storage->get_user($user_id);
-
-		//does the id exist?
-		if(!$row){
-			return false;
-		}
-		
-		//id check
-		if($ids AND !in_array($user_id, $ids)){
-			return false;
-		}
-
-		//identity check
-		if($identities AND !in_array($row->{$this->options['login_identity']}, $identities)){
-			return false;
-		}
-		
-		//reset the user variable if it does not exist, this is possible if the developer not use $this->start()
-		if(!$this->user instanceof UserAccount OR empty($this->user['id'])){
-			$this->user = $this->accounts_manager->get_user($user_id);
-		}
-		
-		if($permissions){
-		
-			//check if the user has all the permissions
-			foreach($permissions as $permission_name){
-				if(!$this->user->has_permission($permission_name)){
-					return false;
-				}
-			}
-		
-		}
-		
-		if($roles){
-		
-			//we need to acquire role objects first because has_role only accepts objects, not strings
-			$role_objects = $this->rbac->get_roles($roles);
-
-			foreach($role_objects as $role_object){
-
-				if(!$this->user->has_role($role_object)){
-					return false;
-				}
-			}
-		
-		}
-		
-		return true;
-	
-	}
-	
 	/**
 	 * Gets the currently logged in user's user account
 	 * It calls accounts manager rather than just returning the user here because
@@ -363,11 +175,6 @@ class Authenticator{
 	 * @return object|null gives back null if anonymous, otherwise an UserAccount object
 	 */
 	public function get_user(){
-	
-		//if the user is not filled, this means it's an anonymous user (thus a "null" user)
-		if(empty($this->user)){
-			return null;
-		}
 
 		return $this->accounts_manager->get_user($this->user['id']);
 	
@@ -379,7 +186,6 @@ class Authenticator{
 	 */
 	public function get_session(){
 		
-		//don't remove the user_id
 		return $this->strategy->get_session();
 	
 	}
@@ -424,26 +230,92 @@ class Authenticator{
 
 	protected function set_session_state(UserAccount $user = null){
 
-		$session = $this->strategy->get_session;
+		$session = $this->strategy->get_session();
 
+		//if the user doesn't exist, we'll setup an anonymous user
 		if(!$user){
+
 			$session['user_id'] = false;
-			$this->user = $this->create_anonymous_user_account();
+			$anonymous_user = new UserAccount(false);
+			$anonymous_user->set_user_data(array(
+				'anonymous'	=> true
+			));
+			$this->user = $anonymous_user;
+
 		}else{
+
 			$session['user_id'] = $user['id'];
 			$this->user = $user;
+			
 		}
 
 	}
 	
-	protected function create_anonymous_user_account(){
+	/**
+	 * Autologin cycles through all of the authentication strategies to check if at least one of the autologins worked.
+	 * As soon as one of them works, it breaks the loop, and then updates the last login, and sets the session parameters.
+	 * The user_id gets set the passed back user id. The anonymous becomes false, and the timeout is refreshed.
+	 * This checks for password change and banned status and will throw appropriate exceptions.
+	 * It will assign the user account to the $this->user variable.
+	 *
+	 * @return boolean
+	 */
+	protected function autologin(){
 
-		$anonymous_user = new UserAccount(false);
-		$anonymous_user->set_user_data(array(
-			'anonymous'	=> true
-		));
-		return $anonymous_user;
+		$user = $this->strategy->autologin();
+		
+		if($user){
 
+			//user is now logged in
+			$this->set_session_state($user);
+
+			$this->storage->update_last_login($this->user['id'], $this->get_ip());
+			
+			//final checks before we proceed (inactive or banned would logout the user)
+			$this->check_inactive($this->user);
+			$this->check_banned($this->user);
+			$this->check_password_change($this->user);
+			
+			return true;
+		
+		}else{
+		
+			return false;
+		
+		}
+	
+	}
+	
+	/**
+	 * Login failure should be called when the login did not succeed. This throws the LoginValidationException.
+	 * However it also increments the login attempts and calls the logout hook.
+	 * You can pass the third parameter to prevent it from incrementing the login attempts.
+	 * The third parameter should be true when the attempt is a real login attempt.
+	 * The only attempt that should be throttled is ones where the attempt
+	 * was one with a real identity but the wrong password. Other attempts will not be considered.
+	 *
+	 * @param $data anything
+	 * @param $message string
+	 * @param $throttle boolean
+	 * @throw Exception LoginValidationException
+	 */
+	protected function login_failure($data, $message, $throttle = false){
+	
+		$exception = new LoginValidationException($message);
+		
+		//if the identity does not exist, there's no point throttling, even on ip addresses
+		//this would be the equivalent of an attacker trying to login with no username/email
+		//or it could just be a user that forgot to enter the username
+		//at any case, it's not a threat
+		if(!empty($data['identity']) AND $throttle AND !empty($this->options['login_lockout'])){
+			$this->login_attempts->increment($data['identity']);
+		}
+		
+		//everytime the user fails to login, we log him out completely, this could have ramifications if users login after they are already logged in
+		$this->logout();
+		
+		throw $exception;
+	
 	}
 	
 	/**
@@ -455,9 +327,7 @@ class Authenticator{
 	protected function check_inactive(UserAccount $user){
 	
 		if($user['active'] == 0){
-
 			$this->login_failure(false, $this->lang['user_inactive']);
-
 		}
 	
 	}
