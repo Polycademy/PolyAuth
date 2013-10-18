@@ -26,6 +26,9 @@ use OAuth\OAuth1\Signature\Exception\UnsupportedHashAlgorithm;
 use OAuth\OAuth2\Service\Exception\InvalidScopeException;
 use OAuth\OAuth2\Service\Exception\MissingRefreshTokenException;
 
+//NEED TO SET A STATE COOKIE upon start. This a session + httpOnly cookie! will be compared with redirect.
+//Also query param of provider on redirect!
+
 
 //GET authorisation uri
 

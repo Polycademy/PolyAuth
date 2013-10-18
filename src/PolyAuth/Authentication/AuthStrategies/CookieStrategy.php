@@ -19,7 +19,6 @@ use Symfony\Component\HttpFoundation\Response;
 class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 
 	protected $storage;
-	protected $options;
 	protected $lang;
 	protected $session_manager;
 	protected $cookie_options;
@@ -41,7 +40,6 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 	){
 		
 		$this->storage = $storage;
-		$this->options = $options;
 		$this->lang = $language;
 		$this->session_manager = $session_manager;
 		$this->request = ($request) ? $request : $this->get_request();
@@ -273,7 +271,7 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 
 		}
 
-		if(!empty($data['autologin']) AND $this->options['login_autologin']){
+		if(!empty($data['autologin']) AND $this->cookie_options['autologin']){
 			$this->set_autologin($user_id);
 		}
 
@@ -302,8 +300,6 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 
 		//clears the server session information
 		$this->session_manager->finish();
-
-		return true;
 	
 	}
 
