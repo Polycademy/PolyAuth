@@ -238,7 +238,7 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 		if(!isset($data['identity']) OR (!isset($data['password'] AND !$external))){
 
 			return array(
-				'data'		=> $data,
+				'identity'	=> $data['identity'],
 				'message'	=> $this->lang['login_unsuccessful'],
 				'throttle'	=> false
 			);
@@ -254,7 +254,7 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 
 				//because the password failed, we are going to throttle the login attempt
 				return array(
-					'data'		=> $data,
+					'identity'	=> $data['identity'],
 					'message'	=> $this->lang['login_password'],
 					'throttle'	=> true
 				);
@@ -267,7 +267,7 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 		}else{
 
 			return array(
-				'data'		=> $data,
+				'identity'	=> $data['identity'],
 				'message'	=> $this->lang['login_identity'],
 				'throttle'	=> false
 			);

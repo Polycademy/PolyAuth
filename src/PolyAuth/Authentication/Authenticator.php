@@ -134,7 +134,19 @@ class Authenticator{
 
 		//if the user returned was not UserAccount, that means it failed to login
 		if(!$user instanceof UserAccount){
-			$this->login_failure($user['data'], $user['message'], $user['throttle']);
+
+			//Consider OAuthProvider
+			//1. Auth Code grant -> client credentials could be wrong and resource owner credentials could be wrong
+			//2. Resource Owner Password -> cc could be wrong, roc could also be wrong
+			//3. Client Credentials -> cc could be wrong
+			//For 1. You cannot get the ip of the client who redirected the user. Therefore it's not reliable and
+			//cannot be throttled. Besides how do you throttle redirects!?
+			//For 2. The ROC is who you would throttle. This is because the ROC is an attempt to login into the
+			//resource using ROC credentials. But the IP would be from the CC, since it's sending a request.
+			//For 3. The CC is who you would throttle. So in this the case, the $data makes sense. They need the 
+			//'identity'!
+
+			$this->login_failure($user['identity'], $user['message'], $user['throttle']);
 		}
 
 		//set the user
@@ -304,7 +316,7 @@ class Authenticator{
 	 * @param $throttle boolean
 	 * @throw Exception LoginValidationException
 	 */
-	protected function login_failure($data, $message, $throttle = false){
+	protected function login_failure($identity, $message, $throttle = false){
 	
 		$exception = new LoginValidationException($message);
 		
@@ -312,8 +324,8 @@ class Authenticator{
 		//this would be the equivalent of an attacker trying to login with no username/email
 		//or it could just be a user that forgot to enter the username
 		//at any case, it's not a threat
-		if(!empty($data['identity']) AND $throttle AND !empty($this->options['login_lockout'])){
-			$this->login_attempts->increment($data['identity']);
+		if(!empty($identity) AND $throttle AND !empty($this->options['login_lockout'])){
+			$this->login_attempts->increment($identity);
 		}
 		
 		//everytime the user fails to login, we log him out completely, this could have ramifications if users login after they are already logged in
