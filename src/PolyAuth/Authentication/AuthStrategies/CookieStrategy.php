@@ -231,9 +231,11 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 	
 	}
 
-	public function login(array $data){
+	public function login(array $data, $external = false){
 
-		if(!isset($data['identity']) OR !isset($data['password'])){
+		//if identity doesn't exist or that (password doesn't exist while external is false)
+		//if external is true, password doesn't need to be set
+		if(!isset($data['identity']) OR (!isset($data['password'] AND !$external))){
 
 			return array(
 				'data'		=> $data,
@@ -247,7 +249,8 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 
 		if($row){
 
-			if(!password_verify($data['password'], $row->password)){
+			//if external, we don't run the password verify
+			if(!$external AND !password_verify($data['password'], $row->password)){
 
 				//because the password failed, we are going to throttle the login attempt
 				return array(

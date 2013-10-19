@@ -75,6 +75,30 @@ class OAuthClientStrategy extends AbstractDecorator{
 		
 	}
 
+	public function autologin(){
+
+		//IN THE AUTOLOGIN... it would have to direct itself not to the subsequent autologin, but to the login().
+		//Right now it would have to pass $data['identity'], $data['password'] and $data['autologin'] <= this would be 
+		//true automatically depending on the options it passes in. And it would return a user account from there.
+		//It obviously cannot pass password as that would be null. 
+		//So it would just pass $data['identity'], $data['autologin'] and then a second parameter of $external
+
+		if($auth_code){
+			$user = $this->strategy->login(array(
+				'identity'	=> $identity,
+				'autologin'	=> ($autologin) ? true : false
+			), true);
+
+			if(!$user instanceof UserAccount){
+				return false;
+			}
+			
+			return $user;
+
+		}
+
+	}
+
 	//this function should return the providers object
 	//so they can be used to request stuff... independently,
 	//basically so the API is exposed.
