@@ -127,6 +127,11 @@ class Authenticator{
 
 		$user = $this->strategy->login($data);
 
+		//returning false would indicate that the login did not run at all, which is suitable for certain flows
+		if(!$user){
+			return false;
+		}
+
 		//if the user returned was not UserAccount, that means it failed to login
 		if(!$user instanceof UserAccount){
 			$this->login_failure($user['data'], $user['message'], $user['throttle']);
