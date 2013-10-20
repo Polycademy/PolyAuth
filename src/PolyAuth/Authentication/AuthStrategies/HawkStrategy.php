@@ -13,7 +13,7 @@ use PolyAuth\UserAccount;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class HawkStrategy{
+class HawkStrategy extends AbstractStrategy implements StrategyInterface{
 
 
 

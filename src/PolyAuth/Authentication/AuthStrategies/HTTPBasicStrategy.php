@@ -13,7 +13,7 @@ use PolyAuth\UserAccount;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class HTTPStrategy implements AuthStrategyInterface{
+class HTTPStrategy extends AbstractStrategy implements StrategyInterface{
 
 	protected $storage;
 	protected $session_manager;
