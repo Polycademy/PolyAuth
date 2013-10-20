@@ -82,9 +82,9 @@ class CompositeStrategy extends AbstractStrategy{
 
 	}
 
-	public function login($data){
+	public function login($data, $external = false){
 
-		return $this->context->login($data);
+		return $this->context->login($data, $external);
 
 	}
 
