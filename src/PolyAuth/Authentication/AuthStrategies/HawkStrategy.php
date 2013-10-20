@@ -61,7 +61,8 @@ class HawkStrategy extends AbstractStrategy implements StrategyInterface{
 
 		//the server requires a function that will get the hmac shared secret based on the identity to compare with
 		//the hawk request credentials
-		$this->hawk_server = ServerBuilder::create(function($identity){
+		$algorithm = $this->hawk_options['algorithm'];
+		$credentials_provider = function($identity) use ($algorithm){
 
 			$row = $this->storage->get_login_check($identity);
 
@@ -80,14 +81,16 @@ class HawkStrategy extends AbstractStrategy implements StrategyInterface{
 			//both the id and the identity of the this authenticated user
 			return new Credentials(
 				$secret,
-				$this->hawk_options['algorithm'], 
+				$algorithm, 
 				array(
 					'id'		=> $id,
 					'identity'	=> $identity
 				)
 			);
 
-		})->build();
+		};
+
+		$this->hawk_server = ServerBuilder::create($credentials_provider)->build();
 
 	}
 
