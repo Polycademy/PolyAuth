@@ -13,15 +13,9 @@ use PolyAuth\UserAccount;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-/**
- * To use HTTP strategy, you need to make sure to capture any LoginValidationException, UserInactiveException or UserBannedException, and send the HTTP authentication 401 and WWW-Authenticate challenge to the client.
- * PolyAuth won't do this by default, because it doesn't know how you might want the username/password challenge to be displayed or when/where you want them.
- * Furthermore logout doesn't work with HTTP authentication. You can however resend the challenge, however this semantically means that the client's credentials are incorrect.
- */
 class HTTPStrategy implements AuthStrategyInterface{
 
 	protected $storage;
-	protected $lang;
 	protected $session_manager;
 	protected $realm;
 	protected $request;
@@ -40,7 +34,6 @@ class HTTPStrategy implements AuthStrategyInterface{
 	){
 		
 		$this->storage = $storage;
-		$this->lang = $language;
 		$this->session_manager = $session_manager;
 		$this->request = ($request) ? $request : $this->get_request();
 		$this->response = ($response) ? $response : new Response;
@@ -50,14 +43,16 @@ class HTTPStrategy implements AuthStrategyInterface{
 		
 	}
 
+	/**
+	 * Detects if the request headers contains HTTP basic authorization. This also makes sure
+	 * that the request body does not have 'grant_type' in application/x-www-form-urlencoded
+	 * Because that would conflict with the OAuth flows which may authenticate the client using
+	 * HTTP Basic as well.
+	 * @return Boolean
+	 */
 	public function detect_relevance(){
 
-		//oauth can sometimes use basic auth to authenticate the client, however the standards indicate they
-		//would always have grant_type in the post body, this makes sure there is no grant_type in the post 
-		//body during basic authentication. In the end, just don't use OAuth provision with HTTP Basic!
 		if(
-			$this->request->headers->has('authorization')
-			AND 
 			$this->request->headers->has('php_auth_user') 
 			AND 
 			$this->request->headers->has('php_auth_pw') 
@@ -73,6 +68,10 @@ class HTTPStrategy implements AuthStrategyInterface{
 
 	}
 
+	/**
+	 * Starts an anonymous session as this stateless.
+	 * @return Void
+	 */
 	public function start_session(){
 
 		$this->session_manager->start();
@@ -80,94 +79,61 @@ class HTTPStrategy implements AuthStrategyInterface{
 	}
 	
 	/**
-	 * Checks for the HTTP Authorization header for identity and password.
-	 * This does not send HTTP 401 challenge, it's meant to be non-intrusive.
-	 * The end user will need to send that manually if they wish for a page to be authenticated.
-	 *
-	 * @return $user_id int | boolean
+	 * Autologin is based on the HTTP header containing HTTP Basic authorization
+	 * @return UserAccount|Boolean
 	 */
 	public function autologin(){
-	
-		//check if the identity or password is passed in as HTTP
-		if(!empty($_SERVER['PHP_AUTH_USER'])){
-		
-			$identity = $_SERVER['PHP_AUTH_USER'];
-			$password = $_SERVER['PHP_AUTH_PW'];
+
+		$identity = $this->request->headers->get('php_auth_user');
+		$password = $this->request->headers->get('php_auth_pw');
+
+		if($identity AND $password){
 
 			$row = $this->storage->get_login_check($identity);
 
 			if($row AND password_verify($password, $row->password)){
-				return $row->id;
-			}
-		
-		}
-		
-		return false;
-	
-	}
-	
-	/**
-	 * HTTP authentication is stateless, there are no autologin cookies. Autologin depends on the browser saving the credentials.
-	 *
-	 * @param $user_id int
-	 * @return null
-	 */
-	public function set_autologin($user_id){
-	
-		return;
-	
-	}
-	
-	/**
-	 * Login hook for HTTP authentication.
-	 * This does not send HTTP 401 challenge, the end user will need to catch the login exceptions and show the HTTP 401 and WWW-Authenticate Header themselves.
-	 *
-	 * @param $data array | boolean
-	 */
-	public function login_hook($data){
-	
-		if(!empty($_SERVER['PHP_AUTH_USER'])){
-		
-			$data['identity'] = $_SERVER['PHP_AUTH_USER'];
-			$data['password'] = $_SERVER['PHP_AUTH_PW'];
+
+				return $this->accounts_manager->get_user($row->id);
 			
-			return $data;
-		
+			}
+
 		}
+
+		return false;
+	
+	}
+	
+	/**
+	 * Login does not do anything. Hence returns false.
+	 * @return Boolean
+	 */
+	public function login(){
 		
 		return false;
 	
 	}
 	
 	/**
-	 * HTTP basic authentication does not have a proper logout functionality. This may clear the authentication cache or it may not.
-	 * Also doing this on pages that do not require authentication will result in a prompt for username and password.
-	 *
-	 * @return null
+	 * Logout just destroys the session.
+	 * @return Void
 	 */
-	public function logout_hook(){
-		
-		$this->send_challenge($this->realm);
-		return;
+	public function logout(){
+
+		$this->session_manager->finish();
 	
 	}
 	
 	/**
-	 * Sends an HTTP basic auth challenge. You can use this to manually send the challenge if authentication didn't work, or if it was needed.
-	 * This is activated from HTTPStrategy, the UserSessionsManager does not use this function.
-	 * Also sends an optional message.
-	 *
-	 * @param $realm string
-	 * @param $message string
+	 * Challenges the client in the response. Get the response object and 
+	 * send the headers.
+	 * @param  String $realm HTTP Basic realm
+	 * @return Void
 	 */
-	public function send_challenge($realm, $message = false){
-	
-		header('WWW-Authenticate: Basic realm="' . $realm . '"');
-		header('HTTP/1.0 401 Unauthorized');
-		
-		if($message){
-			exit($message);
-		}
+	public function challenge($realm = false){
+
+		$realm = ($realm) ? $realm : $this->realm;
+		$this->response->setStatusCode(401, 'Unauthorized');
+		$this->response->headers->set('WWW-Authenticate', 'Basic realm="' . $realm . '"');
 	
 	}
 
