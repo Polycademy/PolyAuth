@@ -2,8 +2,16 @@
 
 namespace PolyAuth\Authentication\AuthStrategies;
 
-use PolyAuth\Options;
 use PolyAuth\Storage\StorageInterface;
+use PolyAuth\Sessions\SessionManager;
+
+use PolyAuth\Options;
+use PolyAuth\Language;
+use PolyAuth\Accounts\AccountsManager;
+use PolyAuth\UserAccount;
+
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * To use HTTP strategy, you need to make sure to capture any LoginValidationException, UserInactiveException or UserBannedException, and send the HTTP authentication 401 and WWW-Authenticate challenge to the client.
@@ -13,18 +21,62 @@ use PolyAuth\Storage\StorageInterface;
 class HTTPStrategy implements AuthStrategyInterface{
 
 	protected $storage;
-	protected $options;
+	protected $lang;
+	protected $session_manager;
 	protected $realm;
+	protected $request;
+	protected $response;
+	protected $accounts_manager;
 	
 	public function __construct(
 		StorageInterface $storage, 
+		Options $options, 
+		Language $language, 
 		SessionManager $session_manager, 
-		$realm = false 
+		$realm = false, 
+		Request $request = null, 
+		Response $response = null, 
+		AccountsManager $accounts_manager = null
 	){
 		
 		$this->storage = $storage;
-		$this->realm = ($realm) ? $realm : 'Protected by PolyAuth Realm';
+		$this->lang = $language;
+		$this->session_manager = $session_manager;
+		$this->request = ($request) ? $request : $this->get_request();
+		$this->response = ($response) ? $response : new Response;
+		$this->accounts_manager = ($accounts_manager) ? $accounts_manager : new AccountsManager($storage, $options, $language);
+
+		$this->realm = ($realm) ? $realm : 'Protected by PolyAuth';
 		
+	}
+
+	public function detect_relevance(){
+
+		//oauth can sometimes use basic auth to authenticate the client, however the standards indicate they
+		//would always have grant_type in the post body, this makes sure there is no grant_type in the post 
+		//body during basic authentication. In the end, just don't use OAuth provision with HTTP Basic!
+		if(
+			$this->request->headers->has('authorization')
+			AND 
+			$this->request->headers->has('php_auth_user') 
+			AND 
+			$this->request->headers->has('php_auth_pw') 
+			AND 
+			!$this->request->request->has('grant_type')
+		){
+
+			return true;
+
+		}
+
+		return false;
+
+	}
+
+	public function start_session(){
+
+		$this->session_manager->start();
+
 	}
 	
 	/**
