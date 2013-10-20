@@ -107,7 +107,7 @@ class HTTPStrategy extends AbstractStrategy implements StrategyInterface{
 	 * Login does not do anything. Hence returns false.
 	 * @return Boolean
 	 */
-	public function login(){
+	public function login($data, $external = false){
 		
 		return false;
 	

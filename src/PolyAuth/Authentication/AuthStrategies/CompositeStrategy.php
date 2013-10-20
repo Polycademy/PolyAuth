@@ -94,9 +94,9 @@ class CompositeStrategy extends AbstractStrategy{
 
 	}
 
-	public function get_response(){
+	public function challenge(){
 
-		return $this->context->get_response();
+		return $this->context->challenge();
 
 	}
 

@@ -199,4 +199,6 @@ abstract class AbstractStrategy{
 	 */
 	abstract public function logout();
 
+	abstract public function challenge();
+
 }

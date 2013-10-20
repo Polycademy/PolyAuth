@@ -306,6 +306,12 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 	
 	}
 
+	public function challenge(){
+
+		$this->response->setStatusCode(401, 'Unauthorized');
+
+	}
+
 	/**
 	 * Regenerates the session id on the server and on the cookies. This is only ever
 	 * used inside the CookieStrategy. Other strategies do not need to regenerate 
