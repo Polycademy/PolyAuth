@@ -64,6 +64,10 @@ class Migration_add_polyauth extends CI_Migration {
 				'member',
 			),
 		);
+
+		//autoCode is for autologin
+		//accessTokens would be in a separate table representing the accessTokens
+		//hmac is for HawkStrategy, it's a shared secret to be generated at random
 		
 		// Table structure for table 'user_accounts'
 		$this->dbforge->add_field(array(
@@ -131,6 +135,10 @@ class Migration_add_polyauth extends CI_Migration {
 				'unsigned' => TRUE,
 				'default' => 0,
 			),
+			'hmac' => array(
+				'type' => 'VARCHAR',
+				'constraint' => '50',
+			)
 		));
 		
 		$this->dbforge->add_key('id', TRUE);

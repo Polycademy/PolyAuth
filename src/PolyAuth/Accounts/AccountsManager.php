@@ -104,6 +104,7 @@ class AccountsManager{
 		    'createdOn'	=> date('Y-m-d H:i:s'),
 		    'lastLogin'	=> date('Y-m-d H:i:s'),
 		    'active'	=> $activated,
+		    'hmac'		=> $this->random->generate(50),
 		);
 		
 		//inserting activation code into the users table, whether it is manual or email
@@ -575,7 +576,7 @@ class AccountsManager{
 	 * @param $user_id int
 	 * @return $user object
 	 */
-	public function get_user($user_id){
+	public function get_user($id){
 
 		$row = $this->storage->get_user($user_id);
 		if(!$row){
