@@ -98,7 +98,7 @@ class HawkStrategy extends AbstractStrategy implements StrategyInterface{
 
 		$authorization = $this->request->headers->get('authorization');
 
-		if($authorization){
+		if($authorization AND !$this->request->request->has('grant_type')){
 
 			//check if it has Hawk at the start
 			$position = strpos($authorization, 'Hawk');
