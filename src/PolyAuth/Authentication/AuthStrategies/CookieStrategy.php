@@ -5,7 +5,6 @@ namespace PolyAuth\Authentication\AuthStrategies;
 use PolyAuth\Storage\StorageInterface;
 use PolyAuth\Sessions\SessionManager;
 use PolyAuth\Security\Random;
-use PolyAuth\Exceptions\SessionExceptions\SessionExpireException;
 
 use PolyAuth\Options;
 use PolyAuth\Language;
@@ -60,6 +59,7 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 			),
 			$cookie_options
 		);
+
 		//client session expiration should equal the server session expiration
 		$this->cookie_options['session_expiration'] = intval($this->session_manager->get_session_expiration()); //session expiration can literally be zero for a session cookie!
 
@@ -72,8 +72,8 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 	 */
 	public function detect_relevance(){
 
-		$session_cookie = $this->request->cookies->get('session');
-		$autologin_cookie = $this->request->cookies->get('autologin');
+		$session_cookie = $this->request->cookies->has('session');
+		$autologin_cookie = $this->request->cookies->has('autologin');
 
 		if($session_cookie OR $autologin_cookie){
 			return true;
