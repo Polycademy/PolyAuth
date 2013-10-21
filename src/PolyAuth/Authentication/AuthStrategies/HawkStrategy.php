@@ -66,27 +66,15 @@ class HawkStrategy extends AbstractStrategy implements StrategyInterface{
 
 			$row = $this->storage->get_login_check($identity);
 
-			//hmac will always be stored for each user
-			//however if the identity doesn't exist, we'll return a credential with a false secret
-			//it won't match any credentials passed in the request
 			if($row){
-				$secret = $row->hmac;
-				$id = $row->id;
-			}else{
-				$secret = false;
-				$id = false;
-			}
 
-			//third parameter of credentials is optional, we are going to return an array that contains
-			//both the id and the identity of the this authenticated user
-			return new Credentials(
-				$secret,
-				$algorithm, 
-				array(
-					'id'		=> $id,
-					'identity'	=> $identity
-				)
-			);
+				return new Credentials(
+					$row->hmac,
+					$algorithm, 
+					$identity
+				);
+			
+			}
 
 		};
 
@@ -166,8 +154,8 @@ class HawkStrategy extends AbstractStrategy implements StrategyInterface{
 		$this->credentials = $response->credentials();
 		$this->artifacts = $response->artifacts();
 
-		//we need the id, not the identity to get the user account
-		return $this->accounts_manager->get_user($response->credentials()->id()['id']);
+		//credential's id is the actual identity of the user, not the id
+		return $this->accounts_manager->get_user(false, $response->credentials()->id());
 
 	}
 

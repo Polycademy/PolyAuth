@@ -576,9 +576,14 @@ class AccountsManager{
 	 * @param $user_id int
 	 * @return $user object
 	 */
-	public function get_user($id){
+	public function get_user($id, $identity = false){
 
-		$row = $this->storage->get_user($user_id);
+		if(!$id AND $id !== 0 AND $identity){
+			$row = $this->storage->get_user_by_identity($identity);
+		}else{
+			$row = $this->storage->get_user($user_id);
+		}
+
 		if(!$row){
 			throw new UserNotFoundException($this->lang['user_select_unsuccessful']);
 		}
@@ -622,6 +627,30 @@ class AccountsManager{
 		
 		return $output_users;
 	
+	}
+
+	public function get_users_by_identity(array $identities){
+
+		$result = $this->storage->get_users_by_identity($identities);
+		
+		if(!$result){
+			throw new UserNotFoundException($this->lang['user_select_unsuccessful']);
+		}
+		
+		$output_users = array();
+		
+		foreach($result as $row){
+			
+			unset($row->password);
+			$user = new UserAccount($row->id);
+			$user->set_user_data($row);
+			$this->rbac->load_subject_roles($user);
+			$output_users[] = $user;
+		
+		}
+		
+		return $output_users;
+
 	}
 	
 	/**
