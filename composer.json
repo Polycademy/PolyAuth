@@ -25,8 +25,7 @@
 		"codeception/codeception": "1.7.0.2"
 	},
 	"suggest": {
-		"ext-apc": "Can provide a faster memory cache for PolyAuth.",
-		"ext-mcrypt": "Required for encryption and decryption.",
+		"ext-mcrypt": "Required for encryption and decryption of shared keys for HTTP Digest and Hawk.",
 		"ext-SimpleXML": "Required for authentication responses to be encoded in XML format."
 	},
 	"config": {
