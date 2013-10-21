@@ -76,6 +76,32 @@ class HawkStrategy extends AbstractStrategy implements StrategyInterface{
 			
 			}
 
+			/*
+				
+			//THIS MIGHT BE REQUIRED
+			-			//hmac will always be stored for each user
+			-			//however if the identity doesn't exist, we'll return a credential with a false secret
+			-			//it won't match any credentials passed in the request
+			 			if($row){
+			-				$secret = $row->hmac;
+			-				$id = $row->id;
+			-			}else{
+			-				$secret = false;
+			-				$id = false;
+			-			}
+			 
+			-			//third parameter of credentials is optional, we are going to return an array that contains
+			-			//both the id and the identity of the this authenticated user
+			-			return new Credentials(
+			-				$secret,
+			-				$algorithm, 
+			-				array(
+			-					'id'		=> $id,
+			-					'identity'	=> $identity
+			-				)
+			-			);
+			 */
+
 		};
 
 		$this->hawk_server = ServerBuilder::create($credentials_provider)->build();
