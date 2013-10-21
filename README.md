@@ -21,12 +21,13 @@ Dependencies
 Features
 ---------
 
+- Authentication Flow Implementations: HTTP Basic, HTTP Digest, Hawk, Cookie, OAuth 1 & 2 Consumer Access Delegation, OAuth 2 Provider, and OpenID Consumer/Provider.
 - User Account Management (includes account bans) - Make sure your identity is unique, if you're using the identity as the display name, don't allow duplicate display names. You can mix up usernames and emails, so that emails are identitities and usernames are display names.
 - Role Based Access Control at NIST Level 1
 - Password Encryption based on Bcrypt
 - Automatic Emailing for Activation and Forgotten Identity/Password (can be turned off and used manually (SMTP/mail support))
 - Utilisation of loggers that support the PSR log interface
-- Automatic Session Handling (with optional encryption) based on PHP sessions. You can extend it from EncryptedSessionHandler or implement your own SessionHandlerInterface
+- Custom Session Handling that's extendable to many backe ends
 - Manipulation of the session object such as adding in a shopping cart.
 - File locks on the session file are automatically resolved by closing the handle immediately. This prevents AJAX race conditions.
 - PSR 1 Compatible and Framework Independent
@@ -34,23 +35,24 @@ Features
 - Logging in & Logging out
 - Optional login throttling based on exponential timeouts (timeout = 1.8^(number of attempts-1)), this can be set to ip address, login identity or both. There are advantages and disadvantages to using each.
 - Autologin using a range of authentication strategies.
-- SQL and Codeigniter Migrations
+- SQL, Codeigniter and Phinx Migrations
 - Configurable Language for Returned Errors
 - Error handling through exceptions that extend from "PolyAuthException"
 - Highly Configurable User Data/Profile
 - Password Complexity Checks
 - Excellent Random Token Generator
-- Authentication Strategy Interface Server Side Implementation - Can be used for HTTP Basic, Cookie, OAuth 1 & 2 Consumer Access Delegation, OAuth 2 Provider, and OpenID. (HTTP Digest is not supported due to its crytographic constraints)
 - Unit tested with Continuous Integration at Travis so you can trust that it works!
-- Optional caching library involving APC or Filesystem. It's also extendable with the caching interface.
 - Supports storage adapters for Database Independent Functionality
 
 To Do
 ------
 
-- Add OAuth consumption, OpenID consumption, and Hawk authentication strategies
-- SQL Migration
+- Add OAuth consumption, OpenID consumption
+- SQL Migration, Phinx Migation
 - Add OAuth2 provision
+- Add Phinx migration
+- Add Redis Persistence
+- Add more storage adapters
 //Cookie strategy is vulnerable to CSRF. But not XSS when you have HTTPONLY.
 //Authorisation Header is not vulnerable to CSRF. But it is vulnerable to XSS!
 
