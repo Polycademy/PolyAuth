@@ -104,7 +104,7 @@ class AccountsManager{
 		    'createdOn'	=> date('Y-m-d H:i:s'),
 		    'lastLogin'	=> date('Y-m-d H:i:s'),
 		    'active'	=> $activated,
-		    'sharedKey'	=> $this->random->generate(50),
+		    'sharedKey'	=> $this->encryption->encrypt($this->random->generate(50), $this->options['shared_key_encryption']),
 		);
 		
 		//inserting activation code into the users table, whether it is manual or email

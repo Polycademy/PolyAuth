@@ -136,8 +136,7 @@ class Migration_add_polyauth extends CI_Migration {
 				'default' => 0,
 			),
 			'sharedKey' => array(
-				'type' => 'VARCHAR',
-				'constraint' => '50',
+				'type' => 'TEXT'
 			)
 		));
 		

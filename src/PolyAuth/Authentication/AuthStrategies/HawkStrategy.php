@@ -9,6 +9,7 @@ use PolyAuth\Options;
 use PolyAuth\Language;
 use PolyAuth\Accounts\AccountsManager;
 use PolyAuth\UserAccount;
+use PolyAuth\Security\Encryption;
 
 use Dflydev\Hawk\Credentials\Credentials;
 use Dflydev\Hawk\Server\ServerBuilder;
@@ -20,14 +21,14 @@ use Symfony\Component\HttpFoundation\Response;
 class HawkStrategy extends AbstractStrategy implements StrategyInterface{
 
 	protected $storage;
+	protected $options;
 	protected $session_manager;
 	protected $hawk_options;
 	protected $request;
 	protected $response;
 	protected $accounts_manager;
-	protected $random;
+	protected $encryption;
 	protected $hawk_server;
-
 	protected $credentials;
 	protected $artifacts;
 
@@ -40,16 +41,18 @@ class HawkStrategy extends AbstractStrategy implements StrategyInterface{
 		Request $request = null, 
 		Response $response = null, 
 		AccountsManager $accounts_manager = null, 
+		Encryption $encryption = null, 
 		Credentials $credentials = null, 
 		ServerBuilder $server_builder = null
 	){
 
 		$this->storage = $storage;
-		$this->lang = $language;
+		$this->options = $options;
 		$this->session_manager = $session_manager;
 		$this->request = ($request) ? $request : $this->get_request();
 		$this->response = ($response) ? $response : new Response;
 		$this->accounts_manager = ($accounts_manager) ? $accounts_manager : new AccountsManager($storage, $options, $language);
+		$this->encryption = ($encryption) ? $encryption : new Encryption;
 
 		$this->hawk_options = array_merge(
 			array(
@@ -69,7 +72,7 @@ class HawkStrategy extends AbstractStrategy implements StrategyInterface{
 			if($row){
 
 				return new Credentials(
-					$row->sharedKey,
+					$this->encryption->decrypt($row->sharedKey, $this->options['shared_key_encryption']),
 					$algorithm, 
 					$identity
 				);

@@ -9,6 +9,7 @@ use PolyAuth\Options;
 use PolyAuth\Language;
 use PolyAuth\Accounts\AccountsManager;
 use PolyAuth\UserAccount;
+use PolyAuth\Security\Encryption;
 
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -16,11 +17,13 @@ use Symfony\Component\HttpFoundation\Response;
 class HTTPDigestStrategy extends AbstractStrategy implements StrategyInterface{
 
 	protected $storage;
+	protected $options;
 	protected $session_manager;
 	protected $realm;
 	protected $request;
 	protected $response;
 	protected $accounts_manager;
+	protected $encryption;
 	
 	public function __construct(
 		StorageInterface $storage, 
@@ -30,14 +33,17 @@ class HTTPDigestStrategy extends AbstractStrategy implements StrategyInterface{
 		$realm = false, 
 		Request $request = null, 
 		Response $response = null, 
-		AccountsManager $accounts_manager = null
+		AccountsManager $accounts_manager = null, 
+		Encryption $encryption = null
 	){
 		
 		$this->storage = $storage;
+		$this->options = $options;
 		$this->session_manager = $session_manager;
 		$this->request = ($request) ? $request : $this->get_request();
 		$this->response = ($response) ? $response : new Response;
 		$this->accounts_manager = ($accounts_manager) ? $accounts_manager : new AccountsManager($storage, $options, $language);
+		$this->encryption = ($encryption) ? $encryption : new Encryption;
 
 		$this->realm = ($realm) ? $realm : 'Protected by PolyAuth';
 		
@@ -93,7 +99,9 @@ class HTTPDigestStrategy extends AbstractStrategy implements StrategyInterface{
 
 			if($row){
 
-				$a1 = md5($digest_parts['username'] . ':' . $this->realm . ':' . $row->sharedKey);
+				$shared_key = $this->encryption->decrypt($row->sharedKey, $this->options['shared_key_encryption']);
+
+				$a1 = md5($digest_parts['username'] . ':' . $this->realm . ':' . $shared_key);
 				$a2 = md5($this->request->getMethod() . ':' . $digest_parts['uri']);
 
 				$valid_response_hash = md5(
