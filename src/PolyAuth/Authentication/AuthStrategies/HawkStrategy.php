@@ -59,7 +59,7 @@ class HawkStrategy extends AbstractStrategy implements StrategyInterface{
 			$hawk_options
 		);
 
-		//the server requires a function that will get the hmac shared secret based on the identity to compare with
+		//the server requires a function that will get the shared secret based on the identity to compare with
 		//the hawk request credentials
 		$algorithm = $this->hawk_options['algorithm'];
 		$credentials_provider = function($identity) use ($algorithm){
@@ -69,7 +69,7 @@ class HawkStrategy extends AbstractStrategy implements StrategyInterface{
 			if($row){
 
 				return new Credentials(
-					$row->hmac,
+					$row->sharedKey,
 					$algorithm, 
 					$identity
 				);
@@ -83,7 +83,7 @@ class HawkStrategy extends AbstractStrategy implements StrategyInterface{
 			-			//however if the identity doesn't exist, we'll return a credential with a false secret
 			-			//it won't match any credentials passed in the request
 			 			if($row){
-			-				$secret = $row->hmac;
+			-				$secret = $row->sharedKey;
 			-				$id = $row->id;
 			-			}else{
 			-				$secret = false;

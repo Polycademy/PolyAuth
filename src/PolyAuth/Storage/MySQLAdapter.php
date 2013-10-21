@@ -795,7 +795,7 @@ class MySQLAdapter implements StorageInterface{
 
 	public function get_login_check($identity){
 
-		$query = "SELECT id, password, hmac FROM {$this->options['table_users']} WHERE {$this->options['login_identity']} = :identity";
+		$query = "SELECT id, password, sharedKey FROM {$this->options['table_users']} WHERE {$this->options['login_identity']} = :identity";
 		$sth = $this->db->prepare($query);
 		$sth->bindValue('identity', $identity, PDO::PARAM_STR);
 		

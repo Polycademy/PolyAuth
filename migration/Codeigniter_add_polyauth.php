@@ -135,7 +135,7 @@ class Migration_add_polyauth extends CI_Migration {
 				'unsigned' => TRUE,
 				'default' => 0,
 			),
-			'hmac' => array(
+			'sharedKey' => array(
 				'type' => 'VARCHAR',
 				'constraint' => '50',
 			)
