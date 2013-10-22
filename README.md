@@ -21,7 +21,7 @@ Dependencies
 Features
 ---------
 
-- Authentication Flow Implementations: HTTP Basic, HTTP Digest, Hawk, Cookie, OAuth 1 & 2 Consumer Access Delegation, OAuth 2 Provider, OpenID Consumer/Provider and Persona Consumer.
+- Authentication Flow Implementations: HTTP Basic, HTTP Digest, Hawk, Cookie, OAuth 1 & 2 Consumer Access Delegation, OAuth 2 Provider, OpenID Consumer and Persona Consumer.
 - User Account Management (includes account bans) - Make sure your identity is unique, if you're using the identity as the display name, don't allow duplicate display names. You can mix up usernames and emails, so that emails are identitities and usernames are display names.
 - Role Based Access Control at NIST Level 1
 - Password Encryption based on Bcrypt
@@ -47,10 +47,8 @@ Features
 To Do
 ------
 
-- Add OAuth consumption, OpenID consumption
+- Add OpenId provision & Persona provision
 - SQL Migration, Phinx Migation
-- Add OAuth2 provision
-- Add Phinx migration
 - Add Redis Persistence
 - Add more storage adapters
 //Cookie strategy is vulnerable to CSRF. But not XSS when you have HTTPONLY.
