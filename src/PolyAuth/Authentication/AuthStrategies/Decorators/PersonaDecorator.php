@@ -2,8 +2,10 @@
 
 namespace PolyAuth\Authentication\AuthStrategies\Decorators;
 
+use PolyAuth\Options;
 use PolyAuth\Language;
 
+use PolyAuth\Exceptions\ValidationExceptions\PersonaValidationException;
 use PolyAuth\Exceptions\HttpExceptions\HttpPersonaException;
 
 /*
@@ -12,6 +14,7 @@ use PolyAuth\Exceptions\HttpExceptions\HttpPersonaException;
  */
 class PersonaDecorator extends AbstractDecorator{
 
+	protected $options;
 	protected $lang;
 	protected $audience;
 	protected $verifier;
@@ -26,12 +29,23 @@ class PersonaDecorator extends AbstractDecorator{
 	 * @param String|Boolean                     $audience
 	 * @param String|Boolean                     $verifier
 	 */
-	public function __construct($strategy, Language $language, $audience = false, $verifier = false){
+	public function __construct(
+		$strategy, 
+		Options $options, 
+		Language $language, 
+		$audience = false, 
+		$verifier = false
+	){
 
 		$this->strategy = $strategy;
+		$this->options = $options;
 		$this->lang = $language;
 		$this->audience = ($audience) ? $audience : $this->strategy->request->getSchemeAndHttpHost();
 		$this->verifier = ($verifier) ? $verifier : 'https://verifier.login.persona.org/verify';
+
+		if($this->options['login_identity'] != 'email'){
+			throw PersonaValidationException('PersonaDecorator requires "login_identity" in Options to be set to "email"');
+		}
 
 	}
 
@@ -85,15 +99,16 @@ class PersonaDecorator extends AbstractDecorator{
 
 			if($response['status'] == 'okay'){
 
-				//ok now we need to check if the identity doesn't exist in the database
-				//if it doesn't we need to create an account automatically, just like OAuth
+				$row = $this->strategy->storage->get_login_check($response['email']);
 
-				//CREATE ACCOUNT!
+				//if the identity doesn't exist, we'll create a new account
+				if(!$row){
+					$this->strategy->accounts_manager->external_register(array(
+						'email'	=> $response['email']
+					));
+				}
 
-
-				//the identity field now corresponds to the email
-				$data['identity'] = $response['email'];
-				return $this->strategy->login($data, true);
+				return $this->strategy->accounts_manager->get_user(false, $response['email']);
 
 			}
 

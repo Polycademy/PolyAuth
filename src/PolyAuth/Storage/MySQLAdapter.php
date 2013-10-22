@@ -303,32 +303,6 @@ class MySQLAdapter implements StorageInterface{
 
 	}
 
-	public function external_register($data){
-
-		$query = "INSERT INTO {$this->options['table_users']} (ipAddress, createdOn, lastLogin, active) VALUES (:ip_address, :created_on, :last_login, :active)";
-		$sth = $this->db->prepare($query);
-		$sth->bindValue('ip_address', $data['ipAddress'], PDO::PARAM_STR);
-		$sth->bindValue('created_on', $data['createdOn'], PDO::PARAM_STR);
-		$sth->bindValue('last_login', $data['lastLogin'], PDO::PARAM_STR);
-		$sth->bindValue('active', $data['active'], PDO::PARAM_INT);
-		
-		try{
-		
-			$sth->execute();
-			return $this->db->lastInsertId();
-			
-		}catch(PDOException $db_err){
-
-			if($this->logger){
-				$this->logger->error('Failed to execute query to register a new user from external providers.', ['exception' => $db_err]);
-			}
-			
-			throw $db_err;
-			
-		}
-
-	}
-
 	public function get_external_providers($external_identifier){
 
 		$query = "

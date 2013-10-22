@@ -385,26 +385,46 @@ class AccountsManager{
 	/**
 	 * Registration for users that are authenticating from external providers.
 	 * You do not need any user details, they can be filled in later.
-	 * This means that we're registering a user with no username, password or email.
+	 * This means that we're registering a user with no password.
 	 * @return object       The user object
 	 */
-	public function external_register(){
+	public function external_register($data){
 
-		$ip = (!empty($_SERVER['REMOTE_ADDR'])) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1';
+		//login_data should have the identity
+		if(empty($data[$this->options['login_identity']])){
+			throw new RegisterValidationException($this->lang['account_creation_invalid']);
+		}
 		
-		$data = array(
-			'ipAddress'	=> inet_pton($ip),
+		//check for duplicates based on identity
+		if($this->duplicate_identity_check($data[$this->options['login_identity']])){
+			throw new UserDuplicateException($this->lang["account_creation_duplicate_{$this->options['login_identity']}"]);
+		}
+		
+		//constructing the payload now
+		$ip = (!empty($_SERVER['REMOTE_ADDR'])) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1';
+		$data['ipAddress'] = inet_pton($ip);
+		
+		$data += array(
 		    'createdOn'	=> date('Y-m-d H:i:s'),
 		    'lastLogin'	=> date('Y-m-d H:i:s'),
 		    'active'	=> 1,
+		    'sharedKey'	=> $this->encryption->encrypt($this->random->generate(50), $this->options['shared_key_encryption']),
 		);
-
-		$last_insert_id = $this->storage->external_register($data);
 		
+		//we need to validate that the columns actually exist
+		$columns = array_keys($data);
+		if(!$this->storage->validate_columns($this->options['table_users'], $columns)){
+			throw new DatabaseValidationException($this->lang['account_creation_invalid']);
+		}
+		
+		$last_insert_id = $this->storage->register_user($data, $columns);
+		
+		//grab the user's data that we just inserted
 		$registered_user = $this->get_user($last_insert_id);
 		
+		//now we've got to add the default roles and permissions
 		$registered_user = $this->rbac->register_user_roles($registered_user, array($this->options['role_default']));
-		
+
 		return $registered_user;
 
 	}
