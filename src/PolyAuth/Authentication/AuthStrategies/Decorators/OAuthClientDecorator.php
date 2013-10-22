@@ -39,7 +39,7 @@ use OAuth\OAuth2\Service\Exception\MissingRefreshTokenException;
 //4. login cannot cascade easily, it requires data to be passed in and is unique to each strategy
 
 //try extending OAuthStrategy to CookieStrategy, to allow independent logins and autologin functionality
-class OAuthClientStrategy extends AbstractDecorator{
+class OAuthClientDecorator extends AbstractDecorator{
 
 	protected $storage;
 	protected $options;
