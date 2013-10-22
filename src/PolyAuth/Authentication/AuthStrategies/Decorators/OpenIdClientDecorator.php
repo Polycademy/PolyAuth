@@ -2,9 +2,9 @@
 
 namespace PolyAuth\Authentication\AuthStrategies\Decorators;
 
-class OpenIdDecorator extends AbstractDecorator{
+class OpenIdClientDecorator extends AbstractDecorator{
 
 
 
-	
+
 }

@@ -12,7 +12,7 @@ use PolyAuth\Exceptions\HttpExceptions\HttpPersonaException;
 	PersonaDecorator relies on Email as the user identity. You must be using email as the login identity for
 	this to work.
  */
-class PersonaDecorator extends AbstractDecorator{
+class PersonaClientDecorator extends AbstractDecorator{
 
 	protected $options;
 	protected $lang;
