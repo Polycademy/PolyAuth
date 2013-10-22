@@ -62,8 +62,9 @@ class Language implements \ArrayAccess{
 		'email_forgotten_identity_subject'		=> 'Forgotten Identity PolyAuth',
 		'email_forgotten_password_subject'		=> 'Forgotten Password PolyAuth',
 		// Session
-		'session_invalid_key'					=> 'You cannot manipulate properties on the session object that have reserved keys.',
-		'session_expire'						=> 'Session id or token has expired.'
+		'session_expire'						=> 'Session id or token has expired.',
+		// Http
+		'persona_verifier'						=> 'Failed to request Persona verifier.',
 	);
 	
 	public function __construct(array $language = null){
