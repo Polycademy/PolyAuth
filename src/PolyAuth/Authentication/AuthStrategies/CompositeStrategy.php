@@ -21,10 +21,6 @@ class CompositeStrategy extends AbstractStrategy{
 
 		foreach($strategies as $strategy){
 
-			if(!$strategy instanceof StrategyInterface){
-				throw StrategyValidationException('Authentication strategies in CompositeStrategy needs to implement StrategyInterface.');
-			}
-
 			if($strategy->detect_relevance()){
 				$this->context = $strategy;
 				break;

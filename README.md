@@ -21,7 +21,7 @@ Dependencies
 Features
 ---------
 
-- Authentication Flow Implementations: HTTP Basic, HTTP Digest, Hawk, Cookie, OAuth 1 & 2 Consumer Access Delegation, OAuth 2 Provider, and OpenID Consumer/Provider.
+- Authentication Flow Implementations: HTTP Basic, HTTP Digest, Hawk, Cookie, OAuth 1 & 2 Consumer Access Delegation, OAuth 2 Provider, OpenID Consumer/Provider and Persona Consumer.
 - User Account Management (includes account bans) - Make sure your identity is unique, if you're using the identity as the display name, don't allow duplicate display names. You can mix up usernames and emails, so that emails are identitities and usernames are display names.
 - Role Based Access Control at NIST Level 1
 - Password Encryption based on Bcrypt

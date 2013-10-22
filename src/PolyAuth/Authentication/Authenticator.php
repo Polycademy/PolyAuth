@@ -3,7 +3,6 @@
 namespace PolyAuth\Authentication;
 
 
-use PolyAuth\AuthStrategies\AbstractStrategy;
 use PolyAuth\Storage\StorageInterface;
 use PolyAuth\Options;
 use PolyAuth\Language;
@@ -22,7 +21,6 @@ use PolyAuth\Exceptions\ValidationExceptions\StrategyValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\PasswordValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\DatabaseValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\LoginValidationException;
-use PolyAuth\Exceptions\ValidationExceptions\SessionValidationException;
 
 class Authenticator{
 
@@ -36,7 +34,7 @@ class Authenticator{
 	protected $user;
 
 	public function __construct(
-		AbstractStrategy $strategy, 
+		$strategy, 
 		StorageInterface $storage, 
 		Options $options, 
 		Language $language, 
