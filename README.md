@@ -47,7 +47,7 @@ Features
 To Do
 ------
 
-- Add OpenId provision & Persona provision
+- Add OpenId provision & OpenId delegation & Persona provision
 - SQL Migration, Phinx Migation
 - Add Redis Persistence
 - Add more storage adapters
