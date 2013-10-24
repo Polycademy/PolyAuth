@@ -5,6 +5,11 @@ namespace PolyAuth\Authentication\AuthStrategies\Decorators;
 use PolyAuth\Options;
 use PolyAuth\Language;
 
+use Guzzle\Http\Client;
+
+use Guzzle\Http\Exception\BadResponseException;
+use Guzzle\Http\Exception\CurlException;
+
 use PolyAuth\Exceptions\ValidationExceptions\PersonaValidationException;
 use PolyAuth\Exceptions\HttpExceptions\HttpPersonaException;
 
@@ -18,6 +23,7 @@ class PersonaClientDecorator extends AbstractDecorator{
 	protected $lang;
 	protected $audience;
 	protected $verifier;
+	protected $client;
 
 	/**
 	 * Construct Persona Decorator. It requires language for a potential error in requesting the verifier.
@@ -34,7 +40,8 @@ class PersonaClientDecorator extends AbstractDecorator{
 		Options $options, 
 		Language $language, 
 		$audience = false, 
-		$verifier = false
+		$verifier = false,
+		Client $client = null
 	){
 
 		$this->strategy = $strategy;
@@ -42,6 +49,7 @@ class PersonaClientDecorator extends AbstractDecorator{
 		$this->lang = $language;
 		$this->audience = ($audience) ? $audience : $this->strategy->request->getSchemeAndHttpHost();
 		$this->verifier = ($verifier) ? $verifier : 'https://verifier.login.persona.org/verify';
+		$this->client = ($client) ? $client : new Client;
 
 		if($this->options['login_identity'] != 'email'){
 			throw PersonaValidationException('PersonaDecorator requires "login_identity" in Options to be set to "email"');
@@ -61,41 +69,34 @@ class PersonaClientDecorator extends AbstractDecorator{
 
 		if(!empty($data['assertion'])){
 
-			$request_body = http_build_query(
-				array(
-					'assertion'	=> $data['assertion'],
-					'audience'	=> $this->audience
-				),
-				null,
-				'&'
-			);
+			try{
 
-			$context = stream_context_create(array(
-				'http' => array(
-					'method'			=> 'POST',
-					'header'			=> 'Content-type: application/x-www-form-urlencoded',
-					'content'			=> $request_body,
-					'protocol_version'	=> '1.1',
-					'user_agent'		=> 'PolyAuth',
-					'max_redirects'		=> 5,
-					'timeout'			=> 15
-				)
-			));
+				$this->client->setUserAgent('PolyAuth');
 
-			$level = error_reporting(0);
-			$response = file_get_contents($this->verifier, false, $context);
-			error_reporting($level);
+				$request = $this->client->post(
+					$this->verifier, 
+					array(
+						'Content-Type': 'application/x-www-form-urlencoded'
+					), 
+					array(
+						'assertion'	=> $data['assertion'],
+						'audience'	=> $this->audience
+					)
+				);
 
-			//if response was false, this means the url could not be accessed
-			if($response === false){
-				$last_error = error_get_last();
-				if(is_null($last_error)){
-					throw new HttpPersonaException($this->lang['persona_verifier']);
-				}
-				throw new HttpPersonaException($last_error['message']);
+				$response = $request->send();
+
+			}catch(BadResponseException $e){
+
+				throw new HttpPersonaException($this->lang['persona_verifier']);
+
+			}catch(CurlException $e){
+
+				throw new HttpPersonaException($this->lang['persona_verifier']);
+
 			}
 
-			$response = json_decode($response, true);
+			$response = $response->json();
 
 			if($response['status'] == 'okay'){
 
