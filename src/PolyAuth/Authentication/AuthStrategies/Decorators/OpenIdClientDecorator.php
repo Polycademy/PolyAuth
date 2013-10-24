@@ -4,6 +4,12 @@ namespace PolyAuth\Authentication\AuthStrategies\Decorators;
 
 use PolyAuth\Options;
 use PolyAuth\Language;
+use Purl\Url;
+use Guzzle\Http\Client;
+use Guzzle\Http\Exception\BadResponseException;
+use Guzzle\Http\Exception\CurlException;
+
+use PolyAuth\Exceptions\HttpExceptions\HttpOpenIdException;
 
 //WHEN OPENID creates a new account from someone who signed in/up
 //it creates a user account with a prefilled username and external_provider row as well
@@ -18,16 +24,30 @@ class OpenIdClientDecorator extends AbstractDecorator{
 
 	protected $options;
 	protected $lang;
+	protected $xri_resolver;
+	protected $purl;
+	protected $client;
 
 	public function __construct(
 		$strategy, 
 		Options $options, 
-		Language $language
+		Language $language,
+		$xri_resolver = false, 
+		Url $purl = null,
+		Client $client = null
 	){
 
 		$this->strategy = $strategy;
 		$this->options = $options;
 		$this->lang = $language;
+
+		//add a trailing slash if it doesn't have one
+		$this->xri_resolver = ($xri_resolver) ? rtrim($xri_resolver, '/') . '/' : 'https://xri.net/';
+
+		$this->purl = ($purl) ? $purl : new Url;
+		$this->client = ($client) ? $client : new Client;
+
+		$this->client->setUserAgent('PolyAuth');
 
 	}
 
@@ -49,18 +69,6 @@ class OpenIdClientDecorator extends AbstractDecorator{
 
 	public function get_auth_endpoint($openid_identifier){
 
-		//this login function may force a redirect, or give back the redirect uri
-		//since this is created at run time depending on the open id uri, this has to be called
-		//after the user submits the form
-		//so therefore if you want js to go through a popup, this gives back the uri and then the redirect will
-		//happen therefore the login being taken over by the autologin
-		//actually this affects the response object and returns false...?
-		//No either: array for failure, UserAccount for success, false for not running at all...?
-
-		//this should be called instead when you need to login
-		//because we would need to login directly...?
-		//No there's a redirect that needs to happen
-
 		$claimed_id = $this->normalize_uri($data['openid_identifier']);
 
 		//id was malformed, so the login failed!
@@ -72,14 +80,184 @@ class OpenIdClientDecorator extends AbstractDecorator{
 			);
 		}
 
+		//use $claimed_id['uri'] as the actual open id identity
+
+		$disovery_uri = $claimed_id['uri'];
+		$type = $claimed_id['type'];
+
 		//perform discovery on auth end point: xri or yadis or html discovery
-		if(isset($claimed_id['xri'])){
-			//implement xri discovery
-		}else{
+		if($type == 'xri'){
+			$discovery_uri = $this->resolve_xri_to_uri($discovery_uri);
+			$xrds = $this->discover_xri($discovery_uri);
+			$endpoint = $this->parse_xrds($xrds);
+		}
 
+		if($xrds = $this->discover_yadis($discovery_uri)){
+			$endpoint = $this->parse_xrds($xrds);
+		}else($html = $this->discover_html($discovery_uri)){
+			$endpoint = $this->parse_html($html);
+		}
 
+		//xri failed, yadis failed, html failed - could not discover the end point
+		if(!$endpoint){
+			return false;
+		}
+
+		//add the extra parameters to the end point
+
+	}
+
+	protected function discover_xri($xri){
+
+		try{
+
+			$request = $this->client->get($xri);
+			$response = $request->send();
+		
+		}catch(BadResponseException $e){
+
+			throw new HttpOpenIdException($this->lang['openid_discovery']);
+
+		}catch(CurlException $e){
+
+			throw new HttpOpenIdException($this->lang['openid_discovery']);
 
 		}
+
+		return $response->xml();
+
+	}
+
+	protected function discover_yadis($uri){
+
+		try{
+
+			$request = $this->client->get($uri, array(
+				'Accept'	=> 'application/xrds+xml'
+			));
+			$response = $request->send();
+		
+		}catch(BadResponseException $e){
+
+			throw new HttpOpenIdException($this->lang['openid_discovery']);
+
+		}catch(CurlException $e){
+
+			throw new HttpOpenIdException($this->lang['openid_discovery']);
+
+		}
+
+		//if it led us directly to the xrds document, just return it as xml
+		if(stripos($response->getContentType(), 'application/xrds+xml') !== false){
+			return $response->xml();
+		}
+
+		//find the X-XRDS-Location header
+		$headers = array_change_key_case($response->getHeaders(), CASE_LOWER);
+		if(isset($headers['x-xrds-location'])){
+			return $this->discover_yadis($headers['x-xrds-location']);
+		}
+
+		//find the meta tag in the head section
+		//example: <meta http-equiv="X-XRDS-Location" content="http://example.com/yadis.xml">
+		$body = $response->getBody(true);
+		$body = current(explode('</head>', $body, 2));
+		$meta_tags = $this->get_tags($body, 'meta', 'http-equiv', 'content');
+		//get_tags will make sure the keys are lower case
+		if(isset($meta_tags['x-xrds-location'])){
+			return $this->discover_yadis($meta_tags['x-xrds-location']);
+		}
+
+		return false;
+
+	}
+
+	protected discover_html($uri){
+
+		try{
+
+			$request = $this->client->get($uri);
+			$response = $request->send();
+		
+		}catch(BadResponseException $e){
+
+			throw new HttpOpenIdException($this->lang['openid_discovery']);
+
+		}catch(CurlException $e){
+
+			throw new HttpOpenIdException($this->lang['openid_discovery']);
+
+		}
+
+		//we only need the head section
+		$body = $response->getBody(true);
+		$body = current(explode('</head>', $body, 2));
+
+		return $body;
+
+	}
+
+	protected function parse_xrds(\SimpleXmlElement $xrds){
+
+		//expects simple xml element!
+
+	}
+
+	protected function parse_html($html){
+
+		$links = $this->get_tags($html, 'link', 'rel', 'href', true);
+
+		//openid 2.0 and 1.1
+		if(isset($links['openid2.provider'])){
+
+			return $links['openid2.provider'];
+		
+		}elseif(isset($links['openid.server'])){
+
+			return $links['openid.server'];
+
+		}
+
+		return false;
+
+	}
+
+	//this function can be used to get the meta tag links or the normal links
+	protected function get_tags($data, $tag, $att1, $att2, $split = false){
+
+		preg_match_all('#<' . $tag . '\s*(.*?)\s*/?' . '>#is', $data, $matches);
+
+		$links = array();
+
+		foreach ($matches[1] as $link) {
+
+			$rel = $href = null;
+
+			if(preg_match('#' . $att1 . '\s*=\s*(?:([^"\'>\s]*)|"([^">]*)"|\'([^\'>]*)\')(?:\s|$)#is', $link, $m)){
+				array_shift($m);
+				$rel = implode('', $m);
+			}
+
+			if(preg_match('#' . $att2 . '\s*=\s*(?:([^"\'>\s]*)|"([^">]*)"|\'([^\'>]*)\')(?:\s|$)#is', $link, $m)){
+				array_shift($m);
+				$href = implode('', $m);
+			}
+
+			if($split){
+
+				foreach (explode(' ', strtolower($rel)) as $part) {
+					$links[$part] = html_entity_decode($href);
+				}
+
+			}else{
+
+				$links[strtolower($rel)] = html_entity_decode($href);
+
+			}
+
+		}
+
+		return $links;
 
 	}
 
@@ -91,73 +269,53 @@ class OpenIdClientDecorator extends AbstractDecorator{
 	 */
 	protected function normalize_uri($uri){
 
-		//strip xri:// prefix
-		if (substr($uri, 0, 6) == 'xri://') {
+		//first remove the xri:// scheme if it exists
+		if(substr($uri, 0, 6) == 'xri://'){
 			$uri = substr($uri, 6);
 		}
 
-		//if the first char is a global context symbol, then return the full uri as an xri
-		if (in_array($uri[0], array('=', '@', '+', '$', '!'))) {
+		//xri parsing, xris could also be passed without the xri:// scheme
+		if(in_array($uri[0], array('=', '@', '+', '$', '!'))){
 
 			return array(
-				'id'	=> $uri,
+				'uri'	=> $uri,
 				'type'	=> 'xri'
 			);
 
 		}
 
-		// Add http:// if needed
-		if(strpos($uri, '://') === false){
-			$uri = 'http://' . $uri;
-		}
-
-		$bits = parse_url($uri);
-
-		//malformed uri, return false
-		if(!$bits){
+		//parse normal http urls
+		$uri = $this->purl::parse($uri);
+		if(!$uri->getData()){
 			return false;
 		}
 
-		$result = $bits['scheme'] . '://';
-
-		$result .= preg_replace('/\.$/', '', $bits['host']);
-
-		//add port if necessary
-		if(
-			isset($bits['port']) 
-			AND 
-			!empty($bits['port']) 
-			AND 
-			(
-				($bits['scheme'] == 'http' AND $bits['port'] != '80') 
-				OR 
-				($bits['scheme'] == 'https' AND $bits['port'] != '443') 
-				OR 
-				($bits['scheme'] != 'http' AND $bits['scheme'] != 'https')
-			)
-		){
-			$result .= ':' . $bits['port'];
-		}
-
-		//resolve path or trailing slashes
-		if(isset($bits['path'])){
-
-			do{
-				$bits['path'] = preg_replace('#/([^/]*)/\.\./#', '/', str_replace('/./', '/', $old = $bits['path']));
-			}while($old != $bits['path']);
-
-			$result .= $bits['path'];
-
-		}else{
-
-			$result .= '/';
-
+		//add http:// if needed
+		if(!$uri->scheme){
+			$uri->scheme = 'http';
 		}
 
 		return array(
-			'id'	=> $result,
+			'uri'	=> $uri->getUrl(),
 			'type'	=> 'url'
 		);
+
+	}
+
+	protected function resolve_xri_to_uri($xri){
+
+		//add the proxy resolver
+		$uri = $this->xri_resolver . $xri;
+
+		$uri = $this->purl::parse($uri);
+		if(!$uri->getData()){
+			return false;
+		}
+
+		//add the xrds query parameter to get the xrds document for discovery
+		$uri->query->set('_xrd_r', 'application/xrds+xml');
+
+		return $uri->getUrl();
 
 	}
 

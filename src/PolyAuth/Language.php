@@ -65,6 +65,7 @@ class Language implements \ArrayAccess{
 		'session_expire'						=> 'Session id or token has expired.',
 		// Http
 		'persona_verifier'						=> 'Failed to request Persona verifier.',
+		'openid_discovery'						=> 'Failed to request Open Id discovery uri.'
 	);
 	
 	public function __construct(array $language = null){
