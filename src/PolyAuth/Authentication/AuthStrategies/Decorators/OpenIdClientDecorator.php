@@ -8,6 +8,7 @@ use Purl\Url;
 use Guzzle\Http\Client;
 use Guzzle\Http\Exception\BadResponseException;
 use Guzzle\Http\Exception\CurlException;
+use QueryPath;
 
 use PolyAuth\Exceptions\HttpExceptions\HttpOpenIdException;
 
@@ -27,6 +28,7 @@ class OpenIdClientDecorator extends AbstractDecorator{
 	protected $xri_resolver;
 	protected $purl;
 	protected $client;
+	protected $parser;
 
 	public function __construct(
 		$strategy, 
@@ -34,7 +36,8 @@ class OpenIdClientDecorator extends AbstractDecorator{
 		Language $language,
 		$xri_resolver = false, 
 		Url $purl = null,
-		Client $client = null
+		Client $client = null,
+		QueryPath $parser = null
 	){
 
 		$this->strategy = $strategy;
@@ -46,8 +49,8 @@ class OpenIdClientDecorator extends AbstractDecorator{
 
 		$this->purl = ($purl) ? $purl : new Url;
 		$this->client = ($client) ? $client : new Client;
-
 		$this->client->setUserAgent('PolyAuth');
+		$this->parser = ($parser) ? $parser : new QueryPath;
 
 	}
 
@@ -224,6 +227,16 @@ class OpenIdClientDecorator extends AbstractDecorator{
 
 	//this function can be used to get the meta tag links or the normal links
 	protected function get_tags($data, $tag, $att1, $att2, $split = false){
+
+		//this should look for:
+		//<meta http-equiv="X-XRDS-Location" content="http://example.com/yadis.xml">
+		//OR
+		//<link rel="openid2.provider openid.server" href="http://www.livejournal.com/openid/server.bml"/>
+		//<link rel="openid2.local_id openid.delegate" href="http://exampleuser.livejournal.com/"/>
+		//Note that the rel="" may include either the openid2.provider or just openid.server or both
+		//The 2 is for OpenID2 and the openid.server is for 1.1
+		//Always prefer the 2.0 version over the 1.1 version
+		//this should be converted to using QueryPath, mainly because the XRDS parsing can also use QueryPath
 
 		preg_match_all('#<' . $tag . '\s*(.*?)\s*/?' . '>#is', $data, $matches);
 

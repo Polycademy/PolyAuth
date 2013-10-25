@@ -21,6 +21,7 @@
 		"lusitanian/oauth": "0.2.3",
 		"symfony/http-foundation": "2.3.6",
 		"guzzle/guzzle": "3.7.4",
+		"querypath/QueryPath": "3.0.2",
 		"dflydev/hawk": "1.0.x-dev"
 	},
 	"require-dev": {
