@@ -3,20 +3,20 @@
         "This file locks the dependencies of your project to a known state",
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
-    "hash": "b5ee564d36b0333085111a8e9545079d",
+    "hash": "c814e059c2c859034e8305d92f06e364",
     "packages": [
         {
             "name": "dflydev/hawk",
-            "version": "dev-master",
+            "version": "v0.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dflydev/dflydev-hawk.git",
-                "reference": "189dd738da21bd9906ff6d955b1e51bcbdbafcc6"
+                "reference": "136b2a6ab59d361aa2640e4c309513e47d52acca"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dflydev/dflydev-hawk/zipball/189dd738da21bd9906ff6d955b1e51bcbdbafcc6",
-                "reference": "189dd738da21bd9906ff6d955b1e51bcbdbafcc6",
+                "url": "https://api.github.com/repos/dflydev/dflydev-hawk/zipball/136b2a6ab59d361aa2640e4c309513e47d52acca",
+                "reference": "136b2a6ab59d361aa2640e4c309513e47d52acca",
                 "shasum": ""
             },
             "require": {
@@ -26,11 +26,6 @@
                 "phpunit/phpunit": "3.7.21"
             },
             "type": "library",
-            "extra": {
-                "branch-alias": {
-                    "dev-master": "1.0.x-dev"
-                }
-            },
             "autoload": {
                 "psr-0": {
                     "Dflydev\\Hawk": "src"
@@ -58,7 +53,7 @@
                 "bewit",
                 "hawk"
             ],
-            "time": "2013-08-07 07:24:06"
+            "time": "2013-10-30 17:30:33"
         },
         {
             "name": "guzzle/guzzle",
@@ -1998,9 +1993,9 @@
 
     ],
     "minimum-stability": "stable",
-    "stability-flags": {
-        "dflydev/hawk": 20
-    },
+    "stability-flags": [
+
+    ],
     "platform": {
         "php": ">=5.4.12"
     },
