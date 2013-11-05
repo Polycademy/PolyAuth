@@ -51,6 +51,7 @@ To Do
 - SQL Migration, Phinx Migation
 - Add Redis Persistence
 - Add more storage adapters
+- Add a commandline tool that allows the manipulation of RBAC, such as creating roles/permissions and doing every AccountsManager does. It should be able to parse a RBAC JSON configuration file (perhaps in YAML or JSON, definitely not ini file.) This should support hierarchies (so LEVEL 2 RBAC). Use https://github.com/nategood/commando for this binary file. Could even compile to phar! This will need database access, so we need to pass a relevant storage adapter? Perhaps pointing to a file, or command line options, also needs pointing to the relevant options to use. How about polyauth_conf.json (overload Options and DB options) and polyauth_rbac.json (permission hierarchy to process).
 //Cookie strategy is vulnerable to CSRF. But not XSS when you have HTTPONLY.
 //Authorisation Header is not vulnerable to CSRF. But it is vulnerable to XSS!
 
