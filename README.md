@@ -54,6 +54,8 @@ To Do
 - Add a commandline tool that allows the manipulation of RBAC, such as creating roles/permissions and doing every AccountsManager does. It should be able to parse a RBAC JSON configuration file (perhaps in YAML or JSON, definitely not ini file.) This should support hierarchies (so LEVEL 2 RBAC). Use https://github.com/nategood/commando for this binary file. Could even compile to phar! This will need database access, so we need to pass a relevant storage adapter? Perhaps pointing to a file, or command line options, also needs pointing to the relevant options to use. How about polyauth_conf.json (overload Options and DB options) and polyauth_rbac.json (permission hierarchy to process).
 //Cookie strategy is vulnerable to CSRF. But not XSS when you have HTTPONLY.
 //Authorisation Header is not vulnerable to CSRF. But it is vulnerable to XSS!
+- Need to have the ability to ask does this user has these permissions in these set of roles (that is not counting all roles that the user owns, but only specific types of roles). This can be useful if the users themselves can also create roles for other users to access their resources.
+- Regarding OAuth2 Server: https://github.com/php-loep/oauth2-server and https://github.com/bshaffer/oauth2-server-php
 
 Install with Composer
 ---------------------
@@ -71,3 +73,5 @@ Notes
 -----
 
 This does not do filtering or validation of data input. You still need to do this to prevent any problems. This does not do CSRF checks. I do not consider that to be part of a user authentication system. This also does not force you or check for SSL, that should be your job!
+
+Authorization header needs to be available to the PHP runtime. Apache and Fast-CGI will work. However PHP-FPM currently does not support `getallheaders()`, but most web servers such as NGINX will pass the Authorization header. If you're paranoid, just check if `HTTP_AUTHORIZATION` is present your `$_SERVER` global variable, and if isn't you'll need to manually it in the web server configuration. Test with a non HTTP basic Authorization header. It could just be `Authorization: Lol`.

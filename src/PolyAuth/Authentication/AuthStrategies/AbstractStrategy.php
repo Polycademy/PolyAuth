@@ -23,13 +23,15 @@ abstract class AbstractStrategy{
 	 */
 	protected function get_request(){
 
-		$headers = getallheaders();
-
 		$request = Request::createFromGlobals();
-		if(isset($headers['Authorization'])){
-			$request->headers->set('Authorization', $headers['Authorization']);
+		//php-fpm doesn't support getallheaders yet: https://bugs.php.net/bug.php?id=62596
+		//however apache and fast-cgi does support getallheaders
+		if(function_exists('getallheaders')){
+			$headers = getallheaders();
+			if(isset($headers['Authorization'])){
+				$request->headers->set('Authorization', $headers['Authorization']);
+			}
 		}
-
 		return $request;
 
 	}
