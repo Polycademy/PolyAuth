@@ -100,7 +100,7 @@ abstract class AbstractStrategy{
 
 			1. Keep using the object and add properties to it.
 			2. Check if there are headers that need to be sent, if the headers do need to be sent, ->sendHeaders()
-				(note that there are no headers sent by PolyAuth other than a: redirect headers, b: cookie headers).
+				(note that there are no headers sent by PolyAuth other than a: redirect headers, b: cookie headers, c: if you get the strategy direcly and then call challenge you will have other status code and authentication headers).
 			3. Check if there are cookies to be send using ->headers->getCookies(), then ->sendHeaders()
 			4. Check if there is a redirect header using ->isRedirect() or ->isRedirection, then ->sendHeaders()
 			5. Check if there is body output using ->getContent(), then ->sendContent()

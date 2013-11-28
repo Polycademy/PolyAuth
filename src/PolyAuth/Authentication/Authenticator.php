@@ -197,6 +197,12 @@ class Authenticator{
 	
 	}
 
+	public function get_response(){
+
+		return $this->strategy->get_response();
+
+	}
+
 	/**
 	 * Gets the currently logged in user's user account
 	 * It calls accounts manager rather than just returning the user here because
@@ -218,16 +224,16 @@ class Authenticator{
 	
 	}
 
-	public function get_response(){
-
-		return $this->strategy->get_response();
-
-	}
-
 	public function get_strategy(){
 
 		return $this->strategy;
 
+	}
+
+	public function send_challenge(){
+
+		$this->strategy->challenge();
+	
 	}
 
 	protected function logged_in(){
