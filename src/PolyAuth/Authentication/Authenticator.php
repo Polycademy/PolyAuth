@@ -105,7 +105,7 @@ class Authenticator{
 	 * @param $force_login boolean
 	 * @return boolean
 	 */
-	public function login(array $data, $force_login = false, $strategy = false){
+	public function login(array $data, $temp = false, $force_login = false, $strategy = false){
 
 		//this only works with composite strategy,
 		//this is mainly used in case you know the context will default the first strategy
@@ -147,12 +147,20 @@ class Authenticator{
 			$this->login_failure($user['identity'], $user['message'], $user['throttle']);
 		}
 
-		//set the user
-		$this->set_session_state($user);
-
 		if(!empty($this->options['login_lockout'])){
 			$this->login_attempts->clear($this->user[$this->options['login_identity']]);
 		}
+
+		//if temp is true, this returns the user account after validating the credentials
+		//but it does not set any kind of loggedin state
+		//this is useful for 2 factor authentication, where you need to get the user details
+		//to implement the second factor authentication, and then login for real after the second factor has been validated
+		if($temp){
+			return $user;
+		}
+
+		//set the user
+		$this->set_session_state($user);
 
 		$this->storage->update_last_login($this->user['id'], $this->get_ip());
 
