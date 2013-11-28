@@ -2,25 +2,26 @@
 
 namespace PolyAuth\Security;
 
-use Psr\Log\LoggerInterface;
-use Psr\Log\LoggerAwareInterface;
 use PolyAuth\Options;
 use PolyAuth\Storage\StorageInterface;
+use Symfony\Component\HttpFoundation\Request;
 
-class LoginAttempts implements LoggerAwareInterface{
-
-	use \PolyAuth\LoggerTrait;
+class LoginAttempts{
 
 	protected $storage;
 	protected $options;
-	protected $logger;
+	protected $request;
 
-	public function __construct(StorageInterface $storage, Options $options, LoggerInterface $logger = null){
+	public function __construct(
+		StorageInterface $storage, 
+		Options $options,
+		Request $request = null
+	){
 	
 		$this->storage = $storage;
 		$this->options = $options;
-		$this->logger = $logger;
-	
+		$this->request = ($request) ? $request : Request::createFromGlobals();
+
 	}
 	
 	/**
@@ -132,7 +133,7 @@ class LoginAttempts implements LoggerAwareInterface{
 	 */
 	protected function get_ip() {
 	
-		$ip_address = (!empty($_SERVER['REMOTE_ADDR'])) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1';
+		$ip_address = $this->request->getClientIp();
 		return inet_pton($ip_address);
 		
 	}

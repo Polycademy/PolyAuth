@@ -16,6 +16,8 @@ use PolyAuth\Security\Encryption;
 use PolyAuth\Emailer;
 use PolyAuth\Sessions\LoginAttempts;
 
+use Symfony\Component\HttpFoundation\Request;
+
 use PolyAuth\Exceptions\ValidationExceptions\RegisterValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\PasswordValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\DatabaseValidationException;
@@ -33,6 +35,7 @@ class AccountsManager{
 	protected $encryption;
 	protected $emailer;
 	protected $login_attempts;
+	protected $request;
 	
 	public function __construct(
 		StorageInterface $storage, 
@@ -43,7 +46,8 @@ class AccountsManager{
 		Random $random = null, 
 		Encryption $encryption = null,
 		Emailer $emailer = null,
-		LoginAttempts $login_attempts = null
+		LoginAttempts $login_attempts = null,
+		Request $request = null
 	){
 	
 		$this->storage = $storage;
@@ -55,6 +59,7 @@ class AccountsManager{
 		$this->encryption = ($encryption) ? $encryption : new Encryption();
 		$this->emailer = ($emailer) ? $emailer : new Emailer($options, $language);
 		$this->login_attempts = ($login_attempts) ? $login_attempts : new LoginAttempts($storage, $options);
+		$this->request = ($request) ? $request : Request::createFromGlobals();
 		
 	}
 	
@@ -90,8 +95,7 @@ class AccountsManager{
 		}
 		
 		//constructing the payload now
-		$ip = (!empty($_SERVER['REMOTE_ADDR'])) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1';
-		$data['ipAddress'] = inet_pton($ip);
+		$data['ipAddress'] = $this->get_ip();
 		$data['password'] = password_hash($data['password'], $this->options['hash_method'], ['cost' => $this->options['hash_rounds']]);
 		
 		if($force_active){
@@ -401,8 +405,7 @@ class AccountsManager{
 		}
 		
 		//constructing the payload now
-		$ip = (!empty($_SERVER['REMOTE_ADDR'])) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1';
-		$data['ipAddress'] = inet_pton($ip);
+		$data['ipAddress'] = $this->get_ip();
 		
 		$data += array(
 		    'createdOn'	=> date('Y-m-d H:i:s'),
@@ -809,6 +812,18 @@ class AccountsManager{
 
 		return false;
 	
+	}
+
+	/**
+	 * Helper function to get the ip and format it correctly for insertion.
+	 *
+	 * @return $ip_address binary | string
+	 */
+	protected function get_ip() {
+	
+		$ip_address = $this->request->getClientIp();
+		return inet_pton($ip_address);
+		
 	}
 
 }

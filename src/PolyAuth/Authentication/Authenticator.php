@@ -12,6 +12,7 @@ use PolyAuth\Security\LoginAttempts;
 
 use PolyAuth\UserAccount;
 
+use Symfony\Component\HttpFoundation\Request;
 
 use PolyAuth\Exceptions\UserExceptions\UserPasswordChangeException;
 use PolyAuth\Exceptions\UserExceptions\UserNotFoundException;
@@ -31,6 +32,8 @@ class Authenticator{
 	protected $accounts_manager;
 	protected $rbac;
 	protected $login_attempts;
+	protected $request;
+
 	protected $user;
 
 	public function __construct(
@@ -40,7 +43,8 @@ class Authenticator{
 		Language $language, 
 		AccountsManager $accounts_manager = null, 
 		Rbac $rbac = null,
-		LoginAttempts $login_attempts = null
+		LoginAttempts $login_attempts = null,
+		Request $request = null
 	){
 
 		$this->strategy = $strategy;
@@ -49,8 +53,8 @@ class Authenticator{
 		$this->lang = $language;
 		$this->accounts_manager = ($accounts_manager) ? $accounts_manager : new AccountsManager($storage, $options, $language);
 		$this->rbac = ($rbac) ? $rbac : new Rbac($storage, $language);
-		$this->session_zone = ($session_zone) ? $session_zone : new SessionZone($options);
 		$this->login_attempts = ($login_attempts) ? $login_attempts : new LoginAttempts($storage, $options);
+		$this->request = ($request) ? $request : Request::createFromGlobals();
 	
 	}
 
@@ -143,6 +147,8 @@ class Authenticator{
 			//resource using ROC credentials. But the IP would be from the CC, since it's sending a request.
 			//For 3. The CC is who you would throttle. So in this the case, the $data makes sense. They need the 
 			//'identity'!
+			
+			//BASICALLY, the throttling needs to be more detailed in relation to OAuthProvision since the IP may not represent the actual credentials. And that there is actually 2 credentials from separate users. The client and resource owner.
 
 			$this->login_failure($user['identity'], $user['message'], $user['throttle']);
 		}
@@ -205,7 +211,6 @@ class Authenticator{
 	
 	/**
 	 * Gets the current session manager if you want granular control.
-	 * @return $this->session_zone object
 	 */
 	public function get_session(){
 		
@@ -390,7 +395,7 @@ class Authenticator{
 	 */
 	protected function get_ip() {
 	
-		$ip_address = (!empty($_SERVER['REMOTE_ADDR'])) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1';
+		$ip_address = $this->request->getClientIp();
 		return inet_pton($ip_address);
 		
 	}
