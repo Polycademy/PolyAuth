@@ -2,6 +2,8 @@
 
 namespace PolyAuth;
 
+use Psr\Log\LoggerInterface;
+
 trait LoggerTrait{
 
 	/**

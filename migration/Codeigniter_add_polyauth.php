@@ -10,8 +10,6 @@ use RBAC\Manager\RoleManager;
  * This migration file is catered towards Codeigniter 3.0 and the MySQL database.
  * However you can glean information from here on how to implement it in other frameworks and other databases.
  * 
- * This migration will not setup any sessions table, that's up to you to create if you want to use database sessions.
- * 
  * You will need to modify the configuration array to setup the default permissions and the default user.
  * You can also add to the columns of the user_accounts table, or even change the name, just make sure to configure the name properly.
  * Any added columns will simply be extra data that you can submit when registering or getting a user.
