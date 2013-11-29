@@ -14,7 +14,7 @@ use PolyAuth\Security\Random;
 use PolyAuth\Security\Encryption;
 
 use PolyAuth\Emailer;
-use PolyAuth\Sessions\LoginAttempts;
+use PolyAuth\Security\LoginAttempts;
 
 use Symfony\Component\HttpFoundation\Request;
 

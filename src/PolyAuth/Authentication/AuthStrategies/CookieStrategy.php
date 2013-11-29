@@ -51,7 +51,7 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 			array(
 				'autologin'						=> true, //allowing remember me or not
 				'autologin_expiration'			=> 86400, // autologin expiration (seconds). Set to zero for no expiration (well for as long as possible)
-				'autologin_expiration_extend'	=> true //allowing whether autologin extends the autologin_expiration
+				'autologin_expiration_extend'	=> true, //allowing whether autologin extends the autologin_expiration
 				'cookie_path'					=> '/',
 				'cookie_domain'					=> null,
 				'cookie_secure'					=> false,
@@ -235,7 +235,7 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 
 		//if identity doesn't exist or that (password doesn't exist while external is false)
 		//if external is true, password doesn't need to be set
-		if(!isset($data['identity']) OR (!isset($data['password'] AND !$external))){
+		if(!isset($data['identity']) OR (!isset($data['password']) AND !$external)){
 
 			return array(
 				'identity'	=> $data['identity'],

@@ -123,14 +123,14 @@ abstract class AbstractStrategy{
 	 * @param  String $type Can either be 'json', 'xml' or false
 	 * @return String The formatted data
 	 */
-	protected set_response_data_and_type($data, $type = false){
+	protected function set_response_data_and_type($data, $type = false){
 
 		switch($type){
 			case 'json':
 				$data = json_encode($data);
 				$this->response->headers->set('Content-Type', 'application/json');
 			break;
-			case: 'xml':
+			case 'xml':
 				$xml = new \SimpleXMLElement('<OAuth></OAuth>');
 				$this->array_to_xml($data, $xml);
 				$data = $xml->asXML();
