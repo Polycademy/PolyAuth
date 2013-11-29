@@ -10,6 +10,12 @@
 		"homepage": "http://polycademy.com",
 		"role": "Founder and Developer"
 	}],
+	"repositories": [
+		{
+			"type": "vcs",
+			"url": "https://github.com/Polycademy/Stash.git"
+		}
+	],
 	"require": {
 		"php": ">=5.4.12",
 		"polycademy/php_rbac": "1.0.0",
@@ -17,7 +23,7 @@
 		"ircmaxell/password-compat": "1.0.3",
 		"phpmailer/phpmailer": "5.2.7",
 		"psr/log": "1.0.0",
-		"tedivm/stash": "0.10.5",
+		"tedivm/stash": "dev-master",
 		"lusitanian/oauth": "0.2.3",
 		"symfony/http-foundation": "2.3.6",
 		"guzzle/guzzle": "3.7.4",
