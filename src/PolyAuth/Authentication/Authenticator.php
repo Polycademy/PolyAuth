@@ -79,18 +79,33 @@ class Authenticator{
 
 		$this->strategy->start_session();
 
-		//if the user is not logged in, we're going to reset an anonymous session and attempt autologin
-		if(!$this->logged_in()){
+		$session = $this->strategy->get_session();
+
+		//check the session then the $this->user object
+		$user_id = false;
+		if(!empty($session['user_id']) OR $session['user_id'] === 0){
+			$user_id = $session['user_id'];
+		}elseif($this->user instanceof UserAccount AND (!empty($this->user['id']) OR $this->user['id'] === 0)){
+			$user_id = $this->user['id'];
+		}
+
+		//check the database
+		$user = false;
+		if($user_id){
+			$user = $this->storage->get_user($user_id);
+		}
+
+		if($user){
+			
+			$this->set_session_state($user);
+
+		}else{
 
 			//create an anonymous user
 			$this->set_session_state();
-			//if autologin works, it would overwrite the anonymous user
+			//attempt autologin, it would overwrite the anonymous user if it succeeds
 			$this->autologin();
 
-		}else{
-			
-			$this->user = $this->accounts_manager->get_user($this->strategy->get_session()['user_id']);
-		
 		}
 	
 	}
@@ -211,7 +226,7 @@ class Authenticator{
 	 */
 	public function get_user(){
 
-		return $this->accounts_manager->get_user($this->user['id']);
+		return $this->user;
 	
 	}
 	
@@ -235,33 +250,7 @@ class Authenticator{
 		$this->strategy->challenge();
 	
 	}
-
-	protected function logged_in(){
-
-		$session = $this->strategy->get_session();
-
-		//if user id doesn't exist in the session and $this->user's id doesn't exist then the user is not logged in
-		if(empty($session['user_id']) AND $session['user_id'] !== 0){
-			if(!$this->user instanceof UserAccount OR (empty($this->user['id']) AND $this->user['id'] !== 0)){
-				return false;
-			}else{
-				$user_id = $this->user['id'];
-			}
-		}else{
-			$user_id = $session['user_id'];
-		}
-
-		//check if the user id actually exists in the database
-		$row = $this->storage->get_user($user_id);
-
-		if(!$row){
-			return false;
-		}
-
-		return true;
-
-	}
-
+	
 	protected function set_session_state(UserAccount $user = null){
 
 		$session = $this->strategy->get_session();

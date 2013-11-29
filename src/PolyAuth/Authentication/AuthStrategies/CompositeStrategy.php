@@ -5,6 +5,9 @@ namespace PolyAuth\Authentication\AuthStrategies;
 use PolyAuth\Authentication\AuthStrategies\Decorators\AbstractDecorator;
 use PolyAuth\Exceptions\ValidationExceptions\StrategyValidationException;
 
+/**
+ * This class needs to match all of the public API functions of the Abstract Strategy
+ */
 class CompositeStrategy{
 
 	protected $strategies;
