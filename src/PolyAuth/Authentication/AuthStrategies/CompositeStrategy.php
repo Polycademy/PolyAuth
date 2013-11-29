@@ -3,10 +3,9 @@
 namespace PolyAuth\Authentication\AuthStrategies;
 
 use PolyAuth\Authentication\AuthStrategies\Decorators\AbstractDecorator;
-
 use PolyAuth\Exceptions\ValidationExceptions\StrategyValidationException;
 
-class CompositeStrategy extends AbstractStrategy{
+class CompositeStrategy{
 
 	protected $strategies;
 	protected $context; //this will be switched depending on get relevance
@@ -72,6 +71,12 @@ class CompositeStrategy extends AbstractStrategy{
 
 	}
 
+	public function get_session(){
+
+		return $this->context->get_session();
+	
+	}
+
 	public function autologin(){
 
 		return $this->context->autologin();
@@ -94,6 +99,12 @@ class CompositeStrategy extends AbstractStrategy{
 
 		return $this->context->challenge();
 
+	}
+
+	public function get_response($data_type = false){
+
+		return $this->context->get_response($data_type);
+	
 	}
 
 }
