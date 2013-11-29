@@ -144,10 +144,10 @@ class UserAccount extends Subject implements \ArrayAccess{
 		return $this->user_data;
 	}
 
-	
+	//This authorized doesn't actually check whether this user is logged in or not. In fact the UserAccount is always available, but some UserAccounts are anonymous. So we do have to change the parameters of this function
 	/**
 	 * Checks if the user is logged in and possesses all the passed in parameters.
-	 * The parameters operate on all or nothing except $identities and $id. $identities and $id operates like "has to be at least one of them".
+	 * The parameters operate on all or nothing except $identities and $id. $identities and $id operates like "has to be at least one of them". But if identities and ids are both passed in, then one of them from each has to be true.
 	 * This first checks if the session exists, and if not checks if the user exists in this script's memory.
 	 * 
 	 * @param $permissions array of permission names | string | false

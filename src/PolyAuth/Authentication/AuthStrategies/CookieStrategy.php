@@ -104,8 +104,8 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 			$session_id = $this->session_manager->start();
 		}
 
-		if($this->cookies_options['session_expiration']){
-			$expiration = time() + $cookie_options['session_expiration'];
+		if($this->cookie_options['session_expiration']){
+			$expiration = time() + $this->cookie_options['session_expiration'];
 		}else{
 			$expiration = 0;
 		}
