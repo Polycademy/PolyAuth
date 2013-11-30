@@ -3,7 +3,7 @@
         "This file locks the dependencies of your project to a known state",
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
-    "hash": "d33ef918873e4b86b3aa0b54d453a943",
+    "hash": "7fecc8da47996f00d7bf9160f622b4a5",
     "packages": [
         {
             "name": "dflydev/hawk",
@@ -448,16 +448,16 @@
         },
         {
             "name": "polycademy/php_rbac",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/Polycademy/php_rbac.git",
-                "reference": "98ec44edcbaf399597e9edc17c01df3a2ba6d3c4"
+                "reference": "99625c7066f5fafe7d3a0f061e0940ce560bf12c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Polycademy/php_rbac/zipball/98ec44edcbaf399597e9edc17c01df3a2ba6d3c4",
-                "reference": "98ec44edcbaf399597e9edc17c01df3a2ba6d3c4",
+                "url": "https://api.github.com/repos/Polycademy/php_rbac/zipball/99625c7066f5fafe7d3a0f061e0940ce560bf12c",
+                "reference": "99625c7066f5fafe7d3a0f061e0940ce560bf12c",
                 "shasum": ""
             },
             "require": {
@@ -501,7 +501,7 @@
                 "database",
                 "rbac"
             ],
-            "time": "2013-09-14 20:37:48"
+            "time": "2013-11-30 07:12:48"
         },
         {
             "name": "polycademy/purl",
