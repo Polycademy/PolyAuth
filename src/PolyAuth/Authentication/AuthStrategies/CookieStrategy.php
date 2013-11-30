@@ -324,7 +324,7 @@ class CookieStrategy extends AbstractStrategy implements StrategyInterface{
 		$new_session_id = $this->session_manager->regenerate();
 
 		if($this->cookie_options['session_expiration']){
-			$expiration = time() + $cookie_options['session_expiration'];
+			$expiration = time() + $this->cookie_options['session_expiration'];
 		}else{
 			$expiration = 0;
 		}
