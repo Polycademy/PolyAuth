@@ -90,9 +90,14 @@ class Authenticator{
 		}
 
 		//check the database
-		$user = false;
-		if($user_id){
-			$user = $this->storage->get_user($user_id);
+		try{
+			if($user_id){
+				$user = $this->accounts_manager->get_user($user_id);
+			}else{
+				$user = false;
+			}
+		}catch(UserNotFoundException $e){
+			$user = false;
 		}
 
 		if($user){
