@@ -67,15 +67,13 @@ class UserAccount extends Subject implements \ArrayAccess{
 	 * 
 	 * @param $permissions array of permission names | string | false
 	 * @param $roles array of role names | string | false
-	 * @param $identities array of user identities | string | false (this must match your login_identity option)
 	 * @param $ids array of user ids | integer | false
 	 * @return boolean
 	 */
-	public function authorized($permissions = false, $roles = false, $identities = false, $ids = false){
+	public function authorized($permissions = false, $roles = false, $ids = false){
 			
 		$permissions = ($permissions) ? (array) $permissions : false;
 		$roles = ($roles) ? (array) $roles : false;
-		$identities = ($identities) ? (array) $identities : false;
 		$ids = ($ids) ? (array) $ids : false;
 
 		//anonymous users are not authorized
@@ -85,11 +83,6 @@ class UserAccount extends Subject implements \ArrayAccess{
 		
 		//id check
 		if($ids AND !in_array($this['id'], $ids)){
-			return false;
-		}
-
-		//identity check
-		if($identities AND !in_array($this[$this->options['login_identity']], $identities)){
 			return false;
 		}
 		
