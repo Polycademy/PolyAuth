@@ -3,7 +3,7 @@
         "This file locks the dependencies of your project to a known state",
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
-    "hash": "7fecc8da47996f00d7bf9160f622b4a5",
+    "hash": "183f13a8e474cc8238f8d8aa8cf2ab17",
     "packages": [
         {
             "name": "dflydev/hawk",
@@ -732,16 +732,16 @@
         },
         {
             "name": "tedivm/stash",
-            "version": "dev-master",
+            "version": "v0.11.2",
             "source": {
                 "type": "git",
-                "url": "https://github.com/Polycademy/Stash.git",
-                "reference": "98a83d3fa3268ba3f459247f966900dfeb17b09f"
+                "url": "https://github.com/tedivm/Stash.git",
+                "reference": "89a0114ba1441f134695c3a64f1ac6425718c179"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Polycademy/Stash/zipball/98a83d3fa3268ba3f459247f966900dfeb17b09f",
-                "reference": "98a83d3fa3268ba3f459247f966900dfeb17b09f",
+                "url": "https://api.github.com/repos/tedivm/Stash/zipball/89a0114ba1441f134695c3a64f1ac6425718c179",
+                "reference": "89a0114ba1441f134695c3a64f1ac6425718c179",
                 "shasum": ""
             },
             "require": {
@@ -753,6 +753,7 @@
                     "Stash": "src/"
                 }
             },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "BSD-3-Clause"
             ],
@@ -776,10 +777,7 @@
                 "redis",
                 "sessions"
             ],
-            "support": {
-                "source": "https://github.com/Polycademy/Stash/tree/master"
-            },
-            "time": "2013-11-29 15:04:18"
+            "time": "2013-11-30 09:07:55"
         }
     ],
     "packages-dev": [
@@ -2010,9 +2008,9 @@
 
     ],
     "minimum-stability": "stable",
-    "stability-flags": {
-        "tedivm/stash": 20
-    },
+    "stability-flags": [
+
+    ],
     "platform": {
         "php": ">=5.4.12"
     },
