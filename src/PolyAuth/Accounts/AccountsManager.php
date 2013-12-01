@@ -604,7 +604,7 @@ class AccountsManager{
 		if(!$id AND $id !== 0 AND $identity){
 			$row = $this->storage->get_user_by_identity($identity);
 		}else{
-			$row = $this->storage->get_user($user_id);
+			$row = $this->storage->get_user($id);
 		}
 
 		if(!$row){
@@ -626,12 +626,12 @@ class AccountsManager{
 	/**
 	 * Gets an array of users based on their user ids
 	 *
-	 * @param $user_ids array
+	 * @param $user_ids array | null (if no ids are passed in, we get all the user accounts)
 	 * @return $users array | null - Array of (id => UserAccount)
 	 */
-	public function get_users(array $user_ids){
+	public function get_users(array $user_ids = null, $offset = 0, $limit = null){
 
-		$result = $this->storage->get_users($user_ids);
+		$result = $this->storage->get_users($user_ids, $offset, $limit);
 		if(!$result){
 			throw new UserNotFoundException($this->lang['user_select_unsuccessful']);
 		}

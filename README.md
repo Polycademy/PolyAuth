@@ -56,6 +56,7 @@ To Do
 //Authorisation Header is not vulnerable to CSRF. But it is vulnerable to XSS!
 - Need to have the ability to ask does this user has these permissions in these set of roles (that is not counting all roles that the user owns, but only specific types of roles). This can be useful if the users themselves can also create roles for other users to access their resources.
 - Regarding OAuth2 Server: https://github.com/php-loep/oauth2-server and https://github.com/bshaffer/oauth2-server-php
+- Reduce PHP version requirement to 5.3 (need to do some testing)
 
 Install with Composer
 ---------------------

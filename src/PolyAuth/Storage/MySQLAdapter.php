@@ -498,12 +498,22 @@ class MySQLAdapter implements StorageInterface{
 
 	}
 
-	public function get_users(array $user_ids){
+	public function get_users(array $user_ids = null, $offset = 0, $limit = false){
 
-		$select_placeholders = implode(",", array_fill(0, count($user_ids), '?'));
-		
-		$query = "SELECT * FROM {$this->options['table_users']} WHERE id IN ($select_placeholders)";
+		if(!empty($user_ids)){
+			$select_placeholders = implode(",", array_fill(0, count($user_ids), '?'));
+			$query = "SELECT * FROM {$this->options['table_users']} WHERE id IN ($select_placeholders)";
+		}else{
+			$query = "SELECT * FROM {$this->options['table_users']}";
+		}
+
+		if(is_int($offset) AND is_int($limit)){
+			$query .= ' LIMIT :offset, :limit';
+		}
+
 		$sth = $this->db->prepare($query);
+		$sth->bindValue('offset', abs($offset), PDO::PARAM_INT);
+		$sth->bindValue('limit', abs($limit), PDO::PARAM_INT);
 		
 		try{
 		
