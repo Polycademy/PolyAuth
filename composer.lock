@@ -3,7 +3,7 @@
         "This file locks the dependencies of your project to a known state",
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
-    "hash": "4853f298a9aa5281acc2a4f799fcfedc",
+    "hash": "a989390d31f71a50ba52fcf58fe7c79c",
     "packages": [
         {
             "name": "dflydev/hawk",
@@ -383,16 +383,16 @@
         },
         {
             "name": "lusitanian/oauth",
-            "version": "v0.2.3",
+            "version": "v0.2.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/Lusitanian/PHPoAuthLib.git",
-                "reference": "75074f198e8c7697ff72c1d2a7d8fc8a5ef80fec"
+                "reference": "b83cf1079f40c52de1fe62c8fd49741ca7c7aa1f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Lusitanian/PHPoAuthLib/zipball/75074f198e8c7697ff72c1d2a7d8fc8a5ef80fec",
-                "reference": "75074f198e8c7697ff72c1d2a7d8fc8a5ef80fec",
+                "url": "https://api.github.com/repos/Lusitanian/PHPoAuthLib/zipball/b83cf1079f40c52de1fe62c8fd49741ca7c7aa1f",
+                "reference": "b83cf1079f40c52de1fe62c8fd49741ca7c7aa1f",
                 "shasum": ""
             },
             "require": {
@@ -442,7 +442,7 @@
                 "oauth",
                 "security"
             ],
-            "time": "2013-09-23 17:22:53"
+            "time": "2013-11-09 14:55:37"
         },
         {
             "name": "phpmailer/phpmailer",

@@ -18,7 +18,7 @@
 		"phpmailer/phpmailer": "5.2.7",
 		"psr/log": "1.0.0",
 		"tedivm/stash": "0.11.2",
-		"lusitanian/oauth": "0.2.3",
+		"lusitanian/oauth": "0.2.4",
 		"symfony/http-foundation": "2.3.6",
 		"guzzle/guzzle": "3.7.4",
 		"querypath/QueryPath": "3.0.2",
