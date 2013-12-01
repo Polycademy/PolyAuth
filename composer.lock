@@ -3,7 +3,7 @@
         "This file locks the dependencies of your project to a known state",
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
-    "hash": "183f13a8e474cc8238f8d8aa8cf2ab17",
+    "hash": "4853f298a9aa5281acc2a4f799fcfedc",
     "packages": [
         {
             "name": "dflydev/hawk",
@@ -331,6 +331,57 @@
             "time": "2013-04-27 18:25:23"
         },
         {
+            "name": "leighmacdonald/php_rbac",
+            "version": "1.0.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/leighmacdonald/php_rbac.git",
+                "reference": "8855d6bbfa29e0a5d89f2911d552bc2ab394cf52"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/leighmacdonald/php_rbac/zipball/8855d6bbfa29e0a5d89f2911d552bc2ab394cf52",
+                "reference": "8855d6bbfa29e0a5d89f2911d552bc2ab394cf52",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.4.0",
+                "psr/log": "1.0.0"
+            },
+            "require-dev": {
+                "ext-apc": "*",
+                "phpunit/dbunit": "1.2.*@dev",
+                "phpunit/phpunit": "3.7.18"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-0": {
+                    "RBAC": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Leigh MacDonald",
+                    "email": "leigh.macdonald@gmail.com",
+                    "homepage": "http://cudd.li",
+                    "role": "Developer"
+                }
+            ],
+            "description": "An implementation of RBAC Level 2",
+            "homepage": "https://github.com/leighmacdonald/php_rbac",
+            "keywords": [
+                "Authentication",
+                "auth",
+                "database",
+                "rbac"
+            ],
+            "time": "2013-11-30 08:01:03"
+        },
+        {
             "name": "lusitanian/oauth",
             "version": "v0.2.3",
             "source": {
@@ -445,63 +496,6 @@
             ],
             "description": "PHPMailer is a full-featured email creation and transfer class for PHP",
             "time": "2013-09-12 07:52:38"
-        },
-        {
-            "name": "polycademy/php_rbac",
-            "version": "1.0.1",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/Polycademy/php_rbac.git",
-                "reference": "99625c7066f5fafe7d3a0f061e0940ce560bf12c"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/Polycademy/php_rbac/zipball/99625c7066f5fafe7d3a0f061e0940ce560bf12c",
-                "reference": "99625c7066f5fafe7d3a0f061e0940ce560bf12c",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=5.4.0",
-                "psr/log": "1.0.0"
-            },
-            "require-dev": {
-                "ext-apc": "*",
-                "phpunit/dbunit": "1.2.*@dev",
-                "phpunit/phpunit": "3.7.18"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-0": {
-                    "RBAC": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Leigh MacDonald",
-                    "email": "leigh.macdonald@gmail.com",
-                    "homepage": "http://cudd.li",
-                    "role": "Developer"
-                },
-                {
-                    "name": "Roger Qiu",
-                    "email": "roger.qiu@polycademy.com",
-                    "homepage": "http://polycademy.com",
-                    "role": "Founder and Developer"
-                }
-            ],
-            "description": "An implementation of RBAC Level 2",
-            "homepage": "https://github.com/Polycademy/php_rbac",
-            "keywords": [
-                "Authentication",
-                "auth",
-                "database",
-                "rbac"
-            ],
-            "time": "2013-11-30 07:12:48"
         },
         {
             "name": "polycademy/purl",

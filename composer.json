@@ -12,7 +12,7 @@
 	}],
 	"require": {
 		"php": ">=5.4.12",
-		"polycademy/php_rbac": "1.0.1",
+		"leighmacdonald/php_rbac": "1.0.2",
 		"polycademy/purl": "0.0.3",
 		"ircmaxell/password-compat": "1.0.3",
 		"phpmailer/phpmailer": "5.2.7",
