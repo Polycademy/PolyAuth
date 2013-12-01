@@ -622,39 +622,33 @@ class AccountsManager{
 		return $user;
 		
 	}
-	
+
 	/**
-	 * Gets an array of users based on their user ids
-	 *
-	 * @param $user_ids array | null (if no ids are passed in, we get all the user accounts)
-	 * @return $users array | null - Array of (id => UserAccount)
+	 * Get users by search parameters. If no parameters are passed in, it will get all the users. If parameters 
+	 * are passed in, it's an array of key (table column) to value. It will try to get all the users which match those
+	 * key to value on an 'OR' basis. So if you want user with id of 2, and user with identity of Roger, then you would
+	 * get all the users that have an id of 2 OR the identity of Roger.
+	 * @param  array|null  $parameters Array of search parameters [1, 2, 3] OR ['username' => ['Roger', 'Brad']]
+	 * @param  integer     $offset     Offset for pagination
+	 * @param  boolean     $limit      Limit for pagination
+	 * @return array
 	 */
-	public function get_users(array $user_ids = null, $offset = 0, $limit = null){
+	public function get_users(array $parameters = null, $offset = 0, $limit = false){
 
-		$result = $this->storage->get_users($user_ids, $offset, $limit);
-		if(!$result){
-			throw new UserNotFoundException($this->lang['user_select_unsuccessful']);
+		if(is_array($parameters) AND !empty($parameters)){
+
+			//parameters may be a flat array of integers, which represent the id column, they don't need to be validated
+			$search_keys = array_filter(array_keys($parameters), function($value){
+				return !is_int($value);
+			});
+
+			if(!$this->storage->validate_columns($this->options['table_users'], $search_keys)){
+				throw new DatabaseValidationException($this->lang['user_select_invalid']);
+			}
+
 		}
-		
-		$output_users = array();
-		
-		foreach($result as $row){
-			
-			unset($row->password);
-			$user = new UserAccount($row->id);
-			$user->set_user_data($row);
-			$this->rbac->load_subject_roles($user);
-			$output_users[] = $user;
-		
-		}
-		
-		return $output_users;
-	
-	}
 
-	public function get_users_by_identity(array $identities){
-
-		$result = $this->storage->get_users_by_identity($identities);
+		$result = $this->storage->get_users($parameters, $offset, $limit);
 		
 		if(!$result){
 			throw new UserNotFoundException($this->lang['user_select_unsuccessful']);

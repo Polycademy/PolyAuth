@@ -32,6 +32,7 @@ class Language implements \ArrayAccess{
 		'activation_email_unsuccessful'			=> 'Unable to Send Activation Email',
 		// User
 		'user_select_unsuccessful'				=> 'Could not find the user or users.',
+		'user_select_invalid'					=> 'Cannot find users with invalid data search parameters.',
 		'user_role_select_empty'				=> 'No users were found corresponding to the specified roles.',
 		'user_role_select_unsuccessful'			=> 'Could not select users based on roles.',
 		'user_permission_select_empty'			=> 'No users were found corresponding to the specified permissions.',

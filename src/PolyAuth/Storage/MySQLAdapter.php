@@ -498,26 +498,63 @@ class MySQLAdapter implements StorageInterface{
 
 	}
 
-	public function get_users(array $user_ids = null, $offset = 0, $limit = false){
+	public function get_users(array $parameters = null, $offset = 0, $limit = false){
 
-		if(!empty($user_ids)){
-			$select_placeholders = implode(",", array_fill(0, count($user_ids), '?'));
-			$query = "SELECT * FROM {$this->options['table_users']} WHERE id IN ($select_placeholders)";
-		}else{
+		$properties = null;
+		if(is_array($parameters) AND !empty($parameters)){
+
+			$keys = array_keys($parameters);
+			$search_params = array();
+
+			foreach($keys as $key){
+
+				if(is_int($key)){
+					$search_params['id'][] = $parameters[$key];
+				}elseif($key == 'id'){
+					if(!array_key_exists('id', $search_params))	$search_params['id'] = array();
+						$search_params['id'] = array_merge($search_params['id'], $parameters[$key]);
+				}else{
+					$search_params[$key] = $parameters[$key];  
+				}
+
+			}
+
+			array_walk($search_params, function(&$value){
+			  $value = array_unique($value);
+			});
+
 			$query = "SELECT * FROM {$this->options['table_users']}";
+
+			$where_components = array();
+			$properties = array();
+
+			foreach($search_params as $key => $placeholders){
+				$properties = array_merge($properties, $placeholders);
+				$placeholders = implode(",", array_fill(0, count($placeholders), '?'));
+				$where_components[] = "$key IN ($placeholders)";
+			}
+
+			$where_components = implode(' OR ', $where_components);
+
+			$query .= ' WHERE ' . $where_components;
+
+		}else{
+			
+			$query = "SELECT * FROM {$this->options['table_users']}";
+
 		}
 
 		if(is_int($offset) AND is_int($limit)){
-			$query .= ' LIMIT :offset, :limit';
+			$query .= " LIMIT :offset, :limit";
 		}
 
 		$sth = $this->db->prepare($query);
 		$sth->bindValue('offset', abs($offset), PDO::PARAM_INT);
 		$sth->bindValue('limit', abs($limit), PDO::PARAM_INT);
-		
+
 		try{
 		
-			$sth->execute($user_ids);
+			$sth->execute($properties);
             $result = $sth->fetchAll(PDO::FETCH_OBJ);
 			return $result;
 			
@@ -525,30 +562,6 @@ class MySQLAdapter implements StorageInterface{
 		
 			if($this->logger){
 				$this->logger->error("Failed to execute query to select users.", ['exception' => $db_err]);
-			}
-			throw $db_err;
-		
-		}
-
-	}
-
-	public function get_users_by_identity(array $identities){
-
-		$select_placeholders = implode(",", array_fill(0, count($identities), '?'));
-
-		$query = "SELECT * FROM {$this->options['table_users']} WHERE {$this->options['login_identity']} IN ($select_placeholders)";
-		$sth = $this->db->prepare($query);
-
-		try{
-		
-			$sth->execute($identities);
-            $result = $sth->fetchAll(PDO::FETCH_OBJ);
-			return $result;
-			
-		}catch(PDOException $db_err){
-		
-			if($this->logger){
-				$this->logger->error("Failed to execute query to select users by identities.", ['exception' => $db_err]);
 			}
 			throw $db_err;
 		
