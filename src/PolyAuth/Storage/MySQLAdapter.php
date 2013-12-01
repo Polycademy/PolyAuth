@@ -1105,8 +1105,8 @@ class MySQLAdapter implements StorageInterface{
 		return $this->rbac_storage->roleFetchById($role_ids);
 	}
 
-	public function roleFetchSubjectRoles(SubjectInterface $subject){
-		return $this->rbac_storage->roleFetchSubjectRoles($subject);
+	public function roleFetchSubjectRoles(SubjectInterface $subject, $permissions = true){
+		return $this->rbac_storage->roleFetchSubjectRoles($subject, $permissions);
 	}
 
 	public function roleAddSubjectId(Role $role, $subject_id){
