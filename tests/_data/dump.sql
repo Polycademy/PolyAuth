@@ -19,7 +19,7 @@ SET time_zone = "+00:00";
 --
 -- Database: `test`
 --
-CREATE DATABASE IF NOT EXISTS `test` DEFAULT CHARACTER SET latin1 COLLATE latin1_swedish_ci;
+CREATE DATABASE IF NOT EXISTS `test` DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;
 USE `test`;
 
 -- --------------------------------------------------------
@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS `auth_permission` (
   `updated_on` datetime DEFAULT NULL,
   PRIMARY KEY (`permission_id`),
   UNIQUE KEY `uniq_perm` (`name`) USING BTREE
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=6 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=6 ;
 
 --
 -- Dumping data for table `auth_permission`
@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS `auth_role` (
   `updated_on` datetime DEFAULT NULL,
   PRIMARY KEY (`role_id`),
   UNIQUE KEY `uniq_name` (`name`) USING BTREE
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=3 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=3 ;
 
 --
 -- Dumping data for table `auth_role`
@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS `auth_role_permissions` (
   PRIMARY KEY (`role_permission_id`),
   KEY `fk_role` (`role_id`) USING BTREE,
   KEY `fk_permission` (`permission_id`) USING BTREE
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=6 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=6 ;
 
 --
 -- Dumping data for table `auth_role_permissions`
@@ -114,7 +114,7 @@ CREATE TABLE IF NOT EXISTS `auth_subject_role` (
   UNIQUE KEY `role_id` (`role_id`,`subject_id`) USING BTREE,
   KEY `fk_subjectid` (`subject_id`) USING BTREE,
   KEY `fk_roleid` (`role_id`) USING BTREE
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=3 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=3 ;
 
 --
 -- Dumping data for table `auth_subject_role`
