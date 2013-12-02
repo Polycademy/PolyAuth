@@ -156,23 +156,6 @@ CREATE TABLE IF NOT EXISTS `login_attempts` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `migrations`
---
-
-CREATE TABLE IF NOT EXISTS `migrations` (
-  `version` bigint(20) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
---
--- Dumping data for table `migrations`
---
-
-INSERT INTO `migrations` (`version`) VALUES
-(1);
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `user_accounts`
 --
 
