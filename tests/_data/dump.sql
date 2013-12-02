@@ -1,11 +1,9 @@
-/* Replace this file with actual dump of your database */
-
 -- phpMyAdmin SQL Dump
 -- version 4.0.4
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Jul 02, 2013 at 05:43 PM
+-- Generation Time: Dec 02, 2013 at 06:42 AM
 -- Server version: 5.6.12-log
 -- PHP Version: 5.4.16
 
@@ -18,6 +16,10 @@ SET time_zone = "+00:00";
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
 /*!40101 SET NAMES utf8 */;
 
+--
+-- Database: `test`
+--
+CREATE DATABASE IF NOT EXISTS `test` DEFAULT CHARACTER SET latin1 COLLATE latin1_swedish_ci;
 USE `test`;
 
 -- --------------------------------------------------------
@@ -41,11 +43,11 @@ CREATE TABLE IF NOT EXISTS `auth_permission` (
 --
 
 INSERT INTO `auth_permission` (`permission_id`, `name`, `description`, `added_on`, `updated_on`) VALUES
-(1, 'admin_create', 'Creating administration resources.', '2013-07-02 00:14:55', '2013-07-02 00:14:55'),
-(2, 'admin_read', 'Viewing administration resources.', '2013-07-02 00:14:55', '2013-07-02 00:14:55'),
-(3, 'admin_update', 'Editing administration resources.', '2013-07-02 00:14:55', '2013-07-02 00:14:55'),
-(4, 'admin_delete', 'Deleting administration resources.', '2013-07-02 00:14:55', '2013-07-02 00:14:55'),
-(5, 'public_read', 'Viewing public resources.', '2013-07-02 00:14:55', '2013-07-02 00:14:55');
+(1, 'admin_create', 'Creating administration resources.', '2013-12-02 17:41:41', '2013-12-02 17:41:41'),
+(2, 'admin_read', 'Viewing administration resources.', '2013-12-02 17:41:41', '2013-12-02 17:41:41'),
+(3, 'admin_update', 'Editing administration resources.', '2013-12-02 17:41:41', '2013-12-02 17:41:41'),
+(4, 'admin_delete', 'Deleting administration resources.', '2013-12-02 17:41:41', '2013-12-02 17:41:41'),
+(5, 'public_read', 'Viewing public resources.', '2013-12-02 17:41:41', '2013-12-02 17:41:41');
 
 -- --------------------------------------------------------
 
@@ -68,8 +70,8 @@ CREATE TABLE IF NOT EXISTS `auth_role` (
 --
 
 INSERT INTO `auth_role` (`role_id`, `name`, `description`, `added_on`, `updated_on`) VALUES
-(1, 'admin', 'Site Administrators', '2013-07-02 00:14:55', '2013-07-02 00:14:55'),
-(2, 'member', 'General Members', '2013-07-02 00:14:55', '2013-07-02 00:14:55');
+(1, 'admin', 'Site Administrators', '2013-12-02 17:41:41', '2013-12-02 17:41:41'),
+(2, 'member', 'General Members', '2013-12-02 17:41:41', '2013-12-02 17:41:41');
 
 -- --------------------------------------------------------
 
@@ -92,11 +94,11 @@ CREATE TABLE IF NOT EXISTS `auth_role_permissions` (
 --
 
 INSERT INTO `auth_role_permissions` (`role_permission_id`, `role_id`, `permission_id`, `added_on`) VALUES
-(1, 1, 1, '2013-07-02 00:14:55'),
-(2, 1, 2, '2013-07-02 00:14:55'),
-(3, 1, 3, '2013-07-02 00:14:55'),
-(4, 1, 4, '2013-07-02 00:14:55'),
-(5, 2, 5, '2013-07-02 00:14:55');
+(1, 1, 1, '2013-12-02 17:41:41'),
+(2, 1, 2, '2013-12-02 17:41:41'),
+(3, 1, 3, '2013-12-02 17:41:41'),
+(4, 1, 4, '2013-12-02 17:41:41'),
+(5, 2, 5, '2013-12-02 17:41:41');
 
 -- --------------------------------------------------------
 
@@ -125,32 +127,15 @@ INSERT INTO `auth_subject_role` (`subject_role_id`, `subject_id`, `role_id`) VAL
 -- --------------------------------------------------------
 
 --
--- Table structure for table `chat`
+-- Table structure for table `external_providers`
 --
 
-CREATE TABLE IF NOT EXISTS `chat` (
-  `id` int(9) NOT NULL AUTO_INCREMENT,
-  `timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `usersId` int(9) DEFAULT NULL,
-  `roomId` int(9) DEFAULT NULL,
-  `message` varchar(1000) DEFAULT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `courses`
---
-
-CREATE TABLE IF NOT EXISTS `courses` (
-  `id` int(9) NOT NULL AUTO_INCREMENT,
-  `name` varchar(50) DEFAULT NULL,
-  `startingDate` date DEFAULT NULL,
-  `daysDuration` smallint(6) DEFAULT NULL,
-  `times` varchar(100) DEFAULT NULL,
-  `numberOfApplications` smallint(6) DEFAULT NULL,
-  `numberOfStudents` smallint(6) DEFAULT NULL,
+CREATE TABLE IF NOT EXISTS `external_providers` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `userId` int(11) NOT NULL,
+  `provider` varchar(100) NOT NULL,
+  `externalIdentifier` text NOT NULL,
+  `tokenObject` text NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
 
@@ -161,10 +146,10 @@ CREATE TABLE IF NOT EXISTS `courses` (
 --
 
 CREATE TABLE IF NOT EXISTS `login_attempts` (
-  `id` mediumint(8) NOT NULL AUTO_INCREMENT,
-  `ipAddress` varbinary(16) DEFAULT NULL,
-  `identity` varchar(100) DEFAULT NULL,
-  `lastAttempt` datetime DEFAULT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `ipAddress` varbinary(16) NOT NULL,
+  `identity` varchar(100) NOT NULL,
+  `lastAttempt` datetime NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
 
@@ -175,7 +160,7 @@ CREATE TABLE IF NOT EXISTS `login_attempts` (
 --
 
 CREATE TABLE IF NOT EXISTS `migrations` (
-  `version` bigint(20) DEFAULT NULL
+  `version` bigint(20) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
@@ -183,7 +168,7 @@ CREATE TABLE IF NOT EXISTS `migrations` (
 --
 
 INSERT INTO `migrations` (`version`) VALUES
-(3);
+(1);
 
 -- --------------------------------------------------------
 
@@ -192,21 +177,22 @@ INSERT INTO `migrations` (`version`) VALUES
 --
 
 CREATE TABLE IF NOT EXISTS `user_accounts` (
-  `id` mediumint(8) NOT NULL AUTO_INCREMENT,
-  `ipAddress` varbinary(16) DEFAULT NULL,
-  `username` varchar(100) DEFAULT NULL,
-  `password` varchar(255) DEFAULT NULL,
-  `passwordChange` tinyint(1) DEFAULT '0',
-  `email` varchar(100) DEFAULT NULL,
-  `activationCode` varchar(40) DEFAULT NULL,
-  `forgottenCode` varchar(40) DEFAULT NULL,
-  `forgottenDate` datetime DEFAULT NULL,
-  `autoCode` varchar(40) DEFAULT NULL,
-  `autoDate` datetime DEFAULT NULL,
-  `createdOn` datetime DEFAULT NULL,
-  `lastLogin` datetime DEFAULT NULL,
-  `active` tinyint(1) DEFAULT '0',
-  `banned` tinyint(1) DEFAULT '0',
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `ipAddress` varbinary(16) NOT NULL,
+  `username` varchar(100) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `passwordChange` tinyint(1) NOT NULL DEFAULT '0',
+  `email` varchar(100) NOT NULL,
+  `activationCode` varchar(40) NOT NULL,
+  `forgottenCode` varchar(40) NOT NULL,
+  `forgottenDate` datetime NOT NULL,
+  `autoCode` varchar(40) NOT NULL,
+  `autoDate` datetime NOT NULL,
+  `createdOn` datetime NOT NULL,
+  `lastLogin` datetime NOT NULL,
+  `active` tinyint(1) NOT NULL DEFAULT '0',
+  `banned` tinyint(1) NOT NULL DEFAULT '0',
+  `sharedKey` text NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=2 ;
 
@@ -214,8 +200,8 @@ CREATE TABLE IF NOT EXISTS `user_accounts` (
 -- Dumping data for table `user_accounts`
 --
 
-INSERT INTO `user_accounts` (`id`, `ipAddress`, `username`, `password`, `passwordChange`, `email`, `activationCode`, `forgottenCode`, `forgottenDate`, `autoCode`, `autoDate`, `createdOn`, `lastLogin`, `active`, `banned`) VALUES
-(1, '\0\0', 'administrator', '$2y$10$EiqipvSt3lnD//nchj4u9OgOTL9R3J4AbZ5bUVVrh.Tq/gmc5xIvS', 0, 'admin@admin.com', '', NULL, NULL, 'w01LgeSk8pO9B03Gv0sE', '2013-07-01 14:45:41', '2013-07-01 14:14:55', '2013-07-01 14:45:41', 1, 0);
+INSERT INTO `user_accounts` (`id`, `ipAddress`, `username`, `password`, `passwordChange`, `email`, `activationCode`, `forgottenCode`, `forgottenDate`, `autoCode`, `autoDate`, `createdOn`, `lastLogin`, `active`, `banned`, `sharedKey`) VALUES
+(1, '\0\0', 'administrator', '$2y$10$EiqipvSt3lnD//nchj4u9OgOTL9R3J4AbZ5bUVVrh.Tq/gmc5xIvS', 0, 'admin@admin.com', '', '', '0000-00-00 00:00:00', '', '0000-00-00 00:00:00', '2013-12-02 17:41:40', '2013-12-02 17:41:40', 1, 0, '');
 
 --
 -- Constraints for dumped tables
