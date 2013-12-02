@@ -70,8 +70,7 @@ class Migration_add_polyauth extends CI_Migration {
 		// Table structure for table 'user_accounts'
 		$this->dbforge->add_field(array(
 			'id' => array(
-				'type' => 'MEDIUMINT',
-				'constraint' => '8',
+				'type' => 'INT',
 				'unsigned' => TRUE,
 				'auto_increment' => TRUE
 			),
@@ -147,8 +146,7 @@ class Migration_add_polyauth extends CI_Migration {
 		// Table structure for table 'login_attempts'
 		$this->dbforge->add_field(array(
 			'id' => array(
-				'type' => 'MEDIUMINT',
-				'constraint' => '8',
+				'type' => 'INT',
 				'unsigned' => TRUE,
 				'auto_increment' => TRUE
 			),
@@ -171,14 +169,12 @@ class Migration_add_polyauth extends CI_Migration {
 		// Table structure for table 'external_providers' (essentially the token storage stable)
 		$this->dbforge->add_field(array(
 			'id'	=> array(
-				'type' => 'MEDIUMINT',
-				'constraint' => '8',
+				'type' => 'INT',
 				'unsigned' => TRUE,
 				'auto_increment' => TRUE
 			),
 			'userId'	=> array(
-				'type' => 'MEDIUMINT',
-				'constraint' => '8',
+				'type' => 'INT',
 				'unsigned' => TRUE,
 			),
 			'provider'	=> array(
