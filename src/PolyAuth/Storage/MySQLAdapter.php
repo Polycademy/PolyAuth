@@ -511,6 +511,29 @@ class MySQLAdapter implements StorageInterface{
 
 	}
 
+	public function get_user_by_identity($identity){
+
+		$query = "SELECT * FROM {$this->options['table_users']} WHERE {$this->options['login_identity']} = :identity";
+		$sth = $this->db->prepare($query);
+		$sth->bindValue('identity', $identity, PDO::PARAM_STR);
+		
+		try{
+		
+			$sth->execute();
+			$row = $sth->fetch(PDO::FETCH_OBJ);
+			return $row;
+		
+		}catch(PDOException $db_err){
+		
+			if($this->logger){
+				$this->logger->error("Failed to execute query to select user $identity.", ['exception' => $db_err]);
+			}
+			throw $db_err;
+		
+		}
+
+	}
+
 	public function get_users(array $user_ids){
 
 		$select_placeholders = implode(",", array_fill(0, count($user_ids), '?'));

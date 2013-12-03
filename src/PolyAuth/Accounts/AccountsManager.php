@@ -591,9 +591,14 @@ class AccountsManager implements LoggerAwareInterface{
 	 * @param $user_id int
 	 * @return $user object
 	 */
-	public function get_user($user_id){
+	public function get_user($id, $identity = false){
 
-		$row = $this->storage->get_user($user_id);
+		if(!$id AND $id !== 0 AND $identity){
+			$row = $this->storage->get_user_by_identity($identity);
+		}else{
+			$row = $this->storage->get_user($id);
+		}
+
 		if(!$row){
 			throw new UserNotFoundException($this->lang['user_select_unsuccessful']);
 		}
