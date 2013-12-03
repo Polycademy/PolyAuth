@@ -34,6 +34,7 @@ class Migration_add_polyauth extends CI_Migration {
 			'createdOn'				=> date('Y-m-d H:i:s'),
 			'lastLogin'				=> date('Y-m-d H:i:s'),
 			'active'				=> '1',
+			'sharedKey'				=> 's19+c1UijAuCFm5Iy8tBK9iBbakMH7ES6w0W6Lqiux2BhBJ7UbwM7Gol402waP7NWrbNgwKXaQi4jzUgqb3i2w=='
 		);
 		
 		//roles to descriptions
