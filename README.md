@@ -59,6 +59,13 @@ To Do
 - Reduce PHP version requirement to 5.3 (need to do some testing)
 - Streamline the storage adapter
 
+Forgotten Password checking and reset password has somethings that need to change.
+
+1. The forgotten_password automatically sends the email through the emailer. There needs to be a way to set this to manual. To allow the user to send the email themselves if necessary.
+2. The forgotten_password functionality is a bit too complex. It should just reset the password to a random one and give that back to be sent via the email.
+3. The reset_password should go directly to the database source, it should not call change_password because the change_password may throw an exception if the random generator was not random enough
+The whole emailing thing needs an overhaul because emailing doesn't make sense. It should be optionally inserted and instantiated by itself with any templates passed into the class. It should not be part of the Options table.
+
 Install with Composer
 ---------------------
 

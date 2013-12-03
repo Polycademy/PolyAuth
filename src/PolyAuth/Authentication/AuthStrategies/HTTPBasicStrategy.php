@@ -13,7 +13,7 @@ use PolyAuth\UserAccount;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class HTTPBasicStrategy extends AbstractStrategy implements StrategyInterface{
+class HTTPBasicStrategy extends AbstractStrategy{
 
 	protected $storage;
 	protected $session_manager;
@@ -107,7 +107,7 @@ class HTTPBasicStrategy extends AbstractStrategy implements StrategyInterface{
 	 * Login does not do anything. Hence returns false.
 	 * @return Boolean
 	 */
-	public function login($data, $external = false){
+	public function login(array $data, $external = false){
 		
 		return false;
 	

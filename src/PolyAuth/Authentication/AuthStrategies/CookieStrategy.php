@@ -15,7 +15,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\Response;
 
-class CookieStrategy extends AbstractStrategy implements StrategyInterface{
+class CookieStrategy extends AbstractStrategy{
 
 	protected $storage;
 	protected $lang;

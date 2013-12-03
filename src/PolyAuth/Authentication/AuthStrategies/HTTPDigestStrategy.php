@@ -14,7 +14,7 @@ use PolyAuth\Security\Encryption;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class HTTPDigestStrategy extends AbstractStrategy implements StrategyInterface{
+class HTTPDigestStrategy extends AbstractStrategy{
 
 	protected $storage;
 	protected $options;
@@ -136,7 +136,7 @@ class HTTPDigestStrategy extends AbstractStrategy implements StrategyInterface{
 	 * Login does not do anything. Hence returns false.
 	 * @return Boolean
 	 */
-	public function login($data, $external = false){
+	public function login(array $data, $external = false){
 		
 		return false;
 	

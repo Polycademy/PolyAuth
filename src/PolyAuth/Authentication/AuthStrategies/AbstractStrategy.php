@@ -177,6 +177,13 @@ abstract class AbstractStrategy{
 	}
 
 	/**
+	 * CompositeStrategy uses detect_relevance() to see which strategy is to be used for 
+	 * a particular request response cycle. The detect_relevance() would check for a 
+	 * session id in the relevant transport method.
+	 */
+	abstract public function detect_relevance();
+
+	/**
 	 * Start_session will find the relevant session id/token and the transport method, and start
 	 * the session tracking
 	 */

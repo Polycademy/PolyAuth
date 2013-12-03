@@ -18,7 +18,7 @@ use Dflydev\Hawk\Server\UnauthorizedException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class HawkStrategy extends AbstractStrategy implements StrategyInterface{
+class HawkStrategy extends AbstractStrategy{
 
 	protected $storage;
 	protected $options;
@@ -188,7 +188,7 @@ class HawkStrategy extends AbstractStrategy implements StrategyInterface{
 
 	}
 
-	public function login($data, $external = false){
+	public function login(array $data, $external = false){
 
 		return false;
 
