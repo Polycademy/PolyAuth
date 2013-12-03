@@ -32,7 +32,6 @@ class Language implements \ArrayAccess{
 		'activation_email_unsuccessful'			=> 'Unable to Send Activation Email',
 		// User
 		'user_select_unsuccessful'				=> 'Could not find the user or users.',
-		'user_select_invalid'					=> 'Cannot find users with invalid data search parameters.',
 		'user_role_select_empty'				=> 'No users were found corresponding to the specified roles.',
 		'user_role_select_unsuccessful'			=> 'Could not select users based on roles.',
 		'user_permission_select_empty'			=> 'No users were found corresponding to the specified permissions.',
@@ -53,7 +52,7 @@ class Language implements \ArrayAccess{
 		'role_register_unsuccessful'			=> 'Role failed to be registered.',
 		'role_assignment_unsuccessful'			=> 'Could not assign the role to the specified account.',
 		// Permissions
-		'permission_select_unsuccessful'		=> 'Could not select permissions.',
+		'permission_select_unsuccessful'			=> 'Could not select permissions.',
 		'permission_not_exists'					=> 'Specified permission(s) don\'t exist.',
 		'permission_delete_unsuccessful'		=> 'Unable to delete permission.',
 		'permission_save_unsuccessful'			=> 'Unable to save one of the permissions.',
@@ -63,10 +62,7 @@ class Language implements \ArrayAccess{
 		'email_forgotten_identity_subject'		=> 'Forgotten Identity PolyAuth',
 		'email_forgotten_password_subject'		=> 'Forgotten Password PolyAuth',
 		// Session
-		'session_expire'						=> 'Session id or token has expired.',
-		// Http
-		'persona_verifier'						=> 'Failed to request Persona verifier.',
-		'openid_discovery'						=> 'Failed to request Open Id discovery uri.'
+		'session_invalid_key'					=> 'You cannot manipulate properties on the session object that have reserved keys.',
 	);
 	
 	public function __construct(array $language = null){

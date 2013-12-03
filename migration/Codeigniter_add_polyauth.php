@@ -10,6 +10,8 @@ use RBAC\Manager\RoleManager;
  * This migration file is catered towards Codeigniter 3.0 and the MySQL database.
  * However you can glean information from here on how to implement it in other frameworks and other databases.
  * 
+ * This migration will not setup any sessions table, that's up to you to create if you want to use database sessions.
+ * 
  * You will need to modify the configuration array to setup the default permissions and the default user.
  * You can also add to the columns of the user_accounts table, or even change the name, just make sure to configure the name properly.
  * Any added columns will simply be extra data that you can submit when registering or getting a user.
@@ -34,7 +36,6 @@ class Migration_add_polyauth extends CI_Migration {
 			'createdOn'				=> date('Y-m-d H:i:s'),
 			'lastLogin'				=> date('Y-m-d H:i:s'),
 			'active'				=> '1',
-			'sharedKey'				=> 's19+c1UijAuCFm5Iy8tBK9iBbakMH7ES6w0W6Lqiux2BhBJ7UbwM7Gol402waP7NWrbNgwKXaQi4jzUgqb3i2w=='
 		);
 		
 		//roles to descriptions
@@ -63,15 +64,12 @@ class Migration_add_polyauth extends CI_Migration {
 				'member',
 			),
 		);
-
-		//autoCode is for autologin
-		//accessTokens would be in a separate table representing the accessTokens
-		//hmac is for HawkStrategy, it's a shared secret to be generated at random
 		
 		// Table structure for table 'user_accounts'
 		$this->dbforge->add_field(array(
 			'id' => array(
-				'type' => 'INT',
+				'type' => 'MEDIUMINT',
+				'constraint' => '8',
 				'unsigned' => TRUE,
 				'auto_increment' => TRUE
 			),
@@ -133,9 +131,6 @@ class Migration_add_polyauth extends CI_Migration {
 				'unsigned' => TRUE,
 				'default' => 0,
 			),
-			'sharedKey' => array(
-				'type' => 'TEXT'
-			)
 		));
 		
 		$this->dbforge->add_key('id', TRUE);
@@ -147,7 +142,8 @@ class Migration_add_polyauth extends CI_Migration {
 		// Table structure for table 'login_attempts'
 		$this->dbforge->add_field(array(
 			'id' => array(
-				'type' => 'INT',
+				'type' => 'MEDIUMINT',
+				'constraint' => '8',
 				'unsigned' => TRUE,
 				'auto_increment' => TRUE
 			),
@@ -170,12 +166,14 @@ class Migration_add_polyauth extends CI_Migration {
 		// Table structure for table 'external_providers' (essentially the token storage stable)
 		$this->dbforge->add_field(array(
 			'id'	=> array(
-				'type' => 'INT',
+				'type' => 'MEDIUMINT',
+				'constraint' => '8',
 				'unsigned' => TRUE,
 				'auto_increment' => TRUE
 			),
 			'userId'	=> array(
-				'type' => 'INT',
+				'type' => 'MEDIUMINT',
+				'constraint' => '8',
 				'unsigned' => TRUE,
 			),
 			'provider'	=> array(

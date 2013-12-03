@@ -5,6 +5,10 @@ namespace PolyAuth;
 //standard options object to be passed in
 class Options implements \ArrayAccess{
 
+	//session_expiration => expiration of a particular user or anonymous sesion (remembering staying on the page)
+	//cookie_lifetime => expiration of the session cookie (remembering across pages)
+	//login_expiration => expiration of the autologin cookie
+
 	public $options = array(
 		//table options, see that the migration to be reflected. (RBAC options are not negotiable)
 		'table_users'						=> 'user_accounts',
@@ -13,11 +17,19 @@ class Options implements \ArrayAccess{
 		//password options
 		'hash_method'						=> PASSWORD_DEFAULT, //PASSWORD_DEFAULT || PASSWORD_BCRYPT
 		'hash_rounds'						=> 10,
-		'shared_key_encryption'				=> 'abc123', //this is for encrypting the sharedKey used by Hawk and Digest, this should be kept secret, can be false if you're not using Hawk or Digest
-		//session options (used for internal session handling)
-		'session_expiration'				=> 43200, //expiration of a single session (client side and server side), this gets reset everytime the session is accessed, can be overwritten for specific SessionManagers for specific AuthStrategies
-		'session_save_path'					=> '', //for filesystem persistence, leave empty for default session save path
-		'session_gc_probability'			=> '1', //probability of running the session garbage collection (percentage chance to one decimal place)
+		//session options
+		'session_handler'					=> null, //SessionHandlerInterface or null (can use EncryptedSessionHandler('abc4345ncu'))
+		'session_save_path'					=> '',
+		'session_cache_limiter'				=> '',
+		'session_cache_expire'				=> '',
+		'session_expiration'				=> 43200, //expiration of a single session (set to 0 for infinite)
+		//cookie options
+		'cookie_domain'						=> '',
+		'cookie_path'						=> '/',
+		'cookie_prefix'						=> 'polyauth_',
+		'cookie_secure'						=> false,
+		'cookie_httponly'					=> true,
+		'cookie_lifetime'					=> 0, //for when the browser is closed (how long should the session cookies should be remembered for) (0 means the cookie dies as soon as the browser closes)
 		//email options (email data should be passed in as a string, end user manages their own stuff)
 		'email'								=> false, //make this true to use the emails by PHPMailer, otherwise false if you want to roll your own email solution, watch out for email activation
 		'email_smtp'						=> false,
@@ -52,9 +64,13 @@ class Options implements \ArrayAccess{
 			'diffidentity'	=> false,
 			'unique'		=> false, //number of unique characters ('' or false or 4) ('' defaults to 4)
 		), //can be an array or empty array
+		'login_autologin'					=> true, //allowing remember me or not
+		'login_expiration'					=> 86500, // autologin expiration (seconds). Set to zero for no expiration
+		'login_expiration_extend'			=> true, //allowing whether autologin extends the login_expiration
 		'login_lockout'						=> array('ipaddress', 'identity'), //lockout tracking, can use both or one of them or false
 		'login_lockout_cap'					=> 172800, //cap on the lockout time in seconds (0 means no cap) 48 hrs
 		'login_forgot_expiration'			=> 0, //how long before the temporary password expires in seconds!
+		'login_realm'						=> 'Protected by PolyAuth Realm', //only relevant to HTTP auth
 		//registration options
 		'reg_activation'					=> false, //can be email, manual, or false (if doing manual, the activationCode is still generated, but you will need to send the email yourself)
 		//oauth1/2 consumption options
@@ -84,6 +100,9 @@ class Options implements \ArrayAccess{
 			// ),
 		),
 		'external_token_encryption'			=> false, //if this is false, we will not encrypt the token data, otherwise provide a random key, only set this once, if you change this option, you'll need to manually encrypt/decrypt all the database tokens
+		//cache options
+		'cache_directory'					=> '', //this is only relevant to the FileSystemCache
+		'cache_ttl'							=> 3600, //maximum time an item can live in memory, this is only relevant to APCCache
 	);
 	
 	public function __construct(array $options = null){
@@ -92,10 +111,51 @@ class Options implements \ArrayAccess{
 			$this->set_options($options);
 		}
 		
+		//this should only run once at startup (should create this as a singleton)
+		if($this->options['session_handler'] !== null){
+			$this->set_session_handler($this->options['session_handler']);
+		}
+		
+		$this->set_session_and_cookie_settings();
+		
 	}
 	
 	public function set_options(array $options){
 		$this->options = array_merge($this->options, $options);
+	}
+	
+	protected function set_session_handler(\SessionHandlerInterface $session_handler = null){
+		
+		session_set_save_handler($session_handler, true);		
+	
+	}
+	
+	protected function set_session_and_cookie_settings(){
+	
+		$session_name = ini_get('session.name');
+		$session_name = $this->options['cookie_prefix'] . $session_name;
+		ini_set('session.name', $session_name);
+		
+		session_set_cookie_params(
+			$this->options['cookie_lifetime'],
+			$this->options['cookie_path'],
+			$this->options['cookie_domain'],
+			$this->options['cookie_secure'],
+			$this->options['cookie_httponly']
+		);
+
+		if(!empty($this->options['session_save_path'])){
+			session_save_path($this->options['session_save_path']);
+		}
+
+		if(!empty($this->options['session_cache_limiter'])){
+			session_cache_limiter($this->options['session_cache_limiter']);
+		}
+
+		if(!empty($this->options['session_cache_expire'])){
+			session_cache_expire($this->options['session_cache_expire']);
+		}
+	
 	}
 	
 	public function offsetSet($offset, $value) {

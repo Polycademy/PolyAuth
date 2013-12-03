@@ -6,7 +6,7 @@ paths:
 settings:
     bootstrap: _bootstrap.php
     suite_class: \PHPUnit_Framework_TestSuite
-    colors: false
+    colors: true
     memory_limit: 1024M
     log: false
 modules:
@@ -16,5 +16,3 @@ modules:
             user: 'root'
             password: ''
             dump: tests/_data/dump.sql
-            populate: true
-            cleanup: true

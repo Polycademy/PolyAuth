@@ -26,6 +26,8 @@ interface StorageInterface extends LoggerAwareInterface, RBACStorageInterface{
 
 	public function forgotten_password_clear($user_id);
 
+	public function external_register($data);
+
 	public function get_external_providers($external_identifier);
 
 	public function register_external_provider(array $data);

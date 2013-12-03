@@ -21,8 +21,6 @@ use RBAC\DataStore\Adapter\PDOMySQLAdapter;
  */
 class MySQLAdapter implements StorageInterface{
 
-	use \PolyAuth\LoggerTrait;
-
 	protected $db;
 	protected $options;
 	protected $logger;
@@ -35,6 +33,19 @@ class MySQLAdapter implements StorageInterface{
 		$this->logger = $logger;
 		$this->rbac_storage = new PDOMySQLAdapter($db, $logger);
 
+	}
+
+	/**
+	 * Sets a logger instance on the object
+	 *
+	 * @param LoggerInterface $logger
+	 * @return null
+	 */
+	public function setLogger(LoggerInterface $logger){
+
+		$this->logger = $logger;
+		$this->rbac_storage = new PDOMySQLADapter($this->db, $logger);
+	
 	}
 
 	//////////////////////
@@ -108,8 +119,7 @@ class MySQLAdapter implements StorageInterface{
 	}
 
 	/**
-	 * Checks for duplicate identity, returns true if the identity exists, false if the identity already exist.
-	 * This can also be used to check if the identity exists in the database.
+	 * Checks for duplicate identity, returns true if the identity exists, false if the identity already exist
 	 *
 	 * @param $identity string
 	 * @return boolean - true if duplicate, false if no duplicate
@@ -303,6 +313,32 @@ class MySQLAdapter implements StorageInterface{
 
 	}
 
+	public function external_register($data){
+
+		$query = "INSERT INTO {$this->options['table_users']} (ipAddress, createdOn, lastLogin, active) VALUES (:ip_address, :created_on, :last_login, :active)";
+		$sth = $this->db->prepare($query);
+		$sth->bindValue('ip_address', $data['ipAddress'], PDO::PARAM_STR);
+		$sth->bindValue('created_on', $data['createdOn'], PDO::PARAM_STR);
+		$sth->bindValue('last_login', $data['lastLogin'], PDO::PARAM_STR);
+		$sth->bindValue('active', $data['active'], PDO::PARAM_INT);
+		
+		try{
+		
+			$sth->execute();
+			return $this->db->lastInsertId();
+			
+		}catch(PDOException $db_err){
+
+			if($this->logger){
+				$this->logger->error('Failed to execute query to register a new user from external providers.', ['exception' => $db_err]);
+			}
+			
+			throw $db_err;
+			
+		}
+
+	}
+
 	public function get_external_providers($external_identifier){
 
 		$query = "
@@ -475,86 +511,16 @@ class MySQLAdapter implements StorageInterface{
 
 	}
 
-	public function get_user_by_identity($identity){
+	public function get_users(array $user_ids){
 
-		$query = "SELECT * FROM {$this->options['table_users']} WHERE {$this->options['login_identity']} = :identity";
+		$select_placeholders = implode(",", array_fill(0, count($user_ids), '?'));
+		
+		$query = "SELECT * FROM {$this->options['table_users']} WHERE id IN ($select_placeholders)";
 		$sth = $this->db->prepare($query);
-		$sth->bindValue('identity', $identity, PDO::PARAM_STR);
 		
 		try{
 		
-			$sth->execute();
-			$row = $sth->fetch(PDO::FETCH_OBJ);
-			return $row;
-		
-		}catch(PDOException $db_err){
-		
-			if($this->logger){
-				$this->logger->error("Failed to execute query to select user $identity.", ['exception' => $db_err]);
-			}
-			throw $db_err;
-		
-		}
-
-	}
-
-	public function get_users(array $parameters = null, $offset = 0, $limit = false){
-
-		$properties = null;
-		if(is_array($parameters) AND !empty($parameters)){
-
-			$keys = array_keys($parameters);
-			$search_params = array();
-
-			foreach($keys as $key){
-
-				if(is_int($key)){
-					$search_params['id'][] = $parameters[$key];
-				}elseif($key == 'id'){
-					if(!array_key_exists('id', $search_params))	$search_params['id'] = array();
-						$search_params['id'] = array_merge($search_params['id'], $parameters[$key]);
-				}else{
-					$search_params[$key] = $parameters[$key];  
-				}
-
-			}
-
-			array_walk($search_params, function(&$value){
-			  $value = array_unique($value);
-			});
-
-			$query = "SELECT * FROM {$this->options['table_users']}";
-
-			$where_components = array();
-			$properties = array();
-
-			foreach($search_params as $key => $placeholders){
-				$properties = array_merge($properties, $placeholders);
-				$placeholders = implode(",", array_fill(0, count($placeholders), '?'));
-				$where_components[] = "$key IN ($placeholders)";
-			}
-
-			$where_components = implode(' OR ', $where_components);
-
-			$query .= ' WHERE ' . $where_components;
-
-		}else{
-			
-			$query = "SELECT * FROM {$this->options['table_users']}";
-
-		}
-
-		if(is_int($offset) AND is_int($limit)){
-			$query .= " LIMIT :offset, :limit";
-		}
-
-		$sth = $this->db->prepare($query);
-		$sth->bindValue('offset', abs($offset), PDO::PARAM_INT);
-		$sth->bindValue('limit', abs($limit), PDO::PARAM_INT);
-
-		try{
-		
-			$sth->execute($properties);
+			$sth->execute($user_ids);
             $result = $sth->fetchAll(PDO::FETCH_OBJ);
 			return $result;
 			
@@ -787,12 +753,12 @@ class MySQLAdapter implements StorageInterface{
 	}
 
 	/////////////////////
-	// AUTH STRATEGIES //
+	// SESSION MANAGER //
 	/////////////////////
 
 	public function get_login_check($identity){
 
-		$query = "SELECT id, password, sharedKey FROM {$this->options['table_users']} WHERE {$this->options['login_identity']} = :identity";
+		$query = "SELECT id, password FROM {$this->options['table_users']} WHERE {$this->options['login_identity']} = :identity";
 		$sth = $this->db->prepare($query);
 		$sth->bindValue('identity', $identity, PDO::PARAM_STR);
 		
@@ -1105,8 +1071,8 @@ class MySQLAdapter implements StorageInterface{
 		return $this->rbac_storage->roleFetchById($role_ids);
 	}
 
-	public function roleFetchSubjectRoles(SubjectInterface $subject, $permissions = true){
-		return $this->rbac_storage->roleFetchSubjectRoles($subject, $permissions);
+	public function roleFetchSubjectRoles(SubjectInterface $subject){
+		return $this->rbac_storage->roleFetchSubjectRoles($subject);
 	}
 
 	public function roleAddSubjectId(Role $role, $subject_id){

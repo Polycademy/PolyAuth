@@ -2,6 +2,9 @@
 
 namespace PolyAuth\Accounts;
 
+use Psr\Log\LoggerInterface;
+use Psr\Log\LoggerAwareInterface;
+
 use PolyAuth\Options;
 use PolyAuth\Language;
 use PolyAuth\Storage\StorageInterface;
@@ -14,9 +17,7 @@ use PolyAuth\Security\Random;
 use PolyAuth\Security\Encryption;
 
 use PolyAuth\Emailer;
-use PolyAuth\Security\LoginAttempts;
-
-use Symfony\Component\HttpFoundation\Request;
+use PolyAuth\Sessions\LoginAttempts;
 
 use PolyAuth\Exceptions\ValidationExceptions\RegisterValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\PasswordValidationException;
@@ -24,43 +25,53 @@ use PolyAuth\Exceptions\ValidationExceptions\DatabaseValidationException;
 use PolyAuth\Exceptions\UserExceptions\UserDuplicateException;
 use PolyAuth\Exceptions\UserExceptions\UserNotFoundException;
 
-class AccountsManager{
+class AccountsManager implements LoggerAwareInterface{
 
 	protected $storage;
 	protected $options;
 	protected $lang;
+	protected $logger;
 	protected $rbac;
 	protected $password_complexity;
 	protected $random;
 	protected $encryption;
 	protected $emailer;
 	protected $login_attempts;
-	protected $request;
 	
 	public function __construct(
 		StorageInterface $storage, 
 		Options $options, 
 		Language $language, 
+		LoggerInterface $logger = null, 
 		Rbac $rbac = null, 
 		PasswordComplexity $password_complexity = null, 
 		Random $random = null, 
 		Encryption $encryption = null,
 		Emailer $emailer = null,
-		LoginAttempts $login_attempts = null,
-		Request $request = null
+		LoginAttempts $login_attempts = null
 	){
 	
 		$this->storage = $storage;
 		$this->options = $options;
 		$this->lang = $language;
-		$this->rbac  = ($rbac) ? $rbac : new Rbac($storage, $language);
+		$this->logger = $logger;
+		$this->rbac  = ($rbac) ? $rbac : new Rbac($storage, $language, $logger);
 		$this->password_complexity = ($password_complexity) ? $password_complexity : new PasswordComplexity($options, $language);
 		$this->random = ($random) ? $random : new Random;
 		$this->encryption = ($encryption) ? $encryption : new Encryption();
-		$this->emailer = ($emailer) ? $emailer : new Emailer($options, $language);
-		$this->login_attempts = ($login_attempts) ? $login_attempts : new LoginAttempts($storage, $options);
-		$this->request = ($request) ? $request : Request::createFromGlobals();
+		$this->emailer = ($emailer) ? $emailer : new Emailer($options, $language, $logger);
+		$this->login_attempts = ($login_attempts) ? $login_attempts : new LoginAttempts($storage, $options, $logger);
 		
+	}
+	
+	/**
+	 * Sets a logger instance on the object
+	 *
+	 * @param LoggerInterface $logger
+	 * @return null
+	 */
+	public function setLogger(LoggerInterface $logger){
+		$this->logger = $logger;
 	}
 	
 	/**
@@ -95,7 +106,8 @@ class AccountsManager{
 		}
 		
 		//constructing the payload now
-		$data['ipAddress'] = $this->get_ip();
+		$ip = (!empty($_SERVER['REMOTE_ADDR'])) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1';
+		$data['ipAddress'] = inet_pton($ip);
 		$data['password'] = password_hash($data['password'], $this->options['hash_method'], ['cost' => $this->options['hash_rounds']]);
 		
 		if($force_active){
@@ -108,7 +120,6 @@ class AccountsManager{
 		    'createdOn'	=> date('Y-m-d H:i:s'),
 		    'lastLogin'	=> date('Y-m-d H:i:s'),
 		    'active'	=> $activated,
-		    'sharedKey'	=> $this->encryption->encrypt($this->random->generate(50), $this->options['shared_key_encryption']),
 		);
 		
 		//inserting activation code into the users table, whether it is manual or email
@@ -389,45 +400,26 @@ class AccountsManager{
 	/**
 	 * Registration for users that are authenticating from external providers.
 	 * You do not need any user details, they can be filled in later.
-	 * This means that we're registering a user with no password.
+	 * This means that we're registering a user with no username, password or email.
 	 * @return object       The user object
 	 */
-	public function external_register($data){
+	public function external_register(){
 
-		//login_data should have the identity
-		if(empty($data[$this->options['login_identity']])){
-			throw new RegisterValidationException($this->lang['account_creation_invalid']);
-		}
+		$ip = (!empty($_SERVER['REMOTE_ADDR'])) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1';
 		
-		//check for duplicates based on identity
-		if($this->duplicate_identity_check($data[$this->options['login_identity']])){
-			throw new UserDuplicateException($this->lang["account_creation_duplicate_{$this->options['login_identity']}"]);
-		}
-		
-		//constructing the payload now
-		$data['ipAddress'] = $this->get_ip();
-		
-		$data += array(
+		$data = array(
+			'ipAddress'	=> inet_pton($ip),
 		    'createdOn'	=> date('Y-m-d H:i:s'),
 		    'lastLogin'	=> date('Y-m-d H:i:s'),
 		    'active'	=> 1,
-		    'sharedKey'	=> $this->encryption->encrypt($this->random->generate(50), $this->options['shared_key_encryption']),
 		);
+
+		$last_insert_id = $this->storage->external_register($data);
 		
-		//we need to validate that the columns actually exist
-		$columns = array_keys($data);
-		if(!$this->storage->validate_columns($this->options['table_users'], $columns)){
-			throw new DatabaseValidationException($this->lang['account_creation_invalid']);
-		}
-		
-		$last_insert_id = $this->storage->register_user($data, $columns);
-		
-		//grab the user's data that we just inserted
 		$registered_user = $this->get_user($last_insert_id);
 		
-		//now we've got to add the default roles and permissions
 		$registered_user = $this->rbac->register_user_roles($registered_user, array($this->options['role_default']));
-
+		
 		return $registered_user;
 
 	}
@@ -599,14 +591,9 @@ class AccountsManager{
 	 * @param $user_id int
 	 * @return $user object
 	 */
-	public function get_user($id, $identity = false){
+	public function get_user($user_id){
 
-		if(!$id AND $id !== 0 AND $identity){
-			$row = $this->storage->get_user_by_identity($identity);
-		}else{
-			$row = $this->storage->get_user($id);
-		}
-
+		$row = $this->storage->get_user($user_id);
 		if(!$row){
 			throw new UserNotFoundException($this->lang['user_select_unsuccessful']);
 		}
@@ -622,34 +609,16 @@ class AccountsManager{
 		return $user;
 		
 	}
-
+	
 	/**
-	 * Get users by search parameters. If no parameters are passed in, it will get all the users. If parameters 
-	 * are passed in, it's an array of key (table column) to value. It will try to get all the users which match those
-	 * key to value on an 'OR' basis. So if you want user with id of 2, and user with identity of Roger, then you would
-	 * get all the users that have an id of 2 OR the identity of Roger.
-	 * @param  array|null  $parameters Array of search parameters [1, 2, 3] OR ['username' => ['Roger', 'Brad']]
-	 * @param  integer     $offset     Offset for pagination
-	 * @param  boolean     $limit      Limit for pagination
-	 * @return array
+	 * Gets an array of users based on their user ids
+	 *
+	 * @param $user_ids array
+	 * @return $users array | null - Array of (id => UserAccount)
 	 */
-	public function get_users(array $parameters = null, $offset = 0, $limit = false){
+	public function get_users(array $user_ids){
 
-		if(is_array($parameters) AND !empty($parameters)){
-
-			//parameters may be a flat array of integers, which represent the id column, they don't need to be validated
-			$search_keys = array_filter(array_keys($parameters), function($value){
-				return !is_int($value);
-			});
-
-			if(!$this->storage->validate_columns($this->options['table_users'], $search_keys)){
-				throw new DatabaseValidationException($this->lang['user_select_invalid']);
-			}
-
-		}
-
-		$result = $this->storage->get_users($parameters, $offset, $limit);
-		
+		$result = $this->storage->get_users($user_ids);
 		if(!$result){
 			throw new UserNotFoundException($this->lang['user_select_unsuccessful']);
 		}
@@ -667,7 +636,7 @@ class AccountsManager{
 		}
 		
 		return $output_users;
-
+	
 	}
 	
 	/**
@@ -806,18 +775,6 @@ class AccountsManager{
 
 		return false;
 	
-	}
-
-	/**
-	 * Helper function to get the ip and format it correctly for insertion.
-	 *
-	 * @return $ip_address binary | string
-	 */
-	protected function get_ip() {
-	
-		$ip_address = $this->request->getClientIp();
-		return inet_pton($ip_address);
-		
 	}
 
 }

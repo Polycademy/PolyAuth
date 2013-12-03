@@ -2,6 +2,9 @@
 
 namespace PolyAuth\Accounts;
 
+use Psr\Log\LoggerInterface;
+use Psr\Log\LoggerAwareInterface;
+
 use PolyAuth\Language;
 use PolyAuth\Storage\StorageInterface;
 
@@ -16,22 +19,37 @@ use PolyAuth\Exceptions\RoleExceptions\RoleSaveException;
 use PolyAuth\Exceptions\PermissionExceptions\PermissionNotFoundException;
 use PolyAuth\Exceptions\PermissionExceptions\PermissionSaveException;
 
-class Rbac{
+class Rbac implements LoggerAwareInterface{
 
 	protected $storage;
 	protected $lang;
+	protected $logger;
 	protected $role_manager;
 	
 	public function __construct(
 		StorageInterface $storage, 
 		Language $language, 
+		LoggerInterface $logger = null, 
 		RoleManager $role_manager = null
 	){
 	
 		$this->storage = $storage;
 		$this->lang = $language;
-		$this->role_manager  = ($role_manager) ? $role_manager : new RoleManager($storage);
+		$this->logger = $logger;
+		$this->role_manager  = ($role_manager) ? $role_manager : new RoleManager($storage, $logger);
 		
+	}
+	
+	/**
+	 * Sets a logger instance on the object
+	 *
+	 * @param LoggerInterface $logger
+	 * @return null
+	 */
+	public function setLogger(LoggerInterface $logger){
+
+		$this->logger = $logger;
+
 	}
 	
 	/**

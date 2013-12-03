@@ -3,15 +3,13 @@
 namespace PolyAuth;
 
 use Psr\Log\LoggerInterface;
-use Psr\Log\LoggerAwareInterface;
 use PolyAuth\Options;
 use PolyAuth\Language;
 use PolyAuth\UserAccount;
-use PolyAuth\Exceptions\EmailException;
+use PolyAuth\EmailException;
 
-class Emailer implements LoggerAwareInterface{
-
-	use \PolyAuth\LoggerTrait;
+//this class handles the sending of emails
+class Emailer{
 
 	protected $options;
 	protected $lang;
@@ -31,7 +29,7 @@ class Emailer implements LoggerAwareInterface{
 	//this can be sent multiple times, the activation code doesn't change (so the concept of resend activation email)
 	public function send_activation(UserAccount $user, $subject = false, $body = false, $alt_body = false){
 	
-		$subject = (empty($subject)) ? $this->lang['email_activation_subject'] : $subject;
+		$subject = (empty($subject)) ? $this->lang('email_activation_subject') : $subject;
 		$body = (empty($body)) ? $this->options['email_activation_template'] : $body;
 			
 		//use sprintf to insert activation code and user id
@@ -54,7 +52,7 @@ class Emailer implements LoggerAwareInterface{
 	
 	public function send_forgotten_identity(UserAccount $user, $subject = false, $body = false, $alt_body = false){
 	
-		$subject = (empty($subject)) ? $this->lang['email_forgotten_identity_subject'] : $subject;
+		$subject = (empty($subject)) ? $this->lang('email_forgotten_identity_subject') : $subject;
 		$body = (empty($body)) ? $this->options['email_forgotten_identity_template'] : $body;
 		
 		$body = $this->interpolate_email_body($body, array(
@@ -75,7 +73,7 @@ class Emailer implements LoggerAwareInterface{
 	
 	public function send_forgotten_password(UserAccount $user, $subject = false, $body = false, $alt_body = false){
 	
-		$subject = (empty($subject)) ? $this->lang['email_forgotten_password_subject'] : $subject;
+		$subject = (empty($subject)) ? $this->lang('email_forgotten_password_subject') : $subject;
 		$body = (empty($body)) ? $this->options['email_forgotten_password_template'] : $body;
 		
 		$body = $this->interpolate_email_body($body, array(
