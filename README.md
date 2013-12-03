@@ -66,6 +66,8 @@ Forgotten Password checking and reset password has somethings that need to chang
 3. The reset_password should go directly to the database source, it should not call change_password because the change_password may throw an exception if the random generator was not random enough
 The whole emailing thing needs an overhaul because emailing doesn't make sense. It should be optionally inserted and instantiated by itself with any templates passed into the class. It should not be part of the Options table.
 
+LoginPasswordComplexity needs to be optional with just a false!
+
 Install with Composer
 ---------------------
 
