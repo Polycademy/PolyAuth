@@ -58,6 +58,7 @@ To Do
 - Regarding OAuth2 Server: https://github.com/php-loep/oauth2-server and https://github.com/bshaffer/oauth2-server-php
 - Reduce PHP version requirement to 5.3 (need to do some testing)
 - Streamline the storage adapter
+- Switch the $this->authorized to (role, permission, id), it is not really required, since people would be better off checking against the user object itself. Id is good when you need to combine the properties though!
 
 Forgotten Password checking and reset password has somethings that need to change.
 
@@ -67,6 +68,8 @@ Forgotten Password checking and reset password has somethings that need to chang
 The whole emailing thing needs an overhaul because emailing doesn't make sense. It should be optionally inserted and instantiated by itself with any templates passed into the class. It should not be part of the Options table.
 
 LoginPasswordComplexity needs to be optional with just a false!
+
+All queries should have some order by option!
 
 Install with Composer
 ---------------------
