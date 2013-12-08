@@ -544,8 +544,11 @@ class MySQLAdapter implements StorageInterface{
 
 		}
 
+		//offset can only be used with the limit, but limit can be used by itself
 		if(is_int($offset) AND is_int($limit)){
 			$query .= " LIMIT :offset, :limit";
+		}elseif(is_int($limit)){
+			$query .= " LIMIT :limit";
 		}
 
 		$sth = $this->db->prepare($query);
