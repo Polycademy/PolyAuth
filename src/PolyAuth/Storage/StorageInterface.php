@@ -50,6 +50,8 @@ interface StorageInterface extends LoggerAwareInterface, RBACStorageInterface{
 
 	public function get_users_by_permission(array $permissions);
 
+	public function count_users(array $parameters);
+
 	public function update_user($user_id, array $data, array $columns);
 
 	public function ban_user($user_id);

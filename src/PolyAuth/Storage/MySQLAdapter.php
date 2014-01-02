@@ -520,7 +520,7 @@ class MySQLAdapter implements StorageInterface{
 			}
 
 			array_walk($search_params, function(&$value){
-			  $value = array_unique($value);
+				$value = array_unique($value);
 			});
 
 			$query = "SELECT * FROM {$this->options['table_users']}";
@@ -628,6 +628,71 @@ class MySQLAdapter implements StorageInterface{
 		
 			if($this->logger){
 				$this->logger->error('Failed to execute query to select subjects from auth subject role based on permission names.', ['exception' => $db_err]);
+			}
+			throw $db_err;
+		
+		}
+
+	}
+
+	public function count_users(array $parameters = null){
+
+		$properties = null;
+		if(is_array($parameters) AND !empty($parameters)){
+
+			$keys = array_keys($parameters);
+			$search_params = array();
+
+			foreach($keys as $key){
+
+				if(is_int($key)){
+					$search_params['id'][] = $parameters[$key];
+				}elseif($key == 'id'){
+					if(!array_key_exists('id', $search_params))	$search_params['id'] = array();
+						$search_params['id'] = array_merge($search_params['id'], $parameters[$key]);
+				}else{
+					$search_params[$key] = $parameters[$key];  
+				}
+
+			}
+
+			array_walk($search_params, function(&$value){
+				$value = array_unique($value);
+			});
+
+			$query = "SELECT COUNT(*) FROM {$this->options['table_users']}";
+
+			$where_components = array();
+			$properties = array();
+
+			foreach($search_params as $key => $placeholders){
+				$properties = array_merge($properties, $placeholders);
+				$placeholders = implode(",", array_fill(0, count($placeholders), '?'));
+				$where_components[] = "$key IN ($placeholders)";
+			}
+
+			$where_components = implode(' OR ', $where_components);
+
+			$query .= ' WHERE ' . $where_components;
+
+		}else{
+			
+			$query = "SELECT COUNT(*) FROM {$this->options['table_users']}";
+
+		}
+
+		$sth = $this->db->prepare($query);
+
+		try{
+		
+			$sth->execute($properties);
+			$result = $sth->fetchColumn();
+			return $result;
+			
+		}catch(PDOException $db_err){
+		
+			if($this->logger){
+				$this->logger->error("Failed to execute query to count users.", ['exception' => $db_err]);
 			}
 			throw $db_err;
 		

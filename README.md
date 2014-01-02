@@ -71,6 +71,10 @@ LoginPasswordComplexity needs to be optional with just a false!
 
 All queries should have some order by option!
 
+Can switch to native Purl since the problem with Purl has been fixed and we no longer require the Forked version: https://github.com/jwage/purl/pull/22#issuecomment-31191940
+
+Authorized should accept one parameter, an array that allows you to specify a number of all or nothing rules
+
 Install with Composer
 ---------------------
 

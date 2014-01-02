@@ -628,6 +628,7 @@ class AccountsManager{
 	 * are passed in, it's an array of key (table column) to value. It will try to get all the users which match those
 	 * key to value on an 'OR' basis. So if you want user with id of 2, and user with identity of Roger, then you would
 	 * get all the users that have an id of 2 OR the identity of Roger.
+	 * 
 	 * @param  array|null  $parameters Array of search parameters [1, 2, 3] OR ['username' => ['Roger', 'Brad']]
 	 * @param  integer     $offset     Offset for pagination
 	 * @param  boolean     $limit      Limit for pagination
@@ -716,6 +717,35 @@ class AccountsManager{
 		
 		return $this->get_users($user_ids);
 	
+	}
+
+	/**
+	 * Counts all the users based on passed in parameters.
+	 * This is faster than reading all the users into PHP and counting them inside PHP.
+	 * All parameters are queried on an OR basis.
+	 * 
+	 * @param  array|null  $parameters Array of search parameters [1, 2, 3] OR ['username' => ['Roger', 'Brad']]
+	 * @return integer
+	 */
+	public function count_users(array $parameters = null){
+
+		if(is_array($parameters) AND !empty($parameters)){
+
+			//parameters may be a flat array of integers, which represent the id column, they don't need to be validated
+			$search_keys = array_filter(array_keys($parameters), function($value){
+				return !is_int($value);
+			});
+
+			if(!$this->storage->validate_columns($this->options['table_users'], $search_keys)){
+				throw new DatabaseValidationException($this->lang['user_count_invalid']);
+			}
+
+			$result = $this->storage->count_users($parameters);
+
+			return $result;
+
+		}
+
 	}
 	
 	/**
