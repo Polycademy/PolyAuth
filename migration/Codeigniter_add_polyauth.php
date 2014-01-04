@@ -23,46 +23,6 @@ use RBAC\Manager\RoleManager;
 class Migration_add_polyauth extends CI_Migration {
 
 	public function up(){
-	
-		$default_user = array(
-			'id'					=> '1',
-			'ipAddress'				=> inet_pton('127.0.0.1'),
-			'username'				=> 'administrator',
-			'password'				=> '$2y$10$EiqipvSt3lnD//nchj4u9OgOTL9R3J4AbZ5bUVVrh.Tq/gmc5xIvS', //default is "password"
-			'passwordChange'		=> '0',
-			'email'					=> 'admin@admin.com',
-			'createdOn'				=> date('Y-m-d H:i:s'),
-			'lastLogin'				=> date('Y-m-d H:i:s'),
-			'active'				=> '1',
-			'sharedKey'				=> 's19+c1UijAuCFm5Iy8tBK9iBbakMH7ES6w0W6Lqiux2BhBJ7UbwM7Gol402waP7NWrbNgwKXaQi4jzUgqb3i2w=='
-		);
-		
-		//roles to descriptions
-		$default_roles = array(
-			'admin'		=> 'Site Administrators',
-			'member'	=> 'General Members',
-		);
-		
-		//roles to permissions to permission descriptions
-		$default_role_permissions = array(
-			'admin'		=> array(
-				'admin_create'	=> 'Creating administration resources.',
-				'admin_read'	=> 'Viewing administration resources.',
-				'admin_update'	=> 'Editing administration resources.',
-				'admin_delete'	=> 'Deleting administration resources.',
-			),
-			'member'	=> array(
-				'public_read'	=> 'Viewing public resources.',
-			),
-		);
-		
-		//default user to roles
-		$default_user_roles = array(
-			$default_user['id']	=> array(
-				'admin',
-				'member',
-			),
-		);
 
 		//autoCode is for autologin
 		//accessTokens would be in a separate table representing the accessTokens
@@ -140,9 +100,6 @@ class Migration_add_polyauth extends CI_Migration {
 		
 		$this->dbforge->add_key('id', TRUE);
 		$this->dbforge->create_table('user_accounts', true);
-		
-		// Dumping data for table 'users'
-		$this->db->insert('user_accounts', $default_user);
 		
 		// Table structure for table 'login_attempts'
 		$this->dbforge->add_field(array(
@@ -252,8 +209,75 @@ class Migration_add_polyauth extends CI_Migration {
 			ENGINE = InnoDB;';
 		
 		$this->db->query($create_auth_subject_role);
+
+		$this->seed();
 		
-		//time to insert the default permission and role data
+	}
+
+	public function down(){
+	
+		$this->dbforge->drop_table('user_accounts');
+		$this->dbforge->drop_table('login_attempts');
+		//when using foreign keys, if you need to drop them, make sure to ignore them and then set them up again
+		$this->db->query('SET foreign_key_checks = 0;');
+		$this->dbforge->drop_table('auth_permission');
+		$this->dbforge->drop_table('auth_role');
+		$this->dbforge->drop_table('auth_role_permissions');
+		$this->dbforge->drop_table('auth_subject_role');
+		$this->db->query('SET foreign_key_checks = 1;');
+	
+	}
+
+	protected function seed(){
+
+		$default_users = array(
+			array(
+				'id'					=> '1',
+				'ipAddress'				=> inet_pton('127.0.0.1'),
+				'username'				=> 'administrator',
+				'password'				=> '$2y$10$EiqipvSt3lnD//nchj4u9OgOTL9R3J4AbZ5bUVVrh.Tq/gmc5xIvS', //default is "password"
+				'passwordChange'		=> '0',
+				'email'					=> 'admin@admin.com',
+				'createdOn'				=> date('Y-m-d H:i:s'),
+				'lastLogin'				=> date('Y-m-d H:i:s'),
+				'active'				=> '1',
+				'sharedKey'				=> 's19+c1UijAuCFm5Iy8tBK9iBbakMH7ES6w0W6Lqiux2BhBJ7UbwM7Gol402waP7NWrbNgwKXaQi4jzUgqb3i2w=='
+			),
+		);
+
+		//default user to roles
+		$default_users_to_roles = array(
+			array(
+				'admin',
+				'member',
+			),
+		);
+
+		//roles to descriptions
+		$default_roles = array(
+			'admin'		=> 'Site Administrators',
+			'member'	=> 'General Members',
+		);
+		
+		//roles to permissions to permission descriptions
+		$default_role_permissions = array(
+			'admin'		=> array(
+				'admin_create'	=> 'Creating administration resources.',
+				'admin_read'	=> 'Viewing administration resources.',
+				'admin_update'	=> 'Editing administration resources.',
+				'admin_delete'	=> 'Deleting administration resources.',
+			),
+			'member'	=> array(
+				'public_read'	=> 'Viewing public resources.',
+			),
+		);
+
+		//seeding user accounts
+		foreach($default_users as $user){
+			$this->db->insert('user_accounts', $user);
+		}
+
+		//seeding roles and permissions
 		$role_manager = new RoleManager(new MySQLAdapter($this->db->conn_id, new Options));
 		
 		foreach($default_role_permissions as $role => $permissions_array){
@@ -276,33 +300,18 @@ class Migration_add_polyauth extends CI_Migration {
 			
 		}
 		
-		//assign the role to the default user
-		foreach($default_user_roles as $user => $roles){
+		//assign the role to the users
+		foreach($default_users_to_roles as $key => $roles){
+
+			$user_id = $default_users[$key]['id'];
 		
 			foreach($roles as $role){
-			
 				$assignable_role = $role_manager->roleFetchByName($role);
-				
-				$role_manager->roleAddSubjectId($assignable_role, $user);
-			
+				$role_manager->roleAddSubjectId($assignable_role, $user_id);
 			}
 		
 		}
-		
-	}
 
-	public function down(){
-	
-		$this->dbforge->drop_table('user_accounts');
-		$this->dbforge->drop_table('login_attempts');
-		//when using foreign keys, if you need to drop them, make sure to ignore them and then set them up again
-		$this->db->query('SET foreign_key_checks = 0;');
-		$this->dbforge->drop_table('auth_permission');
-		$this->dbforge->drop_table('auth_role');
-		$this->dbforge->drop_table('auth_role_permissions');
-		$this->dbforge->drop_table('auth_subject_role');
-		$this->db->query('SET foreign_key_checks = 1;');
-	
 	}
 	
 }
