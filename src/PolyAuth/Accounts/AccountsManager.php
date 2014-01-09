@@ -740,11 +740,11 @@ class AccountsManager{
 				throw new DatabaseValidationException($this->lang['user_count_invalid']);
 			}
 
-			$result = $this->storage->count_users($parameters);
-
-			return $result;
-
 		}
+
+		$result = $this->storage->count_users($parameters);
+
+		return $result;
 
 	}
 	
