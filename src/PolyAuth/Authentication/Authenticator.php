@@ -217,9 +217,9 @@ class Authenticator{
 	
 	}
 
-	public function get_response(){
+	public function get_response($data_type = false){
 
-		return $this->strategy->get_response();
+		return $this->strategy->get_response($data_type);
 
 	}
 
