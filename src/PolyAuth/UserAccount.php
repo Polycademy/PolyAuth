@@ -61,54 +61,90 @@ class UserAccount extends Subject implements \ArrayAccess{
 	}
 
 	/**
-	 * Checks if the user is logged in and possesses all the passed in parameters.
-	 * The parameters operate on all or nothing except $identities and $id. $identities and $id operates like "has to be at least one of them".
-	 * This first checks if the session exists, and if not checks if the user exists in this script's memory.
-	 * 
-	 * @param $permissions array of permission names | string | false
-	 * @param $roles array of role names | string | false
-	 * @param $ids array of user ids | integer | false
+	 * Checks if the user is logged in and possesses all the required parameters.
+	 * The required parameters can be passed in as a variadic array.
+	 * [
+	 * 		'permissions'	=> [],
+	 * 		'roles'			=> [],
+	 * 		'users'			=> [1],
+	 * 		'scopes'		=> [],
+	 * 		'owners'		=> [1],
+	 * ], ...
+	 * Within each array set will be queried on an AND basis, except for users and owners which are queried on an AND + ANY basis.
+	 * Each subsequent array will be queried on an OR basis.
+	 * @param  variadic array
 	 * @return boolean
 	 */
-	public function authorized($permissions = false, $roles = false, $ids = false){
-			
-		$permissions = ($permissions) ? (array) $permissions : false;
-		$roles = ($roles) ? (array) $roles : false;
-		$ids = ($ids) ? (array) $ids : false;
+	public function authorized(){
 
 		//anonymous users are not authorized
 		if($this['anonymous']){
 			return false;
 		}
-		
-		//id check
-		if($ids AND !in_array($this['id'], $ids)){
-			return false;
-		}
-		
-		if($permissions){
-		
-			//check if the user has all the permissions
-			foreach($permissions as $permission_name){
-				if(!$this->has_permission($permission_name)){
-					return false;
-				}
-			}
-		
-		}
-		
-		if($roles){
 
-			foreach($roles as $role_name){
-				if(!$this->has_role($role_name)){
-					return false;
+		if(func_num_args() > 0){
+
+			$options = func_get_args();
+
+			foreach($options as $requirements){
+
+				$passed = true;
+
+				$permissions = (!empty($requirements['permissions'])) ? (array) $requirements['permissions'] : false;
+				$roles = (!empty($requirements['roles'])) ? (array) $requirements['roles'] : false;
+				$users = (!empty($requirements['users'])) ? $requirements['users'] : false;
+				$scopes = (!empty($requirements['scopes'])) ? (array) $requirements['scopes'] : false;
+				$owners = (!empty($requirements['owners'])) ? $requirements['owners'] : false;
+				
+				$permissions_passed = true;
+				if($permissions){
+					foreach($permissions as $permission_name){
+						if(!$this->has_permission($permission_name)){
+							$permissions_passed = false;
+							break;
+						}
+					}
 				}
+				
+				$roles_passed = true;
+				if($roles){
+					foreach($roles as $role_name){
+						if(!$this->has_role($role_name)){
+							$roles_passed = false;
+							break;
+						}
+					}
+				}
+
+				$users_passed = true;
+				if($users AND !in_array($this['id'], $users)){
+					$users_passed = false;
+				}
+
+
+				//check scopes
+				$scopes_passed = true;
+				//check owner (resource owner)
+				$owners_passed = true;
+
+				//if this requirement set did not pass, then $passed gets set to false, if it's at the end of the loop, the $passed stays false, if there's further iteration the $passed gets reset to true
+				//if this requirement set did pass, then we just break the loop and return the $passed as true
+				if(!$permissions_passed OR !$roles_passed OR !$users_passed OR !$scopes_passed OR !$owners_passed){
+					$passed = false;
+				}else{
+					break;
+				}
+
 			}
-		
+
+		}else{
+
+			$passed = true;
+
 		}
-		
-		return true;
-	
+
+		return $passed;
+
 	}
 	
 	/**

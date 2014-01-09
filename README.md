@@ -58,7 +58,6 @@ To Do
 - Regarding OAuth2 Server: https://github.com/php-loep/oauth2-server and https://github.com/bshaffer/oauth2-server-php
 - Reduce PHP version requirement to 5.3 (need to do some testing)
 - Streamline the storage adapter
-- Switch the $this->authorized to (role, permission, id), it is not really required, since people would be better off checking against the user object itself. Id is good when you need to combine the properties though!
 
 Forgotten Password checking and reset password has somethings that need to change.
 
@@ -73,7 +72,7 @@ All queries should have some order by option!
 
 Can switch to native Purl since the problem with Purl has been fixed and we no longer require the Forked version: https://github.com/jwage/purl/pull/22#issuecomment-31191940
 
-Authorized should accept one parameter, an array that allows you to specify a number of all or nothing rules
+UserAccount::authorized requires scopes and owners implementation
 
 Install with Composer
 ---------------------
