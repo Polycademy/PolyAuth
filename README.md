@@ -76,6 +76,8 @@ UserAccount::authorized requires scopes and owners implementation
 
 Need to compensate for nested transactions by using inTransaction boolean that is part of PDO. Ask if in a transaction before attempting to start a transaction.
 
+Add the possibility of implementing private cloud. Private cloud versions of PolyAuth. So that data is fully encrypted in the database. Basically virtual applicance of PolyAuth.
+
 Install with Composer
 ---------------------
 
