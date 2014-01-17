@@ -272,7 +272,7 @@ class SessionManager implements \ArrayAccess{
 
 	}
 
-	//called on every call to start(), given propabilities similar to how PHP does it
+	//called on every call to start(), given probabilities similar to how PHP does it
 	//this runs it on the persistence layer
 	protected function run_gc(){
 

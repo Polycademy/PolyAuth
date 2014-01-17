@@ -78,6 +78,8 @@ Need to compensate for nested transactions by using inTransaction boolean that i
 
 Add the possibility of implementing private cloud. Private cloud versions of PolyAuth. So that data is fully encrypted in the database. Basically virtual applicance of PolyAuth.
 
+UserAccount should be __clone, __toString and __serialise and any of the other magic functions. One way would be an easy way to export all of the UserAccount data. Since UserAccount implements array interface, it should also implement traversable interface... etc. The user data needs to be preloaded with the roles and permissions as well. One way would be a 'roles' => an array of all the roles including hierarchical roles. Perhaps it essentially is hierarchal? Also a 'permissions' => an array of all the permissions that is calculated from all inherited roles. Currently these 2 properties are not added to the user object, but are hidden in the parent objects. We need to pass this data to the client (AngularJS) so that AngularJS can calculate what to show and what not to show in the UI depending on their roles and permissions. Of course everything goes through a double authentication. First on the UI to check if the user is logged in and has the necessary role/permission/scope and then when an action is requested to view data or modify data, the request is authenticated again on the server side. The server side holds the master state, and is the ultimate judge. But the client needs to be able to show or not show particular things on its own judgement to help with user experience. You can't send an AJAX request to ask whether it is able to show things or not, all the roles and permissions will be loaded in as soon as the user is logged in.
+
 Install with Composer
 ---------------------
 
@@ -92,6 +94,8 @@ Use --defer-flush with Codeception
 
 Notes
 -----
+
+Make sure the `session_save_path()` is writable!
 
 This does not do filtering or validation of data input. You still need to do this to prevent any problems. This does not do CSRF checks. I do not consider that to be part of a user authentication system. This also does not force you or check for SSL, that should be your job!
 
