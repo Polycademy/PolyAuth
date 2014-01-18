@@ -13,7 +13,7 @@ class Options implements \ArrayAccess{
 		//password options
 		'hash_method'						=> PASSWORD_DEFAULT, //PASSWORD_DEFAULT || PASSWORD_BCRYPT
 		'hash_rounds'						=> 10,
-		'shared_key_encryption'				=> 'abc123', //this is for encrypting the sharedKey used by Hawk and Digest, this should be kept secret, can be false if you're not using Hawk or Digest
+		'shared_key_encryption'				=> 'l33t', //this is for encrypting the sharedKey, this should be kept secret, can be false if you're not using Hawk or Digest
 		//session options (used for internal session handling)
 		'session_expiration'				=> 43200, //expiration of a single session (client side and server side), this gets reset everytime the session is accessed, can be overwritten for specific SessionManagers for specific AuthStrategies
 		'session_save_path'					=> '', //for filesystem persistence, leave empty for default session save path
