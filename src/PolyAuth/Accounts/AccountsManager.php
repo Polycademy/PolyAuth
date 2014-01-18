@@ -258,6 +258,135 @@ class AccountsManager{
 		return false;
 	
 	}
+
+	/**
+	 * Changes the password of the user. If the old password was provided, it will be checked against the user, otherwise the password change will be forced.
+	 * Also passes the password through the complexity checks.
+	 * Also sets turns off the password change flag, this is the only place that does this.
+	 *
+	 * @param $user object
+	 * @param $new_password string
+	 * @param $old_password string optional
+	 * @return boolean
+	 */
+	public function change_password(UserAccount $user, $new_password, $old_password = false){
+	
+		//if old password exists, we need to check if it matches the database record
+		if($old_password){
+
+			$check_password = $this->storage->get_password($user['id']);
+			if(!password_verify($old_password, $check_password)){
+				throw new PasswordValidationException($this->lang['password_change_unsuccessful']);
+			}
+			
+		}
+		
+		//password complexity check on the new_password
+		if(!$this->password_complexity->complex_enough($new_password, $old_password, $user[$this->options['login_identity']])){
+			throw new PasswordValidationException($this->password_complexity->get_error());
+		}
+		
+		//hash new password
+		$new_password = password_hash($new_password, $this->options['hash_method'], ['cost' => $this->options['hash_rounds']]);
+		
+		//update with new password
+		if(!$this->storage->update_password($user['id'], $new_password)){
+			return false;
+		}
+		
+		$user['passwordChange'] = 0;
+		
+		return true;
+	
+	}
+	
+	/**
+	 * Resets the password for $user to a random password. Will return the password.
+	 * This does not pass the password complexity tests, but will be sufficiently random!
+	 *
+	 * @param $user object
+	 * @return boolean
+	 */
+	public function reset_password(UserAccount $user){
+	
+		//find the max of the min or max
+		$min = (!empty($this->options['login_password_complexity']['min'])) ? $this->options['login_password_complexity']['min'] : 0;
+		$max = (!empty($this->options['login_password_complexity']['max'])) ? $this->options['login_password_complexity']['max'] : 32;
+		
+		$length = max($min, $max);
+		$new_password = $this->random->generate($length, true);
+		
+		if(!$this->change_password($user, $new_password)){
+			return false;
+		}
+		
+		return $new_password;
+	
+	}
+	
+	/**
+	 * Switches on the password change flag, forcing the user to change their passwords upon their next login
+	 *
+	 * @param $users array of objects | array of ids
+	 * @return boolean true
+	 */
+	public function force_password_change(array $users){
+	
+		foreach($users as $user){
+			if($user instanceof UserAccount){
+				$user_ids[] = $user['id'];
+			}else{
+				$user_ids[] = $user;
+			}
+		}
+
+		//if they were already flagged, then the job has been done
+		$this->storage->multi_password_change_flag($user_ids);
+
+		foreach($users as $user){
+			if($user instanceof UserAccount){
+				$user['passwordChange'] =  1;
+			}
+		}
+
+		return true;
+	
+	}
+
+	/**
+	 * Changes the shared key. It also encrypts the key.
+	 * @param  UserAccount $user    
+	 * @param  String      $new_key
+	 * @return Boolean               
+	 */
+	public function change_key(UserAccount $user, $new_key){
+
+		$new_key = $this->encryption->encrypt($new_key, $this->options['shared_key_encryption']);
+
+		if(!$this->storage->update_key($user['id'], $new_key)){
+			return false;
+		}
+
+		return true;
+
+	}
+
+	/**
+	 * Resets the key for $user to a random key. Will return the key.
+	 * @param  UserAccount $user
+	 * @return String|Boolean            
+	 */
+	public function reset_key(UserAccount $user){
+
+		$new_key = $this->random->generate(50);
+
+		if(!$this->change_key($user, $new_key)){
+			return false;
+		}
+
+		return $new_key;
+	
+	}
 	
 	/**
 	 * Forgotten identity, run this after you have done some identity validation such as security questions.
@@ -500,100 +629,6 @@ class AccountsManager{
 	//also change the user object in order to extract any external providers! 
 	
 	/**
-	 * Changes the password of the user. If the old password was provided, it will be checked against the user, otherwise the password change will be forced.
-	 * Also passes the password through the complexity checks.
-	 * Also sets turns off the password change flag, this is the only place that does this.
-	 *
-	 * @param $user object
-	 * @param $new_password string
-	 * @param $old_password string optional
-	 * @return boolean
-	 */
-	public function change_password(UserAccount $user, $new_password, $old_password = false){
-	
-		//if old password exists, we need to check if it matches the database record
-		if($old_password){
-
-			$check_password = $this->storage->get_password($user['id']);
-			if(!password_verify($old_password, $check_password)){
-				throw new PasswordValidationException($this->lang['password_change_unsuccessful']);
-			}
-			
-		}
-		
-		//password complexity check on the new_password
-		if(!$this->password_complexity->complex_enough($new_password, $old_password, $user[$this->options['login_identity']])){
-			throw new PasswordValidationException($this->password_complexity->get_error());
-		}
-		
-		//hash new password
-		$new_password = password_hash($new_password, $this->options['hash_method'], ['cost' => $this->options['hash_rounds']]);
-		
-		//update with new password
-		if(!$this->storage->update_password($user['id'], $new_password)){
-			return false;
-		}
-		
-		$user['passwordChange'] = 0;
-		
-		return true;
-	
-	}
-	
-	/**
-	 * Resets the password for $user to a random password. Will return the password.
-	 * This does not pass the password complexity tests, but will be sufficiently random!
-	 *
-	 * @param $user object
-	 * @return boolean
-	 */
-	public function reset_password(UserAccount $user){
-	
-		//find the max of the min or max
-		$min = (!empty($this->options['login_password_complexity']['min'])) ? $this->options['login_password_complexity']['min'] : 0;
-		$max = (!empty($this->options['login_password_complexity']['max'])) ? $this->options['login_password_complexity']['max'] : 32;
-		
-		$length = max($min, $max);
-		$new_password = $this->random->generate($length, true);
-		
-		if(!$this->change_password($user, $new_password)){
-			return false;
-		}
-		
-		return $new_password;
-	
-	}
-	
-	/**
-	 * Switches on the password change flag, forcing the user to change their passwords upon their next login
-	 *
-	 * @param $users array of objects | array of ids
-	 * @return boolean true
-	 */
-	public function force_password_change(array $users){
-	
-		foreach($users as $user){
-			if($user instanceof UserAccount){
-				$user_ids[] = $user['id'];
-			}else{
-				$user_ids[] = $user;
-			}
-		}
-
-		//if they were already flagged, then the job has been done
-		$this->storage->multi_password_change_flag($user_ids);
-
-		foreach($users as $user){
-			if($user instanceof UserAccount){
-				$user['passwordChange'] =  1;
-			}
-		}
-
-		return true;
-	
-	}
-	
-	/**
 	 * Gets the user according to their id. The user is an augmented object of UserAccount including all the user's data (minus the password) and with any current permissions loaded in.
 	 *
 	 * @param $user_id int
@@ -612,11 +647,12 @@ class AccountsManager{
 		}
 		
 		//load in the data into the UserAccount
+		//remove the password, decrypt the sharedKey and convert the ipAddress to human readable form
 		unset($row->password);
+		$row->sharedKey = $this->encryption->decrypt($row->sharedKey, $this->options['shared_key_encryption']);
+		$row->ipAddress = inet_ntop($row->ipAddress);
 		$user = new UserAccount($row->id);
 		$user->set_user_data($row);
-		
-		//load in the roles and permissions of the user
 		$user = $this->rbac->load_subject_roles($user);
 		
 		return $user;
@@ -659,10 +695,13 @@ class AccountsManager{
 		
 		foreach($result as $row){
 			
+			//remove the password, decrypt the sharedKey and convert the ipAddress to human readable form
 			unset($row->password);
+			$row->sharedKey = $this->encryption->decrypt($row->sharedKey, $this->options['shared_key_encryption']);
+			$row->ipAddress = inet_ntop($row->ipAddress);
 			$user = new UserAccount($row->id);
 			$user->set_user_data($row);
-			$this->rbac->load_subject_roles($user);
+			$user = $this->rbac->load_subject_roles($user);
 			$output_users[] = $user;
 		
 		}
@@ -783,9 +822,13 @@ class AccountsManager{
 		$user_id = $user['id'];
 		unset($user['id']);
 
+		//encrypt the new shared key
+		if(!empty($user['sharedKey'])){
+			$user['sharedKey'] = $this->encryption->encrypt($user['sharedKey'], $this->options['shared_key_encryption']);
+		}
+
 		//refresh the ip address to the current user
-		$ip = (!empty($_SERVER['REMOTE_ADDR'])) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1';
-		$data['ipAddress'] = inet_pton($ip);
+		$data['ipAddress'] = $this->get_ip();
 
 		//validate if the columns are correct
 		$columns = array_keys($user->get_user_data());

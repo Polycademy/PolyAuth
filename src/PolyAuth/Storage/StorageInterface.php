@@ -26,6 +26,12 @@ interface StorageInterface extends LoggerAwareInterface, RBACStorageInterface{
 
 	public function forgotten_password_clear($user_id);
 
+	public function get_password($user_id);
+
+	public function update_password($user_id, $new_password);
+
+	public function update_key($user_id, $new_key);
+
 	public function get_external_providers($external_identifier);
 
 	public function register_external_provider(array $data);
@@ -37,10 +43,6 @@ interface StorageInterface extends LoggerAwareInterface, RBACStorageInterface{
 	public function get_external_providers_by_user();
 
 	public function update_external_provider($provider_id, array $new_data);
-
-	public function get_password($user_id);
-
-	public function update_password($user_id, $new_password);
 
 	public function get_user($user_id);
 

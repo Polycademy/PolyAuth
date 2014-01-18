@@ -303,6 +303,88 @@ class MySQLAdapter implements StorageInterface{
 
 	}
 
+	public function get_password($user_id){
+
+		$query = "SELECT password FROM {$this->options['table_users']} WHERE id = :user_id";
+		$sth = $this->db->prepare($query);
+		$sth->bindValue('user_id', $user_id, PDO::PARAM_INT);
+		
+		try{
+		
+			$sth->execute();
+			$row = $sth->fetch(PDO::FETCH_OBJ);
+			return $row->password;
+			
+		}catch(PDOException $db_err){
+		
+			if($this->logger){
+				$this->logger->error("Failed to execute query to get the password hash from user $user_id.", ['exception' => $db_err]);
+			}
+			
+			throw $db_err;
+			
+		}
+
+	}
+
+	public function update_password($user_id, $new_password){
+
+		$query = "UPDATE {$this->options['table_users']} SET passwordChange = 0, password = :new_password WHERE id = :user_id";
+		$sth = $this->db->prepare($query);
+		$sth->bindValue('new_password', $new_password, PDO::PARAM_STR);
+		$sth->bindValue('user_id', $user_id, PDO::PARAM_INT);
+		
+		try{
+		
+			$sth->execute();
+			
+			if($sth->rowCount() < 1){
+				return false;
+			}
+
+			return true;
+		
+		}catch(PDOException $db_err){
+		
+			if($this->logger){
+				$this->logger->error("Failed to execute query to update password hash with user $user_id.", ['exception' => $db_err]);
+			}
+			
+			throw $db_err;
+		
+		}
+
+	}
+
+	public function update_key($user_id, $new_key){
+
+		$query = "UPDATE {$this->options['table_users']} SET sharedKey = :new_key WHERE id = :user_id";
+		$sth = $this->db->prepare($query);
+		$sth->bindValue('new_key', $new_key, PDO::PARAM_STR);
+		$sth->bindValue('user_id', $user_id, PDO::PARAM_INT);
+		
+		try{
+		
+			$sth->execute();
+			
+			if($sth->rowCount() < 1){
+				return false;
+			}
+
+			return true;
+		
+		}catch(PDOException $db_err){
+		
+			if($this->logger){
+				$this->logger->error("Failed to execute query to update shared key with user $user_id.", ['exception' => $db_err]);
+			}
+			
+			throw $db_err;
+		
+		}
+
+	}
+
 	public function get_external_providers($external_identifier){
 
 		$query = "
@@ -395,59 +477,6 @@ class MySQLAdapter implements StorageInterface{
 			
 			throw $db_err;
 
-		}
-
-	}
-
-	public function get_password($user_id){
-
-		$query = "SELECT password FROM {$this->options['table_users']} WHERE id = :user_id";
-		$sth = $this->db->prepare($query);
-		$sth->bindValue('user_id', $user_id, PDO::PARAM_INT);
-		
-		try{
-		
-			$sth->execute();
-			$row = $sth->fetch(PDO::FETCH_OBJ);
-			return $row->password;
-			
-		}catch(PDOException $db_err){
-		
-			if($this->logger){
-				$this->logger->error("Failed to execute query to get the password hash from user $user_id.", ['exception' => $db_err]);
-			}
-			
-			throw $db_err;
-			
-		}
-
-	}
-
-	public function update_password($user_id, $new_password){
-
-		$query = "UPDATE {$this->options['table_users']} SET passwordChange = 0, password = :new_password WHERE id = :user_id";
-		$sth = $this->db->prepare($query);
-		$sth->bindValue('new_password', $new_password, PDO::PARAM_STR);
-		$sth->bindValue('user_id', $user_id, PDO::PARAM_INT);
-		
-		try{
-		
-			$sth->execute();
-			
-			if($sth->rowCount() < 1){
-				return false;
-			}
-
-			return true;
-		
-		}catch(PDOException $db_err){
-		
-			if($this->logger){
-				$this->logger->error("Failed to execute query to update password hash with user $user_id.", ['exception' => $db_err]);
-			}
-			
-			throw $db_err;
-		
 		}
 
 	}
