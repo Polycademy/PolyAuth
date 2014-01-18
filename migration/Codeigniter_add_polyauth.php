@@ -235,13 +235,15 @@ class Migration_add_polyauth extends CI_Migration {
 				'id'					=> '1',
 				'ipAddress'				=> inet_pton('127.0.0.1'),
 				'username'				=> 'administrator',
-				'password'				=> '$2y$10$EiqipvSt3lnD//nchj4u9OgOTL9R3J4AbZ5bUVVrh.Tq/gmc5xIvS', //default is "password"
+				//default password is "password"
+				'password'				=> '$2y$10$EiqipvSt3lnD//nchj4u9OgOTL9R3J4AbZ5bUVVrh.Tq/gmc5xIvS',
 				'passwordChange'		=> '0',
 				'email'					=> 'admin@admin.com',
 				'createdOn'				=> date('Y-m-d H:i:s'),
 				'lastLogin'				=> date('Y-m-d H:i:s'),
 				'active'				=> '1',
-				'sharedKey'				=> 's19+c1UijAuCFm5Iy8tBK9iBbakMH7ES6w0W6Lqiux2BhBJ7UbwM7Gol402waP7NWrbNgwKXaQi4jzUgqb3i2w=='
+				//default key is "J5O753RSKtihq0C358iCfC0uaIKxKpCvri3lSUPimV0Ec3Gi9j"
+				'sharedKey'				=> '9tThG2rFhZv+LslrrPy0I6QcCn9E3kNcyv5rqb3qKLywvFCfwHiSZ2fH2qQAgQXAkfBIrd0zHP+1v/FJ4W/kMA==',
 			),
 		);
 
