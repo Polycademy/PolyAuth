@@ -70,7 +70,8 @@ class UserAccount extends Subject implements \ArrayAccess{
 	 * 		'scopes'		=> [],
 	 * 		'owners'		=> [1],
 	 * ], ...
-	 * Within each array set will be queried on an AND basis, except for users and owners which are queried on an AND + ANY basis.
+	 * Within each array set will be queried on an AND basis, except for users and owners.
+	 * The users and owners are queried as a whole on an AND basis, however each id inside the users/owners array is queried on an ANY basis. Therefore if we get ['roles' => 'admin', 'users' => [1, 2]] this translates to "roles must match 'admin' and id must match any of [1, 2]"
 	 * Each subsequent array will be queried on an OR basis.
 	 * @param  variadic array
 	 * @return boolean
