@@ -189,7 +189,7 @@ class HTTPDigestStrategy extends AbstractStrategy{
 
 		$keys = implode('|', array_keys($needed_parts));
 
-		preg_match_all('@(' . $keys . ')=(?:([\'"])([^\2]+?)\2|([^\s,]+))@', $txt, $matches, PREG_SET_ORDER);
+		preg_match_all('@(' . $keys . ')=(?:([\'"])([^\2]+?)\2|([^\s,]+))@', $digest, $matches, PREG_SET_ORDER);
 
 		foreach($matches as $m){
 
