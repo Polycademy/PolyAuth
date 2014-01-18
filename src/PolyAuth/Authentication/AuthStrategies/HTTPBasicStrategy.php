@@ -17,7 +17,7 @@ class HTTPBasicStrategy extends AbstractStrategy{
 
 	protected $storage;
 	protected $session_manager;
-	protected $realm;
+	protected $basic_options;
 	protected $request;
 	protected $response;
 	protected $accounts_manager;
@@ -27,10 +27,11 @@ class HTTPBasicStrategy extends AbstractStrategy{
 		Options $options, 
 		Language $language, 
 		SessionManager $session_manager, 
-		$realm = false, 
+		array $basic_options = null,
 		Request $request = null, 
 		Response $response = null, 
-		AccountsManager $accounts_manager = null
+		AccountsManager $accounts_manager = null,
+		Encryption $encryption = null
 	){
 		
 		$this->storage = $storage;
@@ -38,8 +39,16 @@ class HTTPBasicStrategy extends AbstractStrategy{
 		$this->request = ($request) ? $request : $this->get_request();
 		$this->response = ($response) ? $response : new Response;
 		$this->accounts_manager = ($accounts_manager) ? $accounts_manager : new AccountsManager($storage, $options, $language);
+		$this->encryption = ($encryption) ? $encryption : new Encryption;
 
-		$this->realm = ($realm) ? $realm : 'Protected by PolyAuth';
+		//http basic can use the "key" instead of the password as the password, this is preferred by APIs
+		$this->basic_options = array_merge(
+			array(
+				'realm'		=> 'Protected by PolyAuth',
+				'secret'	=> 'password',
+			),
+			$basic_options
+		);
 		
 	}
 
@@ -91,10 +100,24 @@ class HTTPBasicStrategy extends AbstractStrategy{
 
 			$row = $this->storage->get_login_check($identity);
 
-			if($row AND password_verify($password, $row->password)){
+			if($this->basic_options['secret'] == 'password'){
 
-				return $this->accounts_manager->get_user($row->id);
-			
+				if($row AND password_verify($password, $row->password)){
+
+					return $this->accounts_manager->get_user($row->id);
+				
+				}
+
+			}elseif($this->basic_options['secret'] == 'key'){
+
+				$key = $this->encryption->decrypt($row->sharedKey, $this->options['shared_key_encryption']);
+
+				if($row AND $password == $key){
+
+					return $this->accounts_manager->get_user($row->id);
+				
+				}
+
 			}
 
 		}
@@ -131,7 +154,7 @@ class HTTPBasicStrategy extends AbstractStrategy{
 	 */
 	public function challenge($realm = false){
 
-		$realm = ($realm) ? $realm : $this->realm;
+		$realm = ($realm) ? $realm : $this->basic_options['realm'];
 		$this->response->setStatusCode(401, 'Unauthorized');
 		$this->response->headers->set('WWW-Authenticate', 'Basic realm="' . $realm . '"');
 	
