@@ -9,6 +9,7 @@ use PolyAuth\Options;
 use PolyAuth\Language;
 use PolyAuth\Accounts\AccountsManager;
 use PolyAuth\UserAccount;
+use PolyAuth\Security\Encryption;
 
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
