@@ -78,6 +78,25 @@ Add the possibility of implementing private cloud. Private cloud versions of Pol
 
 UserAccount should be __clone, __toString and __serialise and any of the other magic functions. One way would be an easy way to export all of the UserAccount data. Since UserAccount implements array interface, it should also implement traversable interface... etc. The user data needs to be preloaded with the roles and permissions as well. One way would be a 'roles' => an array of all the roles including hierarchical roles. Perhaps it essentially is hierarchal? Also a 'permissions' => an array of all the permissions that is calculated from all inherited roles. Currently these 2 properties are not added to the user object, but are hidden in the parent objects. We need to pass this data to the client (AngularJS) so that AngularJS can calculate what to show and what not to show in the UI depending on their roles and permissions. Of course everything goes through a double authentication. First on the UI to check if the user is logged in and has the necessary role/permission/scope and then when an action is requested to view data or modify data, the request is authenticated again on the server side. The server side holds the master state, and is the ultimate judge. But the client needs to be able to show or not show particular things on its own judgement to help with user experience. You can't send an AJAX request to ask whether it is able to show things or not, all the roles and permissions will be loaded in as soon as the user is logged in.
 
+Encryption should use phpseclib so that it can work without the mcrypt extension!
+The encryption algorithm isn't secure enough. See the example here: http://au2.php.net/manual/en/function.mcrypt-encrypt.php
+
+For QueryToken strategy:
+
+1. Needs a queryToken field that is separate from autoCode because the autoCode is always linked to the CookieStrategy's autoCode and cannot be automatically refreshed.
+2. Everytime someone logs in and has a ?query_token= field in in the URL parameters, the queryToken needs to be reset. Even if the queryToken strategy didn't get activated. This si because if the queryToken remains the same on the URL. This is essentially presenting a temporary password that is publicly available if someone looks over the shoulders or someone forgets to close the browser. The resetting logic therefore needs to be in the Authenticator strategy. Also these queryTokens should also have an expiry just like the autoCode. Perhaps queryDate?
+3. The AccountsManager needs the ability to reset queryToken and queryDate and reset the autoCode and autoDate.
+4. The AccountsManager/Authenticator needs the ability to log out everybody, by destroying all sessions, or destroying all access tokens, all autoCodes, all queryTokens, all IP authorisations, and all user-agent device authorizations. Furthermore it should also be able to do this for a single account. This is useful if an account gets compromised. This requires the SessionManager to get all sessions and find the ones that match a particular user id.
+
+PolyAuth should standardise the options class and use it for all options to keep it one place. Research better presentation and perhaps use something like Symfony Options.. Device tracking uses user agent and will have to deal with empty user agents. Empty user agents should be considered as suspicious. But there will be different levels of suspicion: Maximum suspicion, block all user agents not added to the list of approved user agents. Or high, block user agents that are not recognised major browsers or similar browsers (like different versions of Firefox if the user always uses Firefox!). Everything can have a whitelist. There can even rules between ip address and user agent. Of course, block all ip addresses that originating from previous logins!
+
+Remember to suggest GEO-IP2 for finding the Location of the IP. Geo IP would be good to use if one needs to know if the IP is not in the same location. We could just ban all ips that are dissimilar. Just remember this is a problem if people use dynamic IPs. So location: city based tracking would be more lenient, but require the GEO IP add on. https://github.com/maxmind/MaxMind-DB-Reader-php
+
+Supply autoloader for each library even if composer is available. Also Dragoon needs an autoloader that is capable of autoloading external modules, register PSR-4 and PSR-3 modules in case they are brought into the source code. Also cut down on simple external dependencies. I think PolyAuth doesn't need the PHP Mailer, there should be functions that return the email data. Also provide variable dependencies that uses the ~ operator for PolyAuth for certain dependencies. Imagine someone registers, instead of auto sending an email. If you want to send an email, you call the function get_activation_data/email() and this will give you back an array of data relevant to activating somebody.
+
+Definitely add in ip location tracking and 2 factor login!! Multidevice tracking too. Multifactor login. Like logging into a new ip or new device.
+
+
 Install with Composer
 ---------------------
 
