@@ -28,7 +28,7 @@
 		"codeception/codeception": "1.8.1"
 	},
 	"suggest": {
-		"ext-mcrypt": "Required for encryption and decryption of shared keys for HTTP Digest and Hawk.",
+		"ext-mcrypt": "Required for encryption and decryption of shared keys and tokens for HTTP Basic, HTTP Digest, Hawk and OAuth.",
 		"ext-SimpleXML": "Required for authentication responses to be encoded in XML format."
 	},
 	"config": {
