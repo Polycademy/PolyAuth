@@ -17,6 +17,7 @@ use Symfony\Component\HttpFoundation\Response;
 class HTTPBasicStrategy extends AbstractStrategy{
 
 	protected $storage;
+	protected $options;
 	protected $session_manager;
 	protected $basic_options;
 	protected $request;
@@ -36,6 +37,7 @@ class HTTPBasicStrategy extends AbstractStrategy{
 	){
 		
 		$this->storage = $storage;
+		$this->options = $options;
 		$this->session_manager = $session_manager;
 		$this->request = ($request) ? $request : $this->get_request();
 		$this->response = ($response) ? $response : new Response;
