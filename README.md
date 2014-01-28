@@ -96,6 +96,13 @@ Supply autoloader for each library even if composer is available. Also Dragoon n
 
 Definitely add in ip location tracking and 2 factor login!! Multidevice tracking too. Multifactor login. Like logging into a new ip or new device.
 
+Use next significant release for the composer dependencies! ~ https://getcomposer.org/doc/01-basic-usage.md#next-significant-release-tilde-operator-
+
+Support for Client Certificate Authentication/Mutual Authentication strategy: http://nategood.com/nodejs-ssl-client-cert-auth-api-rest
+http://blog.nategood.com/client-side-certificate-authentication-in-ngi
+http://cweiske.de/tagebuch/ssl-client-certificates.htm
+http://pilif.github.io/2008/05/why-is-nobody-using-ssl-client-certificates/ (Client Certificate Auth is for enhancing password usage, not replacing password usage. Since that native 2 factor because it's about something you have, and something you know. This means that passwordless SSH is actually less secure. The best would be to combine a certificate that you must have, and a password you know. In a way this strategy can allow passwordless login or with password login too!)
+http://wiki.cacert.org/Technology/KnowledgeBase/ClientCerts
 
 Install with Composer
 ---------------------
