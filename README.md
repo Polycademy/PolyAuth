@@ -104,6 +104,22 @@ http://cweiske.de/tagebuch/ssl-client-certificates.htm
 http://pilif.github.io/2008/05/why-is-nobody-using-ssl-client-certificates/ (Client Certificate Auth is for enhancing password usage, not replacing password usage. Since that native 2 factor because it's about something you have, and something you know. This means that passwordless SSH is actually less secure. The best would be to combine a certificate that you must have, and a password you know. In a way this strategy can allow passwordless login or with password login too!)
 http://wiki.cacert.org/Technology/KnowledgeBase/ClientCerts
 
+Multi device authentication.
+
+Tracking logging in statistics from devices.
+
+And tracking login statistics in general.
+
+Can authorise from different devices, and alerting via email when logging in from a new device. Then keeping track of the device.
+
+http://blog.authy.com/multi-device
+
+Also just like steam guard + gmail! 
+
+Add a sudo mode. To allow reauth for important actions: https://help.github.com/articles/sudo-mode
+
+Use HMAC client tokens. This much better than storing tokens on the server side: http://lucumr.pocoo.org/2013/11/17/my-favorite-database/ The tokens might still need to be stored on the server side, but now the associated information like expiration date can be stored on the client side! One could actually simply store the token as an encrypted version of the user's id. Get the ID, and then you know which user this applies to!
+
 Install with Composer
 ---------------------
 
