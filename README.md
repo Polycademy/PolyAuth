@@ -120,6 +120,27 @@ Add a sudo mode. To allow reauth for important actions: https://help.github.com/
 
 Use HMAC client tokens. This much better than storing tokens on the server side: http://lucumr.pocoo.org/2013/11/17/my-favorite-database/ The tokens might still need to be stored on the server side, but now the associated information like expiration date can be stored on the client side! One could actually simply store the token as an encrypted version of the user's id. Get the ID, and then you know which user this applies to!
 
+Test with hhvm. The PolyAuth service may require hhvm + Dragoon.
+
+```
+language: php
+
+php:
+  - 5.3
+  - 5.4
+  - 5.5
+  - hhvm
+
+script:
+  - phpunit --coverage-text
+  - phpunit --group unicode --coverage-text
+
+matrix:
+  allow_failures:
+    - php: hhvm
+  fast_finish: true
+```
+
 Install with Composer
 ---------------------
 
