@@ -93,9 +93,9 @@ class UserAccount extends Subject implements \ArrayAccess{
 
 				$permissions = (!empty($requirements['permissions'])) ? (array) $requirements['permissions'] : false;
 				$roles = (!empty($requirements['roles'])) ? (array) $requirements['roles'] : false;
-				$users = (!empty($requirements['users'])) ? $requirements['users'] : false;
+				$users = (!empty($requirements['users'])) ? (array) $requirements['users'] : false;
 				$scopes = (!empty($requirements['scopes'])) ? (array) $requirements['scopes'] : false;
-				$owners = (!empty($requirements['owners'])) ? $requirements['owners'] : false;
+				$owners = (!empty($requirements['owners'])) ? (array) $requirements['owners'] : false;
 				
 				$permissions_passed = true;
 				if($permissions){
