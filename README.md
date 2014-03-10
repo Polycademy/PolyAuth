@@ -143,6 +143,8 @@ matrix:
 
 Non activated accounts should not be prevented from logging in. Many sites allow partial access to their account, or even setting up settings, before being activated properly. Perhaps even set a time limit, that if the account hasn't been activated yet, it gets deleted (cant be banned). We need to have a STATUS column to indicate primary status. ACTIVE - BANNED - UNACTIVATED - DELETED (soft delete) - PENDING. Or these can be roles that are created, and assigned to the USER. The RBAC should take over this. In the sense that if an account is not activated then it lacks certain permissions.
 
+Account merging so when there are 2 accounts, you can merge ownership and proxy the account to a primary account.
+
 Install with Composer
 ---------------------
 
