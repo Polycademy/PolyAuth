@@ -145,6 +145,12 @@ Non activated accounts should not be prevented from logging in. Many sites allow
 
 Account merging so when there are 2 accounts, you can merge ownership and proxy the account to a primary account.
 
+Activation: three ways:
+
+1. Prevent login - Option or RBAC (in fact, one could have login callbacks of some sort...?)
+2. Allow full access but need activation within certain amount of time - Reimplementation
+3. Prevent features unless fully activated - RBAC
+
 Install with Composer
 ---------------------
 
