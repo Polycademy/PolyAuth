@@ -17,6 +17,7 @@ class Options implements \ArrayAccess{
 		//session options (used for internal session handling)
 		'session_expiration'				=> 43200, //expiration of a single session (client side and server side), this gets reset everytime the session is accessed, can be overwritten for specific SessionManagers for specific AuthStrategies
 		'session_save_path'					=> '', //for filesystem persistence, leave empty for default session save path
+		'session_namespace'					=> 'polyauth', //different apps should have different namespaces
 		'session_gc_probability'			=> '1', //probability of running the session garbage collection (percentage chance to one decimal place)
 		//email options (email data should be passed in as a string, end user manages their own stuff)
 		'email'								=> false, //make this true to use the emails by PHPMailer, otherwise false if you want to roll your own email solution, watch out for email activation

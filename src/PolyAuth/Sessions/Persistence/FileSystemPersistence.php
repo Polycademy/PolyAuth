@@ -15,12 +15,12 @@ class FileSystemPersistence extends AbstractPersistence{
 			$driver = ($driver) ? $driver : new FileSystem(array('path' => $options['session_save_path']));
 		}else{
 			//the reason we put it in its own directory is because some of the caching functions (such as purge) may conflict with files that are not part the stash library, such as for example session files that are placed there by native session drivers
-			$driver = ($driver) ? $driver : new FileSystem(array('path' => session_save_path() . '/polyauth'));
+			$driver = ($driver) ? $driver : new FileSystem(array('path' => session_save_path()));
 		}
 		$cache = ($cache) ? $cache : new Pool;
 		$cache->setDriver($driver);
 		$this->cache = $cache;
-		$this->namespace = 'PolyAuth/FileSystem/Sessions/';
+		$this->namespace = $options['session_namespace'];
 	
 	}
 

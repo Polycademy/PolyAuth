@@ -268,7 +268,7 @@ class SessionManager implements \ArrayAccess{
 
 	protected function generate_session_id(){
 
-		return $this->random->generate(mt_rand(16, 50));
+		return $this->random->generate(mt_rand(10, 40));
 
 	}
 

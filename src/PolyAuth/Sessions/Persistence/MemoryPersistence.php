@@ -13,7 +13,7 @@ class MemoryPersistence extends AbstractPersistence{
 		$cache = ($cache) ? $cache : new Pool();
 		$cache->setDriver($driver);
 		$this->cache = $cache;
-		$this->namespace = 'PolyAuth/Memory/Sessions/';
+		$this->namespace = ''; //memory is already unique, so no need for a particular namespace
 	
 	}
 
