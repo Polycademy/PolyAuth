@@ -151,6 +151,8 @@ Activation: three ways:
 2. Allow full access but need activation within certain amount of time - Reimplementation
 3. Prevent features unless fully activated - RBAC
 
+There needs to be an easy way to figure out whether a user owns a particular resource? Often actions are only allows if the user owns a particular resource, and this can occur in a collection resource too. Such as being able to delete a resource of a collection.
+
 Install with Composer
 ---------------------
 
