@@ -153,6 +153,79 @@ Activation: three ways:
 
 There needs to be an easy way to figure out whether a user owns a particular resource? Often actions are only allows if the user owns a particular resource, and this can occur in a collection resource too. Such as being able to delete a resource of a collection.
 
+The solution to this is to have an `auth_resources` table:
+
+(id might not be required as users is 1 to 1 for this auth_resources table)
+Also this means you do not need any userId columns on other tables now.
+(Removed the id, lets keep it lean)
+| userId (primary indexed) | blogIds | logIds | commentsIds | resIds... | 
+
+    1                         {4}      {2,4}        {78}         {9}... (the {} is serialized)
+
+This is an relational table creating a many to many to many relationship between `users`, `collections`, and `resources`. Remember this has nothing to do with OAuth delegated resource requests. Multiple users can own the same resource. In this of delegation, you must check the relational entities in the other table where access token table. This is therefore a table in which users delegate access tokens to other users... etc
+
+User1 - - CollectionA - Resource76
+    \                \
+     \                Resource89
+      \
+       \               Resource12 (Owned by both User1 and User2)
+        \            /
+        CollectionB - Resource25
+      /
+User2 
+      \
+        CollectionC - Resource4
+
+On the creation or deletion or updating of collections, a corresponding column is created in the auth_resources table.
+
+This allows us to establish relational ownership of resources between users.
+
+Allowing validation of requests to be simply:
+
+$this->user->authorized([
+    'owners' <--  this actually refers to delegated requests I think, basically you know what the resource's owner is, so then you check if the user currently has the ability to access this ownership, either as the user itself, as delegated access, it needs a better name!
+    'resources' => [ (AND BASIS)
+        'blog (resource)'  => id
+        OR
+        'blog (resource)'  => [id, id]
+    ]
+])
+
+OR
+
+resources => ['blog#4', 'log#9']
+
+OR
+
+resources => 'blog4'
+
+This means you can do this in many requests:
+
+if($this->user->authorized([
+    'roles' => 'admin'
+], [
+    'resources' => 'blog#4'
+])){
+    
+    //proceed with the knowledge that the user either is an admin, or owns the 4th blog post
+
+}
+
+All tables need to be standardised under auth_... etc.
+
+Also on startup, these things will be parsed and loaded under the user account object.
+
+foreach($resources as $key => value){
+    $key ---> blog..etc
+    $value ---> unserialize($value) ---> [4, 5, 6, 7, 8]
+}
+
+BTW we should shift to using Collection objects rather than arrays.
+
+Now updating this auth_resources table involves 2 things, either adding more columns to represent resources (finite) or adding more ids to a particular collection. It should be done through the accounts_manager class. Because the user_account object is temporal, it's a copy not a reference to the saved user_account object.
+
+Also use json_encode/decode not serialize/unserialize. The encoding is faster, decoding is slightly slower, but the size is much better with json_encode/decode, also it's easily readable and processable by other languages.
+
 Install with Composer
 ---------------------
 
