@@ -226,6 +226,8 @@ Now updating this auth_resources table involves 2 things, either adding more col
 
 Also use json_encode/decode not serialize/unserialize. The encoding is faster, decoding is slightly slower, but the size is much better with json_encode/decode, also it's easily readable and processable by other languages.
 
+Hierarchal RBAC can be turned into Hierarchal object namespaced permissions. This allows roles to be interchangeable with multitenancy such as organisations. No longer checking for roles or permissions, instead you just check permissions => 'role.subrole.permission'. Hierarchal permissions! Since permissions are namespaced, they can have the same name. Thus a UI could be built for it.
+
 Install with Composer
 ---------------------
 
