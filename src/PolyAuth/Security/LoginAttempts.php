@@ -5,22 +5,26 @@ namespace PolyAuth\Security;
 use PolyAuth\Options;
 use PolyAuth\Storage\StorageInterface;
 use Symfony\Component\HttpFoundation\Request;
+use PolyAuth\Security\IpTransformer;
 
 class LoginAttempts{
 
 	protected $storage;
 	protected $options;
 	protected $request;
+	protected $ip_transformer;
 
 	public function __construct(
 		StorageInterface $storage, 
 		Options $options,
-		Request $request = null
+		Request $request = null,
+		IpTransformer $ip_transformer = null
 	){
 	
 		$this->storage = $storage;
 		$this->options = $options;
 		$this->request = ($request) ? $request : Request::createFromGlobals();
+		$this->ip_transformer = ($ip_transformer) ? $ip_transformer : new IpTransformer;
 
 	}
 	
@@ -46,7 +50,10 @@ class LoginAttempts{
 			)
 		){
 
-			$row = $this->storage->locked_out($identity, $this->get_ip());
+			$row = $this->storage->locked_out(
+				$identity, 
+				$this->ip_transformer->insert($this->request->getClientIp())
+			);
 
 			if(!$row){
 				return false;
@@ -88,7 +95,10 @@ class LoginAttempts{
 	 */
 	public function increment($identity){
 
-		return $this->storage->increment_login_attempt($identity, $this->get_ip());
+		return $this->storage->increment_login_attempt(
+			$identity, 
+			$this->ip_transformer->insert($this->request->getClientIp())
+		);
 	
 	}
 	
@@ -118,24 +128,16 @@ class LoginAttempts{
 			)
 		){
 
-			return $this->storage->clear_login_attempts($identity, $this->get_ip(), $either_or);
+			return $this->storage->clear_login_attempts(
+				$identity, 
+				$this->ip_transformer->insert($this->request->getClientIp()), 
+				$either_or
+			);
 			
 		}
 		
 		return false;
 	
-	}
-	
-	/**
-	 * Helper function to get the ip and format it correctly for insertion.
-	 *
-	 * @return $ip_address binary | string
-	 */
-	protected function get_ip() {
-	
-		$ip_address = $this->request->getClientIp();
-		return inet_pton($ip_address);
-		
 	}
 
 }

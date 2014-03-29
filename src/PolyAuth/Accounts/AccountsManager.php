@@ -9,14 +9,13 @@ use PolyAuth\Storage\StorageInterface;
 use PolyAuth\UserAccount;
 use PolyAuth\Accounts\Rbac;
 
+use PolyAuth\Security\IpTransformer;
 use PolyAuth\Security\PasswordComplexity;
 use PolyAuth\Security\Random;
 use PolyAuth\Security\Encryption;
 
 use PolyAuth\Emailer;
 use PolyAuth\Security\LoginAttempts;
-
-use Symfony\Component\HttpFoundation\Request;
 
 use PolyAuth\Exceptions\ValidationExceptions\RegisterValidationException;
 use PolyAuth\Exceptions\ValidationExceptions\PasswordValidationException;
@@ -30,36 +29,36 @@ class AccountsManager{
 	protected $options;
 	protected $lang;
 	protected $rbac;
+	protected $ip_transformer;
 	protected $password_complexity;
 	protected $random;
 	protected $encryption;
 	protected $emailer;
 	protected $login_attempts;
-	protected $request;
 	
 	public function __construct(
 		StorageInterface $storage, 
 		Options $options, 
 		Language $language, 
 		Rbac $rbac = null, 
+		IpTransformer $ip_transformer = null, 
 		PasswordComplexity $password_complexity = null, 
 		Random $random = null, 
 		Encryption $encryption = null,
 		Emailer $emailer = null,
-		LoginAttempts $login_attempts = null,
-		Request $request = null
+		LoginAttempts $login_attempts = null
 	){
 	
 		$this->storage = $storage;
 		$this->options = $options;
 		$this->lang = $language;
 		$this->rbac  = ($rbac) ? $rbac : new Rbac($storage, $language);
+		$this->ip_transformer = ($ip_transformer) ? $ip_transformer : new IpTransformer;
 		$this->password_complexity = ($password_complexity) ? $password_complexity : new PasswordComplexity($options, $language);
 		$this->random = ($random) ? $random : new Random;
 		$this->encryption = ($encryption) ? $encryption : new Encryption();
 		$this->emailer = ($emailer) ? $emailer : new Emailer($options, $language);
 		$this->login_attempts = ($login_attempts) ? $login_attempts : new LoginAttempts($storage, $options);
-		$this->request = ($request) ? $request : Request::createFromGlobals();
 		
 	}
 	
@@ -94,8 +93,14 @@ class AccountsManager{
 			throw new PasswordValidationException($this->password_complexity->get_error());
 		}
 		
-		//constructing the payload now
-		$data['ipAddress'] = $this->get_ip();
+		//ip address will only be inserted if it was passed in during registration
+		if(!empty($data['ipAddress'])){
+			$data['ipAddress'] = $this->ip_transformer->insert($data['ipAddress']);
+		}else{
+			unset($data['ipAddress']);
+		}
+		
+		//hash the password
 		$data['password'] = password_hash($data['password'], $this->options['hash_method'], ['cost' => $this->options['hash_rounds']]);
 		
 		if($force_active){
@@ -533,8 +538,12 @@ class AccountsManager{
 			throw new UserDuplicateException($this->lang["account_creation_duplicate_{$this->options['login_identity']}"]);
 		}
 		
-		//constructing the payload now
-		$data['ipAddress'] = $this->get_ip();
+		//ip address will only be inserted if it was passed in during registration
+		if(!empty($data['ipAddress'])){
+			$data['ipAddress'] = $this->ip_transformer->insert($data['ipAddress']);
+		}else{
+			unset($data['ipAddress']);
+		}
 		
 		$data += array(
 		    'createdOn'	=> date('Y-m-d H:i:s'),
@@ -650,7 +659,10 @@ class AccountsManager{
 		//remove the password, decrypt the sharedKey and convert the ipAddress to human readable form
 		unset($row->password);
 		$row->sharedKey = $this->encryption->decrypt($row->sharedKey, $this->options['shared_key_encryption']);
-		$row->ipAddress = inet_ntop($row->ipAddress);
+		$row->ipAddress 
+		if(!empty($row->ipAddress)){
+			$row->ipAddress = $this->ip_transformer->extract($row->ipAddress);
+		}
 		$user = new UserAccount($row->id);
 		$user->set_user_data($row);
 		$user = $this->rbac->load_subject_roles($user);
@@ -698,7 +710,9 @@ class AccountsManager{
 			//remove the password, decrypt the sharedKey and convert the ipAddress to human readable form
 			unset($row->password);
 			$row->sharedKey = $this->encryption->decrypt($row->sharedKey, $this->options['shared_key_encryption']);
-			$row->ipAddress = inet_ntop($row->ipAddress);
+			if(!empty($row->ipAddress)){
+				$row->ipAddress = $this->ip_transformer->extract($row->ipAddress);
+			}
 			$user = new UserAccount($row->id);
 			$user->set_user_data($row);
 			$user = $this->rbac->load_subject_roles($user);
@@ -828,7 +842,9 @@ class AccountsManager{
 		}
 
 		//refresh the ip address to the current user
-		$data['ipAddress'] = $this->get_ip();
+		if(isset($data['ipAddress'])){
+			$data['ipAddress'] = $this->ip_transformer->insert($data['ipAddress']);
+		}
 
 		//validate if the columns are correct
 		$columns = array_keys($user->get_user_data());
@@ -879,18 +895,6 @@ class AccountsManager{
 
 		return false;
 	
-	}
-
-	/**
-	 * Helper function to get the ip and format it correctly for insertion.
-	 *
-	 * @return $ip_address binary | string
-	 */
-	protected function get_ip() {
-	
-		$ip_address = $this->request->getClientIp();
-		return inet_pton($ip_address);
-		
 	}
 
 }

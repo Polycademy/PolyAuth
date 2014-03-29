@@ -8,6 +8,7 @@ use PolyAuth\Options;
 use PolyAuth\Language;
 use PolyAuth\Accounts\AccountsManager;
 use PolyAuth\Accounts\Rbac;
+use PolyAuth\Security\IpTransformer;
 use PolyAuth\Security\LoginAttempts;
 
 use PolyAuth\UserAccount;
@@ -31,6 +32,7 @@ class Authenticator{
 	protected $lang;
 	protected $accounts_manager;
 	protected $rbac;
+	protected $ip_transformer;
 	protected $login_attempts;
 	protected $request;
 
@@ -43,6 +45,7 @@ class Authenticator{
 		Language $language, 
 		AccountsManager $accounts_manager = null, 
 		Rbac $rbac = null,
+		IpTransformer $ip_transformer = null, 
 		LoginAttempts $login_attempts = null,
 		Request $request = null
 	){
@@ -53,6 +56,7 @@ class Authenticator{
 		$this->lang = $language;
 		$this->accounts_manager = ($accounts_manager) ? $accounts_manager : new AccountsManager($storage, $options, $language);
 		$this->rbac = ($rbac) ? $rbac : new Rbac($storage, $language);
+		$this->ip_transformer = ($ip_transformer) ? $ip_transformer : new IpTransformer;
 		$this->login_attempts = ($login_attempts) ? $login_attempts : new LoginAttempts($storage, $options);
 		$this->request = ($request) ? $request : Request::createFromGlobals();
 	
@@ -188,7 +192,10 @@ class Authenticator{
 		//set the user
 		$this->set_session_state($user);
 
-		$this->storage->update_last_login($this->user['id'], $this->get_ip());
+		$this->storage->update_last_login(
+			$this->user['id'], 
+			$this->ip_transformer->insert($this->request->getClientIp())
+		);
 
 		$this->check_inactive($this->user);
 		$this->check_banned($this->user);
@@ -297,7 +304,10 @@ class Authenticator{
 			//user is now logged in
 			$this->set_session_state($user);
 
-			$this->storage->update_last_login($this->user['id'], $this->get_ip());
+			$this->storage->update_last_login(
+				$this->user['id'], 
+				$this->ip_transformer->insert($this->request->getClientIp())
+			);
 			
 			//final checks before we proceed (inactive or banned would logout the user)
 			$this->check_inactive($this->user);
@@ -385,18 +395,6 @@ class Authenticator{
 		if($user['passwordChange'] == 1){
 			throw new UserPasswordChangeException($this->lang['password_change_required']);
 		}
-		
-	}
-
-	/**
-	 * Helper function to get the ip and format it correctly for insertion.
-	 *
-	 * @return $ip_address binary | string
-	 */
-	protected function get_ip() {
-	
-		$ip_address = $this->request->getClientIp();
-		return inet_pton($ip_address);
 		
 	}
 	
