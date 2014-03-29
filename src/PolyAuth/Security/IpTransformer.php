@@ -11,7 +11,7 @@ class IpTransformer{
      *
      * @return $ip binary
      */
-    protected insert($ip){
+    public function insert($ip){
 
         //in_addr binary
         if(ctype_print($ip)){
@@ -29,7 +29,7 @@ class IpTransformer{
      *
      * @return $ip string
      */
-    protected extract($ip){
+    public function extract($ip){
 
         //human readable string
         if(ctype_print($ip)){

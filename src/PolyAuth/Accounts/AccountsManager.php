@@ -659,7 +659,6 @@ class AccountsManager{
 		//remove the password, decrypt the sharedKey and convert the ipAddress to human readable form
 		unset($row->password);
 		$row->sharedKey = $this->encryption->decrypt($row->sharedKey, $this->options['shared_key_encryption']);
-		$row->ipAddress 
 		if(!empty($row->ipAddress)){
 			$row->ipAddress = $this->ip_transformer->extract($row->ipAddress);
 		}
