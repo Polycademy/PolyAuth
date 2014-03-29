@@ -241,6 +241,11 @@ And that's it. We shift the complexity and the flexibility of setting up the cac
 Also everything should be DI based and interface based, no more creating default dependencies.
 Instead of requesting an Options object, request an array. And pass in global options when needed, pass in specific options when otherwise. Also collection object would be better! Since you could have something like lenient array access.
 
+Remove Emailer, instead create Interfaces folder holding a Notification interface that allows PolyAuth to notify people in whatever ways they want.
+
+Create a Config folder holding Options and Language.
+
+Create Utilities folder and put the utilities into this including the LoggerTrait and Random and other stuff.
 
 Install with Composer
 ---------------------
