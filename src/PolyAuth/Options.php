@@ -2,6 +2,11 @@
 
 namespace PolyAuth;
 
+//OPTIONS object needs to be OPTIONAL. So every class does not type hint the Options object, but rather typehints an array.
+//That way we can just pass in anything that can be accessed as an array, so configuration can be passed in the particular classes independently, or as a single monolothic Options Object.
+//This also means every class needs to settle their own defaults regarding property settings.
+//This means every class needs to use Symfony Options Resolver (its very useful!) (it's like validation but for class objects)
+
 //standard options object to be passed in
 class Options implements \ArrayAccess{
 
@@ -18,7 +23,9 @@ class Options implements \ArrayAccess{
 		'session_expiration'				=> 43200, //expiration of a single session (client side and server side), this gets reset everytime the session is accessed, can be overwritten for specific SessionManagers for specific AuthStrategies
 		'session_save_path'					=> '', //for filesystem persistence, leave empty for default session save path
 		'session_namespace'					=> 'polyauth', //different apps should have different namespaces
-		'session_gc_probability'			=> '1', //probability of running the session garbage collection (percentage chance to one decimal place)
+		'session_gc_probability'			=> 1, //probability of running the session garbage collection (percentage chance to two decimal places), set to 0 to disable automatic garbage collection (GC is not needed for every session persistence strategy, and in production you should be running GC out of band via regular scheduled task, this is for convenience)
+		'session_redis_server'				=> '127.0.0.1',
+		'session_redis_port'				=> '6379',
 		//email options (email data should be passed in as a string, end user manages their own stuff)
 		'email'								=> false, //make this true to use the emails by PHPMailer, otherwise false if you want to roll your own email solution, watch out for email activation
 		'email_smtp'						=> false,

@@ -220,6 +220,9 @@ foreach($resources as $key => value){
     $value ---> unserialize($value) ---> [4, 5, 6, 7, 8]
 }
 
+AUTH RESOURCES should use CLOSURE TABLE method. IT's the best for MySQL.
+http://www.slideshare.net/billkarwin/models-for-hierarchical-data
+
 BTW we should shift to using Collection objects rather than arrays.
 
 Now updating this auth_resources table involves 2 things, either adding more columns to represent resources (finite) or adding more ids to a particular collection. It should be done through the accounts_manager class. Because the user_account object is temporal, it's a copy not a reference to the saved user_account object.
@@ -227,6 +230,17 @@ Now updating this auth_resources table involves 2 things, either adding more col
 Also use json_encode/decode not serialize/unserialize. The encoding is faster, decoding is slightly slower, but the size is much better with json_encode/decode, also it's easily readable and processable by other languages.
 
 Hierarchal RBAC can be turned into Hierarchal object namespaced permissions. This allows roles to be interchangeable with multitenancy such as organisations. No longer checking for roles or permissions, instead you just check permissions => 'role.subrole.permission'. Hierarchal permissions! Since permissions are namespaced, they can have the same name. Thus a UI could be built for it.
+
+SESSION MANAGER is flawed. On average, there is 6 requests to the filesystem acquiring the exact same data on every HTTP request. This is stupid. This is happening because that SessionManager is ArrayAccessible object which is acquiring the session data from the remote source, every single time when using isset, set or get. There needs be a way to acquire the data at the beginning, do our checks, and then commit. Max 2 requests to the filesystem on every HTTP requets. One to acquire the data, one to commit the data. The solution to this is to make sure SessionManager caches the remote file source in memory during its operation. A commit is always a real commit.
+
+SessionManager should use the Cache interfaces like PoolInterface and DriverInterface.
+The point is SessionManager needs a persistence object.
+The persistence object can be SessionPersistence.
+This thing requests a Stash\Interfaces\PoolInterface essentially the cache to be put in. This should eventually be standardised into PSR-6 caching interface.
+And that's it. We shift the complexity and the flexibility of setting up the cache to the end user.
+Also everything should be DI based and interface based, no more creating default dependencies.
+Instead of requesting an Options object, request an array. And pass in global options when needed, pass in specific options when otherwise. Also collection object would be better! Since you could have something like lenient array access.
+
 
 Install with Composer
 ---------------------
