@@ -24,4 +24,12 @@ class FileSystemPersistence extends AbstractPersistence{
 	
 	}
 
+	public function garbage_collection($probability){
+
+		if((mt_rand(0, 10000)/100) <= $probability){
+			$this->purge();
+		}
+
+	}
+
 }

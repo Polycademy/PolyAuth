@@ -89,16 +89,22 @@ class SessionManager implements \ArrayAccess{
 	 * expired sessions. If a session id is passed in, and it has expired, then it will 
 	 * restart a new session
 	 * @param  Boolean $session_id       Tracked session id
+	 * @param  Boolean $subsequent       Whether this call is a first time call or subsequent call
 	 * @return String  $this->session_id New session id         
 	 */
-	public function start($session_id = false){
+	public function start($session_id = false, $subsequent = false){
 
 		//if session has already started, no need to start the session again!
 		if($this->session_id){
 			return true;
 		}
 
-		$this->run_gc();
+		if($this->options['session_gc_probability'] > 0){
+			//only run garbage collection if the persistence supports and needs garbage collection
+			if(!$subsequent AND is_callable(array($this->persistence, 'garbage_collection'))){
+				$this->persistence->garbage_collection($this->options['session_gc_probability']);
+			}
+		}
 
 		//if current session id doesn't exist, we are going to generate a new one
 		if(!$session_id){
@@ -114,7 +120,7 @@ class SessionManager implements \ArrayAccess{
 				$this->session_id = $session_id;
 				$this->persistence->set($this->session_id, $this->persistence->get($this->session_id), $this->session_expiration);
 			}else{
-				return $this->start();
+				return $this->start(false, true);
 			}
 
 		}
@@ -201,6 +207,15 @@ class SessionManager implements \ArrayAccess{
 	}
 
 	/**
+	 * Forces a purging of all stale data. This can be used as out of band garbage collection if auto garbage collection is not enabled.
+	 */
+	public function purge_all(){
+
+		$this->persistence->purge();
+
+	}
+
+	/**
 	 * Clears all the session data except the keys passed into the array.
 	 * It also resets the expiration.
 	 * @param  array $except Array of keys to except from deletion
@@ -269,17 +284,6 @@ class SessionManager implements \ArrayAccess{
 	protected function generate_session_id(){
 
 		return $this->random->generate(mt_rand(10, 40));
-
-	}
-
-	//called on every call to start(), given probabilities similar to how PHP does it
-	//this runs it on the persistence layer
-	protected function run_gc(){
-
-		//runs some probabilities
-		if((mt_rand(0, 1000)/10) <= $this->options['session_gc_probability']){
-			$this->persistence->purge();
-		}
 
 	}
 
