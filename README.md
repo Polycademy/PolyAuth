@@ -145,11 +145,12 @@ Non activated accounts should not be prevented from logging in. Many sites allow
 
 Account merging so when there are 2 accounts, you can merge ownership and proxy the account to a primary account.
 
-Activation: three ways:
+Activation: four ways:
 
 1. Prevent login - Option or RBAC (in fact, one could have login callbacks of some sort...?)
 2. Allow full access but need activation within certain amount of time - Reimplementation
 3. Prevent features unless fully activated - RBAC
+4. What happens if the user changed their email? Is the account still activated? I think changing the email needs the email to be revalidated, unless you don't care. In most cases, changing the email require that email to be confirmed, because the change is committed.
 
 There needs to be an easy way to figure out whether a user owns a particular resource? Often actions are only allows if the user owns a particular resource, and this can occur in a collection resource too. Such as being able to delete a resource of a collection.
 
@@ -231,8 +232,6 @@ Also use json_encode/decode not serialize/unserialize. The encoding is faster, d
 
 Hierarchal RBAC can be turned into Hierarchal object namespaced permissions. This allows roles to be interchangeable with multitenancy such as organisations. No longer checking for roles or permissions, instead you just check permissions => 'role.subrole.permission'. Hierarchal permissions! Since permissions are namespaced, they can have the same name. Thus a UI could be built for it.
 
-SESSION MANAGER is flawed. On average, there is 6 requests to the filesystem acquiring the exact same data on every HTTP request. This is stupid. This is happening because that SessionManager is ArrayAccessible object which is acquiring the session data from the remote source, every single time when using isset, set or get. There needs be a way to acquire the data at the beginning, do our checks, and then commit. Max 2 requests to the filesystem on every HTTP requets. One to acquire the data, one to commit the data. The solution to this is to make sure SessionManager caches the remote file source in memory during its operation. A commit is always a real commit.
-
 SessionManager should use the Cache interfaces like PoolInterface and DriverInterface.
 The point is SessionManager needs a persistence object.
 The persistence object can be SessionPersistence.
@@ -246,6 +245,10 @@ Remove Emailer, instead create Interfaces folder holding a Notification interfac
 Create a Config folder holding Options and Language.
 
 Create Utilities folder and put the utilities into this including the LoggerTrait and Random and other stuff.
+
+Temporary tokens like Autologin token, forgotten password token, temporary login tokens should be moved to a separate table. These are temporary, so they could even be put in something like Redis or other caching systems.
+
+Note that OAuth tokens are permanent, so they need to be put into a safe data source.
 
 Install with Composer
 ---------------------
