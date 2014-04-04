@@ -63,6 +63,8 @@ class Language implements \ArrayAccess{
 		'email_activation_subject'				=> 'Account Activation PolyAuth',
 		'email_forgotten_identity_subject'		=> 'Forgotten Identity PolyAuth',
 		'email_forgotten_password_subject'		=> 'Forgotten Password PolyAuth',
+		'forgotten_identity_email_unsuccessful'	=> 'Could not send forgotten identity email',
+		'forgotten_password_email_unsuccessful'	=> 'Could not send forgotten password email',
 		// Session
 		'session_expire'						=> 'Session id or token has expired.',
 		// Http
