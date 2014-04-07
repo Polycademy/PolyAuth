@@ -11,8 +11,6 @@ use PolyAuth\Exceptions\EmailException;
 
 class Emailer implements LoggerAwareInterface{
 
-	use \PolyAuth\LoggerTrait;
-
 	protected $options;
 	protected $lang;
 	protected $logger;

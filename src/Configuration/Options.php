@@ -1,14 +1,16 @@
 <?php
 
-namespace PolyAuth;
+namespace PolyAuth\Configuration;
 
-//OPTIONS object needs to be OPTIONAL. So every class does not type hint the Options object, but rather typehints an array.
-//That way we can just pass in anything that can be accessed as an array, so configuration can be passed in the particular classes independently, or as a single monolothic Options Object.
-//This also means every class needs to settle their own defaults regarding property settings.
-//This means every class needs to use Symfony Options Resolver (its very useful!) (it's like validation but for class objects)
+use PhpCollection\Map;
+use JMS\Serializer\SerializerBuilder;
 
-//standard options object to be passed in
-class Options implements \ArrayAccess{
+use PolyAuth\Exceptions\CodeExceptions\InvalidArgumentException;
+
+/**
+ * Options implements SortableInterface, IteratorAggregate, MapInterface, CollectionInterface, Traversable
+ */
+class Options extends Map {
 
 	public $options = array(
 		//table options, see that the migration to be reflected. (RBAC options are not negotiable)
@@ -93,37 +95,59 @@ class Options implements \ArrayAccess{
 		),
 		'external_token_encryption'			=> false, //if this is false, we will not encrypt the token data, otherwise provide a random key, only set this once, if you change this option, you'll need to manually encrypt/decrypt all the database tokens
 	);
-	
-	public function __construct(array $options = null){
-		
-		if($options){
-			$this->set_options($options);
+
+	protected $serializer;
+
+	/**
+	 * Constructs a shared Options object.
+	 * The Options object is completely optional. 
+	 * Each class in PolyAuth can be utilised independent of the Options object.
+	 * However this object provides suggested option defaults for painless PolyAuth integration.
+	 * 
+	 * @param array|Traversable $options
+	 */
+	public function __construct ($options = null) {
+
+		//turn this into a trait
+		if (!is_null($options)) {
+			if (is_array($options)) {
+				$this->options = array_merge($this->options, $options);
+			} elseif ($options instanceof Traversable) {
+				$this->options = array_merge($this->options, iterator_to_array($options));
+			} else {
+				throw new InvalidArgumentException('Options constructor parameter $options must be either type array or Traversable.');
+			}
 		}
-		
+
+		$this->setAll($this->options);
+
+		$this->serializer = SerializerBuilder::create()->build();
+
 	}
-	
-	public function set_options(array $options){
-		$this->options = array_merge($this->options, $options);
+
+	public function toArray () {
+
+		//this should be changed to a function to prevent us from using the internals of the parent, which is leaky
+		return $this->elements;
+
 	}
-	
-	public function offsetSet($offset, $value) {
-		if (is_null($offset)) {
-			$this->options[] = $value;
-		} else {
-			$this->options[$offset] = $value;
-		}
+
+	public function toJson () {
+
+		return $this->serializer->serialize($this->elements, 'json');
+
 	}
-	
-	public function offsetExists($offset) {
-		return isset($this->options[$offset]);
+
+	public function toXml () {
+
+		return $this->serializer->serialize($this->elements, 'xml');
+
 	}
-	
-	public function offsetUnset($offset) {
-		unset($this->options[$offset]);
-	}
-	
-	public function offsetGet($offset) {
-		return isset($this->options[$offset]) ? $this->options[$offset] : null;
+
+	public function toYml () {
+
+		return $this->serializer->serialize($this->elements, 'yml');
+
 	}
 
 }

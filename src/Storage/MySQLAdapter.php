@@ -1,5 +1,7 @@
 <?php
 
+//WE'RE GOING TO USE TRAITS HERE...
+
 namespace PolyAuth\Storage;
 
 use PDO;
