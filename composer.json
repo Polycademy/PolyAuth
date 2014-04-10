@@ -20,6 +20,7 @@
 		"ircmaxell/password-compat": "~1.0",
 		"symfony/console": "~2.4",
 		"symfony/http-foundation": "~2.1",
+		"symfony/expression-language": "~2.4",
 		"symfony/options-resolver": "~2.1",
 		"phpcollection/phpcollection": "~0.4",
 		"phpoption/phpoption": "~1.4",
@@ -28,8 +29,7 @@
 		"lusitanian/oauth": "~0.3",
 		"rmccue/requests": "~1.6",
 		"querypath/QueryPath": "~3.0",
-		"tedivm/stash": "~0.11.6",
-		"mormat/php-formula-interpreter": "dev-master"
+		"tedivm/stash": "~0.11.6"
 	},
 	"require-dev": {
 		"codeception/codeception": "~1.8",

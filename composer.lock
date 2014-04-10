@@ -3,7 +3,7 @@
         "This file locks the dependencies of your project to a known state",
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
-    "hash": "7f41509fa252870adbac656a393c6d73",
+    "hash": "99ffb6928a925587657e72d31a527ac7",
     "packages": [
         {
             "name": "dflydev/hawk",
@@ -681,45 +681,6 @@
             "time": "2014-03-30 13:50:10"
         },
         {
-            "name": "mormat/php-formula-interpreter",
-            "version": "dev-master",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/mormat/php-formula-interpreter.git",
-                "reference": "0bad8a2e105d6735794e6da76add590ef6550cb9"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/mormat/php-formula-interpreter/zipball/0bad8a2e105d6735794e6da76add590ef6550cb9",
-                "reference": "0bad8a2e105d6735794e6da76add590ef6550cb9",
-                "shasum": ""
-            },
-            "require-dev": {
-                "symfony/class-loader": "2.1.*"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-0": {
-                    "FormulaInterpreter": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "mormat",
-                    "email": "mormat@free.fr"
-                }
-            ],
-            "description": "Formula interpreter for PHP",
-            "keywords": [
-                "php"
-            ],
-            "time": "2013-03-21 11:11:28"
-        },
-        {
             "name": "nesbot/carbon",
             "version": "1.8.0",
             "source": {
@@ -1141,6 +1102,55 @@
             "description": "Symfony Console Component",
             "homepage": "http://symfony.com",
             "time": "2014-03-01 17:35:04"
+        },
+        {
+            "name": "symfony/expression-language",
+            "version": "v2.4.3",
+            "target-dir": "Symfony/Component/ExpressionLanguage",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/symfony/expression-language.git",
+                "reference": "68bbeb713e0c08b6e86d1287b1e46e47738758fb"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/symfony/expression-language/zipball/68bbeb713e0c08b6e86d1287b1e46e47738758fb",
+                "reference": "68bbeb713e0c08b6e86d1287b1e46e47738758fb",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.3.3"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "2.4-dev"
+                }
+            },
+            "autoload": {
+                "psr-0": {
+                    "Symfony\\Component\\ExpressionLanguage\\": ""
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Fabien Potencier",
+                    "email": "fabien@symfony.com",
+                    "homepage": "http://fabien.potencier.org",
+                    "role": "Lead Developer"
+                },
+                {
+                    "name": "Symfony Community",
+                    "homepage": "http://symfony.com/contributors"
+                }
+            ],
+            "description": "Symfony ExpressionLanguage Component",
+            "homepage": "http://symfony.com",
+            "time": "2014-02-27 13:31:09"
         },
         {
             "name": "symfony/http-foundation",
@@ -3079,9 +3089,9 @@
 
     ],
     "minimum-stability": "stable",
-    "stability-flags": {
-        "mormat/php-formula-interpreter": 20
-    },
+    "stability-flags": [
+
+    ],
     "platform": {
         "php": ">=5.4"
     },
