@@ -270,3 +270,19 @@ Make sure the `session_save_path()` is writable!
 This does not do filtering or validation of data input. You still need to do this to prevent any problems. This does not do CSRF checks. I do not consider that to be part of a user authentication system. This also does not force you or check for SSL, that should be your job!
 
 Authorization header needs to be available to the PHP runtime. Apache and Fast-CGI will work. However PHP-FPM currently does not support `getallheaders()`, but most web servers such as NGINX will pass the Authorization header. If you're paranoid, just check if `HTTP_AUTHORIZATION` is present your `$_SERVER` global variable, and if isn't you'll need to manually it in the web server configuration. Test with a non HTTP basic Authorization header. It could just be `Authorization: Lol`.
+
+Plan
+----
+
+Account federation/joining is definitely required. Especially if one has created the same account twice. Will set one as precedent, and the other as merging.
+
+Use the new collection: https://github.com/schmittjoh/php-collection/pull/15
+
+Links:
+http://www.php.net/manual/en/spl.exceptions.php
+https://github.com/schmittjoh/php-option
+http://jmsyst.com/libs/php-collection
+http://jmsyst.com/libs/serializer
+http://symfony.com/doc/current/components/options_resolver.html
+www.slideshare.net/billkarwin/models-for-hierarchical-data (RELATIONAL TO USERS)
+https://github.com/piwik/device-detector/issues/1
