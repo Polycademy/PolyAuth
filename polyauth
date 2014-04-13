@@ -5,3 +5,5 @@ require __DIR__ . '/vendor/autoload.php';
 
 $application = new \PolyAuth\GenerateApplication;
 $application->run();
+
+//this will need to process a config file, relating to the connection to database, it will need to be able to support all the adapters
