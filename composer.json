@@ -28,8 +28,8 @@
 		"dflydev/hawk": "0.0.0",
 		"lusitanian/oauth": "~0.3",
 		"rmccue/requests": "~1.6",
-		"querypath/QueryPath": "~3.0",
-		"tedivm/stash": "~0.11.6"
+		"tedivm/stash": "~0.11.6",
+		"willdurand/geocoder": "~2.4"
 	},
 	"require-dev": {
 		"codeception/codeception": "~1.8",
