@@ -40,6 +40,7 @@ EXECUTE statement;
  * Which means in the case of OAuth, third party clients and users are both registered here.
  * It is possible for a human user to have multiple accounts due to OAuth or multiple identities.
  * Multitenancy can be resolved with roles or groups or both.
+ * User status can be: registered, activated, unactivated, or banned.
  */
 
 SET @account_create = CONCAT(
@@ -201,13 +202,11 @@ EXECUTE statement;
 
 /**
  * PolyAuth Tracking
- * This will be tracking and fingerprinting all sessions, so it can guard against nefarious 
+ * This will be tracking and fingerprinting all requests, so it can guard against nefarious 
  * behaviour or account hijacking. Each user can have one to many relationship to tracking rows.
- * This fingerprints, the ip address (thus country), the useragent, and operating system.
- * In terms of sessions, this tracks every single time a new session is created. A new session is 
- * created every time someone logs in, or regenerates. In case of OAuth, a new session is created 
- * on every request. This will only submit unique fingerprints. There will not be duplicate 
- * fingerprints. The date field will be updated to the last time such as session was utilised.
+ * This will only submit unique fingerprints. There will not be duplicate fingerprints. 
+ * The date field will be updated to the last time such as session was utilised.
+ * The status field indicates whether this fingerprint has been confirmed or unconfirmed.
  */
 
 SET @tracking_create = CONCAT(
@@ -215,6 +214,8 @@ SET @tracking_create = CONCAT(
     @table_tracking,
     ' (
         `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+        `status` varchar(50) NOT NULL,
+        `date` datetime NOT NULL,
         `ipAddress` varbinary(16) NOT NULL,
         `country` varchar(255) NOT NULL,
         `city` varchar (255 NOT NULL,
@@ -222,7 +223,6 @@ SET @tracking_create = CONCAT(
         `os` text NOT NULL,
         `device` text NOT NULL,
         `model` text NOT NULL,
-        `date` datetime NOT NULL,
         PRIMARY KEY (`id`),
         UNIQUE KEY `uniq_tracking` (
             `ipAddress`, 
