@@ -286,3 +286,23 @@ http://jmsyst.com/libs/serializer
 http://symfony.com/doc/current/components/options_resolver.html
 www.slideshare.net/billkarwin/models-for-hierarchical-data (RELATIONAL TO USERS)
 https://github.com/piwik/device-detector/issues/1
+
+FSM for the users
+
+registered - INITIAL
+unactivated - NORMAL
+activated - NORMAL
+banned - FINAL
+
+registered -> activated => activation
+registered -> banned => banning
+registered -> unactivated => deactivation
+
+unactivated -> activated => reactivation
+unactivated -> banned => banning
+
+activated -> banned => bannding
+
+FSM for the tracking
+
+unconfirmed (initial) -> confirmed (final) => confirming
