@@ -46,5 +46,6 @@ Our Cache needs to support:
     c) autologinCode & autologinExpiry
     d) confirmCode & confirmExpiry -> for password change confirmation, but also authorisation confirmation (for device tracking for example)
     e) loginCode & loginExpiry
+    f) authorizationCode & authorizationExpiry -> For OAuth 3 legged login
 
 All of which expire over time. So this is why an in-memory cache is useful here, as it can do automatic garbage cleaning over time.
