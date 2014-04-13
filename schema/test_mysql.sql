@@ -189,6 +189,7 @@ SET @delegation_create = CONCAT(
         `clientId` int(11) UNSIGNED NOT NULL,
         `providerId` int(11) UNSIGNED NOT NULL,
         `accessToken` text NOT NULL,
+        `accessTokenExpiry` datetime NOT NULL,
         `refreshToken` text NOT NULL,
         PRIMARY KEY (`id`)
     ) ',
