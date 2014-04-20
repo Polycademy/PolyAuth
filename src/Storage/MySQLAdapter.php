@@ -39,6 +39,27 @@ class MySQLAdapter implements StorageInterface{
 
 	}
 
+	/**
+	 * Intended for static construction, used by the CLI tools.
+	 * 
+	 * @param  Options $options [description]
+	 * @param  [type]  $logger  [description]
+	 * @return [type]           [description]
+	 */
+	public static function create(Options $options, LoggerInterface $logger = null) {
+
+		return new MySQLAdapter(
+			new PDO(
+				$options['database']['dsn'], 
+				$options['database']['username'], 
+				$password['database']['password']
+			), 
+			$options,
+			$logger
+		);
+
+	}
+
 	//////////////////////
 	// ACCOUNTS MANAGER //
 	//////////////////////

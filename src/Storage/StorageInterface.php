@@ -5,7 +5,12 @@ namespace PolyAuth\Storage;
 use Psr\Log\LoggerAwareInterface;
 use RBAC\DataStore\StorageInterface as RBACStorageInterface;
 
+use PolyAuth\Options;
+use Psr\Log\LoggerInterface;
+
 interface StorageInterface extends LoggerAwareInterface, RBACStorageInterface{
+
+	public static function create(Options $options, LoggerInterface $logger = null);
 
 	//AccountsManager
 	public function register_user(array $data, array $columns);

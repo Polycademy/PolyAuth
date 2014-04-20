@@ -1,9 +1,50 @@
 #!/usr/bin/env php
 <?php
 
-require __DIR__ . '/vendor/autoload.php';
+//set a default timezone if it hasn't already been set
+if (empty(ini_get('date.timezone'))) {
+    date_default_timezone_set('UTC');
+}
 
-$application = new \PolyAuth\GenerateApplication;
+//no timelimit on cli commands
+set_time_limit(0);
+
+//locating composer's autoloader, we need the autoloader to be able to use this cli tool
+if (file_exists(__DIR__ . '/vendor/autoload.php')) {
+    //during development
+    require_once(__DIR__ .'/vendor/autoload.php');
+} elseif (file_exists(__DIR__.'/../../autoload.php')) {
+    //composer installed, we need to go up vendor/vendornamespace/package/executable
+    require_once __DIR__ . '/../../autoload.php';
+} else {
+    throw new Exception('Composer\'s autoloader could not be located.');
+}
+
+use Symfony\Component\Console\Application;
+
+use PolyAuth\Console\Database\Seed;
+use PolyAuth\Console\RBAC\Import;
+use PolyAuth\Console\RBAC\Export;
+use PolyAuth\Console\RBAC\CreateRole;
+
+/**
+ * Commands:
+ * db:seed
+ * rbac:import
+ * rbac:export
+ * rbac:createrole
+ * rbac:createpermission
+ * users:CRUD
+ * groups:CRUD
+ */
+
+$application = new Application('PolyAuth', '1.0.0');
+
+$application->addCommands([
+    new Seed,
+    new Import,
+    new Export,
+    new CreateRole,
+]);
+
 $application->run();
-
-//this will need to process a config file, relating to the connection to database, it will need to be able to support all the adapters
