@@ -306,3 +306,84 @@ activated -> banned => bannding
 FSM for the tracking
 
 unconfirmed (initial) -> confirmed (final) => confirming
+
+
+WE NEED A STATELESS EMAIL ACTIVATION MODEL!
+
+Stateless solution
+
+    Take email of the user and sign it cryptographically
+    Send email to the user with the link to our website containing the signature
+    Once user has clicked the link in the email, verify digital signature and if it's valid, we confirm his email
+
+This could be done for every token. Then we don't need the database fields to hold the state of the token!
+
+Basically the idea is that, PolyAuth has a private key and "unknown" cryptographic algorithm, it takes the email address and encrypts it while signing it with the key. When the signed encrypted comes back, we decrypt it, and check if the email exists on our system. We could even sign it with additional parameters like timestamp, which would allow us to make sure codes are only fresh for a particular period of time. http://lucumr.pocoo.org/2013/11/17/my-favorite-database/
+I think the user ID also needs to be part of the payload. Maybe...
+
+NOTES
+-----
+
+pa_identities - Subjects and their permanent profile data + user state. Anything else should be stored somewhere else. This includes both owners and clients, meaning both owners and clients are subjects.
+pa_tokens - Long lived tokens (forgotten password, activation, one time login tokens). All these tokens have a expiry date. Each token is linked to a userId. Forgotten password and activation tokens are one to one. One time login tokens can also be one to one, or one to many.
+pa_providers - List of: id, userId, providerName, providerUniqueId, one identity to many providers (meaning federated providers). Each provider record is a one to one link to access_delegation record (which will always be an external access token). Identities that are provisioned by PolyAuth is not recorded here.
+pa_roles - Roles are like a common set of permissions required to execute a particular function in an organisation. Roles are also the scopes. Roles are assigned to subjects.
+pa_permissions - Permissions are setup here and called upon by resources. They are assigned to to roles.
+pa_access_delegation - Contains access tokens relating to owners (identities), clients (subjects) and providers (can be PolyAuth itself). Every identity can have access tokens in which it is an owner, but it can also have access tokens in which it is the client. This means identities can both delegate access to other identities, and can be delegated access from other identities.
+pa_security_log - Actions by the user that is logged and remembered. This might 
+pa_associations -> Closure Table, associates subjects with tokens, providers, roles, roles to permissions, subjects to access_delegation, to security_log.
+pa_tracking -> Login tracking, everytime someone logs in, we'll take their fingerprint, and compare against previous fingerprints. If they don't match, we'll raise an exception which can be handled to be notified. Just like Steamguard. Also we can't match exact IPs although that is possible, it's better to use countries.
+
+1. Login attempt data
+pa_login_attempts => Converted to cache. Now we have to store all login attempts, but also can purge them. Also login attempts are discovered by either identity, or ip address or both. 
+2. Session data
+pa_sessions => Converted to cache (this is server held session data for the particular request, if the session id is kept, the session data is kept, note that session data can just as easily be done from the client side instead)
+
+EMAILS:
+
+1. If they are a unique record:
+    a) Makes a hell of a lot easier to "login" with passwords when necessar
+    b) Means that anytime anyone tries to login via a third party provider, if the provider provides the same email address but not the same provider id, then an account will not be created, and instead an exception is thrown. The developer should login into their previous account and merge accounts instead. If the previous account was an account with a external provider, they can use forgotten password, which would generate one. Unless of course the email did not exist, which can be true in the case of Twitter. At any case, the guaranteed path is to login via the third party again. Unless of course the third party no longer exists or is operational. At this point, an escalation is required, an admin will need to change this account. Specifically by adding an email, and allowing the person to "forgotten" password.
+    c) Normal signup does not allow duplicate emails.
+2. If they are not a unique record:
+    a) Means logging in with emails is a lot of harder. This would require us to differentiate between accounts which are loginable, and accounts which are not. This means there has to be a unique combination of email and password. That is, no 2 identities must have the same email and password. So if there are identities with the same email, but no password or different password, this will not be loginnable. The same password cannot be allowed with the same email, and this would be prevented during the profile editing phase/password generation/password change phase.
+    b) Logging in with third party providers is easy.
+    c) Normal signup allows duplicate emails, or not allow duplicate emails... it depends. If you're using OAuth, then you should prevent duplicate emails.
+
+If you are not using email as login identity, then this is irrelevant. That is, email does not need to be a unique record, and and you won't be logging in with emails anyway.
+
+The above applies to usernames as well. Except that if usernames is unique, then you don't have to prevent the creation of the account, but you can just modify the usernames by adding a random suffix.
+
+One could also have "display names".
+
+THE SIMPLEST SOLUTION IS:
+
+1. EMAILS ARE UNIQUE
+2. 
+
+
+Convert to PSR-4
+Add a bootstrap?
+
+DEVELOP  HRBAC
+
+Also Options class implements Config class. We need this to be typehinted, such that an array object can be entered.
+
+All collections are implemented as collections.
+When passed into objects, they need to pass through iterator_to_array().
+
+OK so Configuration and Language will be bassed as Config objects.
+
+Objects expecting configuration do not typehint for array.
+Instead they check if the object is traversable.
+
+How about this:
+
+Configular reads the configuration.
+Options object takes Configula, and maps it into a collection object.
+Objects expecting options will check for whether it's an array or Traversable. If Traversable, it will change it to array before proceeding. Then also use OptionsResolver. Everything is injected.
+
+
+OK with regards to email addresses or even usernames.
+Because we cannot trust remote services to make sure that a subject actually owns a particular email address, and that different providers will have subjects using the same email address and also potentially username. We will create a new identity for every unique providerId. This means acquiring basic data like username and email data and adding them into the database of identities. This means there can be multiple identities with the same username and the email address. This effects password login and password signup:
+1. Password login operates on a one of any rule. It checks for any records matching the login identity, if there are multiple, it checks if the password matches any of them.
