@@ -387,3 +387,109 @@ Objects expecting options will check for whether it's an array or Traversable. I
 OK with regards to email addresses or even usernames.
 Because we cannot trust remote services to make sure that a subject actually owns a particular email address, and that different providers will have subjects using the same email address and also potentially username. We will create a new identity for every unique providerId. This means acquiring basic data like username and email data and adding them into the database of identities. This means there can be multiple identities with the same username and the email address. This effects password login and password signup:
 1. Password login operates on a one of any rule. It checks for any records matching the login identity, if there are multiple, it checks if the password matches any of them.
+
+Mutual SSL Auth!
+http://www.codeproject.com/Articles/326574/An-Introduction-to-Mutual-SSL-Authentication
+
+Kato Sign Up/Sign in Flow
+
+1. Ask for Email
+2. Send activation (stateless style)
+3. Allow usage immediately (timed activation, repeated reminders to activate, every time you use it)
+4. Allow repeat activation
+5. Passwordless session for the duration of usage without actiavtion
+6. Once activated, asks for password (upon activation, and upon signing in (with email))
+
+Things that are missing: Social Sign In, Open ID, Composable auths...
+Perhaps with social sign in, you can skip all those, and proceed to using the app immediately, while allowing the user to set passwords and email addresses later (confirm email address upon setting)
+
+User FSM:
+
+Registered 
+  -> activation -> Activated
+    -> banning -> Banned
+  -> deactivation -> Unactivated
+    -> reactivated -> Activated
+    -> banning -> Banned
+  -> banning -> Banned
+
+OCR Model:
+
+Owner authenticates against the Client and Resource.
+Client authenticates against the Resource
+Resource grants the Client access on behalf of the Owner
+
+O - Owner - a user
+C - Client - an user
+R - Resource
+
+Auth Code:
+O - Roger
+C - PolyAuth
+R - Facebook
+
+Implicit:
+O - Roger
+C - PolyAuth (running Publicly)
+R - Facebook
+
+Resource Owner Password:
+O - Roger
+C - SPA (client app)
+R - PolyAuth
+
+Client Credentials
+O - SPA
+C - SPA
+R - PolyAuth
+
+Non Use of OAuth
+O - Roger
+C - Roger's HTTP Client (unknown)
+R - PolyAuth
+
+Every access token is a unique relaionship between a Client, Owner and Resource.
+Every access token is held by the Client.
+Clients can have many access tokens.
+Each access token has a particular set of scopes associated with a particular Owner and Resource.
+The Resource grants auth to the Client based on the Client's Roles + Permissions AND the Client's Access Token's Scopes based on the Access Token's associated Owner.
+Permission hierarchy is defined by: Client Access Token (Scope + User) < Clients Roles + Permissions.
+Access token scope + user is overwritten by (overrode) the Client's Roles + Permissions.
+
+Permission Model:
+
+All permissions are derived from:
+
+C - Write permissions
+R - Read permissions
+U - Update permissions
+P - Patch permissions
+D - Delete permissions
+
+They should be encoded via binary numbers. So you can kind of do C & R ... etc.
+
+Every resource can have many permissions.
+Every resource can have sub resources.
+Every resource could have abstract resources.
+Resources are operated like a directed graph. (Graph database)
+Permissions for categorically abstract resources map onto child subresources.
+
+Therefore scopes are just permissions relative to a particular user account resource.
+User accounts are pretty abstract resources, thus containing many sub/child resources. For example User's Comments, User's Blog Posts.
+The sub resource inherits the parent resource.
+Because resources are in a graph model, each resource can be hierarchally child of many parent resources.
+For example a blog post may be subject to the Blogs resource, but because each blog post is created and owned by a User, they also fall subject to the User X's Blogs resource, where X is the particular user ID.
+So it's a many to many graph model of hierarchal inheritance: http://blog.neo4j.org/2010/03/modeling-categories-in-graph-database.html
+This means a immutable graph database is the best tool to model this. Other databases can store temporal domain representations for when you need more efficiency (such as for example when we convert MySQL's row model into an object model).
+I recommend Neo4j or FoundationDB.
+
+This means roles are simply convenience wrappers or syntactic sugar for specifying many permissions in one go. Packaged permissions basically.
+
+Given a graph model of resources, one could setup transactions across the directed graph. This should be pretty seamless, so that say if one of the resources in the graph hit an exception (because perhaps of a permission not allowed), it should throw an exception (this might have to be done through a wrapper, exceptions static class, and this will check if the pipeline has be transacted or partial, if transacted, it should fail hard and rollback everything, if partial, it should fail soft, ignore move on to the next independent operation)
+
+Ok, let's imagine our resources are in a graph. Now every resource has their set of CRUPD permissions, this doesn't have be saved, the model is dynamic specified in code.
+
+Clients are the objects that hold permissions (and their associated roles). If they have a roles, this gets automatically flattened and merged as a set of permissions (all permissions are unique btw, because CRUPD is always linked a single resource). Now what they essentially have is R1:CRUPD, R2:CRUPD, R3:CRUPD. But instead of specifying low level RXs, those RXs can be high level resources. Remember how permissions are hierarchal, as the subresource permissions inherit from parent resource permissions. So say for example, if I give the permission to read blog posts, hence BLOGS:R, theis means the user can also read blog post 1, or blog post 2, so BLOGS:R means BLOGS->BLOG1:R and BLOGS->BLOG2:R. UNLESS say BLOG2 said must have permission to read "STRICT", meaning the user must have the read permission strictly for this. This reduces storage size, since we don't have to remember that a client has all the subpermissions, but just the highlevel permissions, and the resources when asking for a permissions, simply traverse the inheritance chain.
+
+Thus scopes and permissions are merged!
+Roles are just syntactic sugar for scopes and permissions, and can be assigned to both clients or access tokens! They expand into permissions eventually.
