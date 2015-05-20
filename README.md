@@ -493,3 +493,24 @@ Clients are the objects that hold permissions (and their associated roles). If t
 
 Thus scopes and permissions are merged!
 Roles are just syntactic sugar for scopes and permissions, and can be assigned to both clients or access tokens! They expand into permissions eventually.
+
+New PolyAuth
+------------
+
+A service that Microservice authentication.
+
+Use purescript + io.js?
+
+Bring in passport and some form of RBAC. Permission driver.
+
+Load into Docker!
+
+Stage 1 contains its own state.
+
+Stage 2 is stateless and depends on external state automaton. This would be a range of optional automatons.
+
+How do we handle optional dependencies that change the type of the parent?
+
+Perhaps they shouldn't because its at configuration that you choose what optional dependencies to use.
+
+Composite authentication was one of the coolest things I ever made. And it works well for cookie/http basic.
