@@ -169,7 +169,7 @@ class AccountsManager{
 	}
 	
 	/**
-	 * Checks for duplicate identity, returns true if the identity exists, false if the identity already exist
+	 * Checks for duplicate identity, returns true if the identity exists, false if the identity doesn't exist
 	 *
 	 * @param $identity string
 	 * @return boolean - true if duplicate, false if no duplicate
@@ -178,6 +178,12 @@ class AccountsManager{
 		
 		return $this->storage->duplicate_identity_check($identity);
 	
+	}
+
+	public function duplicate_identity_update_check ($user_id, $identity) {
+
+		return $this->storage->duplicate_identity_update_check ($user_id, $identity);
+
 	}
 	
 	/**
@@ -809,9 +815,23 @@ class AccountsManager{
 	 * @return $user object | null
 	 */
 	public function update_user(UserAccount $user, array $new_user_data = null){
-	
+
 		if($new_user_data){
 			$user->set_user_data($new_user_data);
+		}
+
+		// we need to check if the identity is being changed, and if so, we need to make sure that
+		// the identity does not already exist in the database excluding the current account
+		// it's possible the user is changing their identity to the same identity
+		// this would be better if we can make `$user['id']` immutable
+		if (
+			isset($user[$this->options['login_identity']])
+			AND 
+			$this->duplicate_identity_update_check ($user['id'], $user[$this->options['login_identity']])
+		) {
+			throw new UserDuplicateException(
+				$this->lang["account_update_duplicate_{$this->options['login_identity']}"]
+			);
 		}
 		
 		$password_updated = false;

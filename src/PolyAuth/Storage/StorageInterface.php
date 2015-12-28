@@ -14,6 +14,8 @@ interface StorageInterface extends LoggerAwareInterface, RBACStorageInterface{
 
 	public function duplicate_identity_check($identity);
 
+	public function duplicate_identity_update_check($user_id, $identity);
+
 	public function force_activate($user_id);
 
 	public function deactivate($user_id, $activation_code);

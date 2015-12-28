@@ -14,6 +14,8 @@ class Language implements \ArrayAccess{
 		'account_creation_email_invalid'		=> 'Cannot use email activation without a emails being registered.',
 		// Account Changes
 		'account_update_unsuccessful'			=> 'Unable to Update Account Information',
+		'account_update_duplicate_email'		=> 'Cannot update email, it already exists.',
+		'account_update_duplicate_username'		=> 'Cannot update username, it already exists.',
 		'account_update_invalid'				=> 'Cannot update without valid data fields.',
 		'account_delete_already'				=> 'User is already Deleted or Doesn\'t Exist.',
 		// Password

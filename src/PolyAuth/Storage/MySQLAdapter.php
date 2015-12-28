@@ -141,6 +141,41 @@ class MySQLAdapter implements StorageInterface{
 	}
 
 	/**
+	 * Checks for duplicate identity for an account update operation.
+	 * Returns true if the identity exists, false if the identity doesn't exist.
+	 *
+	 * @param $user_id int
+	 * @param $identity string
+	 * @return boolean - true if duplicate, false if no duplicate
+	 */
+	public function duplicate_identity_update_check($user_id, $identity){
+
+		$query = "SELECT id FROM {$this->options['table_users']} WHERE id != :id AND {$this->options['login_identity']} = :identity";
+		$sth = $this->db->prepare($query);
+		$sth->bindValue(':id', $user_id, PDO::PARAM_INT);
+		$sth->bindValue(':identity', $identity, PDO::PARAM_STR);
+		
+		try {
+		
+			$sth->execute();
+			if($sth->fetch()){
+				return true;
+			}
+			return false;
+			
+		}catch(PDOException $db_err){
+
+			if($this->logger){
+				$this->logger->error('Failed to execute query to check duplicate login identities for account update.', ['exception' => $db_err]);
+			}
+			
+			throw $db_err;
+			
+		}
+
+	}
+
+	/**
 	 * Forcibly activates an user
 	 * @param  integer $user_id User Id
 	 * @return Boolean
